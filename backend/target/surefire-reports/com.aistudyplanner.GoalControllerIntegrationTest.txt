@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.aistudyplanner.GoalControllerIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.831 s -- in com.aistudyplanner.GoalControllerIntegrationTest

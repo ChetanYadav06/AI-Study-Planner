@@ -1,0 +1,13 @@
+{
+  "name": "ai-study-planner",
+  "version": "1.0.0",
+  "description": "AI-powered personalised study planner — monorepo root scripts",
+  "private": true,
+  "scripts": {
+    "dev":          "powershell -ExecutionPolicy Bypass -File .\\dev.ps1",
+    "stop":         "powershell -ExecutionPolicy Bypass -File .\\stop.ps1",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build":        "npm run build --prefix frontend",
+    "install:all":  "npm install --prefix frontend"
+  }
+}
