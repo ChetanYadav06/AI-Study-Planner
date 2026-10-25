@@ -1,0 +1,17 @@
+# Secrets
+.env
+.env.*
+!.env.example
+**/application-local.properties
+**/application-secret.properties
+
+# Local database and generated files
+.mysql/
+**/data/
+**/target/
+*.log
+hs_err_pid*.log
+
+# Frontend
+**/node_modules/
+**/dist/

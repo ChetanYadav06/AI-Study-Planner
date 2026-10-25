@@ -4,16 +4,16 @@ import {
   User,
   Mail,
   ShieldCheck,
-  Key,
   Calendar,
-  Lock,
   LogOut,
   CheckCircle2,
-  Database
+  BookOpen,
+  Clock,
+  Sparkles
 } from 'lucide-react';
 
 export const ProfileView = () => {
-  const { user, logout, token } = useAuth();
+  const { user, logout } = useAuth();
 
   if (!user) {
     return (
@@ -31,9 +31,7 @@ export const ProfileView = () => {
     ? new Date(user.createdAt).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        day: 'numeric'
       })
     : 'Active Session';
 
@@ -42,7 +40,7 @@ export const ProfileView = () => {
       {/* Profile Header Card */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="flex items-center space-x-5">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-blue-500/20">
+          <div className="w-18 h-18 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-blue-500/20">
             {user.name.charAt(0).toUpperCase()}
           </div>
           <div>
@@ -59,104 +57,85 @@ export const ProfileView = () => {
             </p>
             <p className="text-xs text-slate-400 mt-1 flex items-center space-x-1.5">
               <Calendar className="w-3.5 h-3.5" />
-              <span>Joined: {formattedDate}</span>
+              <span>Member Since: {formattedDate}</span>
             </p>
           </div>
         </div>
 
         <button
           onClick={logout}
-          className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-sm font-medium transition"
+          className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-sm font-semibold transition cursor-pointer"
         >
           <LogOut className="w-4 h-4" />
           <span>Sign Out</span>
         </button>
       </div>
 
-      {/* Account Details & Security Cards */}
+      {/* Account Details & Student Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Personal Account Information */}
+        {/* Student Account Information */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
           <div className="flex items-center space-x-2.5 mb-5 pb-3 border-b border-slate-100">
             <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
               <User className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900">Student Account</h3>
-              <p className="text-xs text-slate-500">Stored in MySQL relational database</p>
+              <h3 className="text-base font-bold text-slate-900">Student Profile</h3>
+              <p className="text-xs text-slate-500">Account credentials & identifier</p>
             </div>
           </div>
 
-          <div className="space-y-3.5 text-xs">
+          <div className="space-y-3 text-xs">
             <div className="flex justify-between items-center p-3 rounded-xl bg-slate-50">
               <span className="text-slate-500">Student ID:</span>
               <span className="font-mono font-bold text-slate-800">#{user.id}</span>
             </div>
             <div className="flex justify-between items-center p-3 rounded-xl bg-slate-50">
-              <span className="text-slate-500">Registered Name:</span>
+              <span className="text-slate-500">Full Name:</span>
               <span className="font-semibold text-slate-800">{user.name}</span>
             </div>
             <div className="flex justify-between items-center p-3 rounded-xl bg-slate-50">
-              <span className="text-slate-500">Primary Email:</span>
+              <span className="text-slate-500">Registered Email:</span>
               <span className="font-semibold text-slate-800">{user.email}</span>
             </div>
             <div className="flex justify-between items-center p-3 rounded-xl bg-slate-50">
               <span className="text-slate-500">Account Role:</span>
-              <span className="font-semibold text-blue-600">STUDENT (Standard)</span>
+              <span className="font-semibold text-blue-600">Student Scholar</span>
             </div>
           </div>
         </div>
 
-        {/* Security & Token Info */}
+        {/* Study Preferences & Security */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
           <div className="flex items-center space-x-2.5 mb-5 pb-3 border-b border-slate-100">
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900">Security & Authentication</h3>
-              <p className="text-xs text-slate-500">Spring Security + JWT protection</p>
+              <h3 className="text-base font-bold text-slate-900">Study Status & Protection</h3>
+              <p className="text-xs text-slate-500">Platform security and learning status</p>
             </div>
           </div>
 
-          <div className="space-y-3.5 text-xs">
-            <div className="p-3 rounded-xl bg-slate-50 space-y-1">
-              <div className="flex justify-between text-slate-600 font-medium">
-                <span className="flex items-center space-x-1">
-                  <Lock className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Password Hashing:</span>
-                </span>
-                <span className="font-mono text-emerald-700">BCrypt (10 rounds)</span>
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl bg-slate-50 space-y-1">
-              <div className="flex justify-between text-slate-600 font-medium">
-                <span className="flex items-center space-x-1">
-                  <Key className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Auth Mechanism:</span>
-                </span>
-                <span className="font-mono text-blue-700">JWT (HMAC-SHA256)</span>
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl bg-slate-50 space-y-1">
-              <div className="flex justify-between text-slate-600 font-medium">
-                <span className="flex items-center space-x-1">
-                  <Database className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Data Isolation:</span>
-                </span>
-                <span className="font-semibold text-indigo-700">User-scoped DB isolation</span>
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100">
-              <span className="text-[11px] font-semibold text-blue-800 block mb-1">
-                Active JWT Bearer Token (Truncated):
+          <div className="space-y-3 text-xs">
+            <div className="flex justify-between items-center p-3 rounded-xl bg-slate-50">
+              <span className="text-slate-500">Session Status:</span>
+              <span className="inline-flex items-center space-x-1 font-semibold text-emerald-600">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Active & Authenticated</span>
               </span>
-              <p className="font-mono text-[10px] text-blue-600 break-all select-all">
-                {token ? `${token.substring(0, 36)}...${token.substring(token.length - 20)}` : 'None'}
-              </p>
+            </div>
+            <div className="flex justify-between items-center p-3 rounded-xl bg-slate-50">
+              <span className="text-slate-500">Learning Mode:</span>
+              <span className="font-semibold text-indigo-700">Self-Paced AI Guided</span>
+            </div>
+            <div className="flex justify-between items-center p-3 rounded-xl bg-slate-50">
+              <span className="text-slate-500">Data Privacy:</span>
+              <span className="font-semibold text-slate-700">Student-Isolated Records</span>
+            </div>
+            <div className="flex justify-between items-center p-3 rounded-xl bg-slate-50">
+              <span className="text-slate-500">AI Curriculum Assistant:</span>
+              <span className="font-semibold text-purple-700">Gemini 1.5 Flash</span>
             </div>
           </div>
         </div>

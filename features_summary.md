@@ -131,11 +131,19 @@
 
 ---
 
-## 🔧 Recent UI Changes
+## 🔧 Recent UI Optimizations
 
-- **Removed** Milestone Progress phase tracker (P1–P4 checklist) from the sidebar
-- **Removed** Spring Boot, MySQL, and Gemini tech-stack badge pills from the navbar
-- **Migrated** entire frontend codebase from **TypeScript to JavaScript** — all `.ts` / `.tsx` files converted to `.js` / `.jsx`, TypeScript and `@types` packages removed from `package.json`
+- **Added Project Phases & Progress Tracker** (`ProjectPhasesTracker.jsx`) prominently on the **Student Dashboard** and unauthenticated landing page, tracking all 8 project development phases (P1–P8) with completion percentages and key deliverables.
+- **Added dedicated "Project Phases" tab** to the sidebar navigation (`Sidebar.jsx`) for one-click access by students, evaluators, and reviewers.
+- **Removed unnecessary columns & blocks not used by students**:
+  - Removed duplicate/redundant 4th metric card ("AI Roadmaps - ready for AI synthesis") and replaced it with a real **Overall Progress** metric (% average completion with mini progress bar).
+  - Removed developer debugging blocks (HikariCP connection pool specs, database InnoDB tables, BCrypt hash rounds, and REST endpoints table).
+  - Removed raw truncated JWT Bearer token hash from student ProfileView.
+- **Enhanced Goal Cards with Study Phase progression**:
+  - Added learning milestone phase badges (`Phase 1: Fundamentals`, `Phase 2: Core Concepts`, `Phase 3: Applied Practice`, `Phase 4: Advanced Mastery`) dynamically determined by goal completion %.
+  - Added streamlined progress controls (`-10%`, `+10%`, and 1-click `Complete`).
+  - Added rich AI Study Roadmap multi-phase preview modal.
+- **Migrated** entire frontend codebase to **JavaScript (JSX)** (React 19 + Tailwind CSS v4 + Vite).
 
 ---
 

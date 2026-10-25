@@ -30,10 +30,14 @@ class AuthControllerIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
+    private com.aistudyplanner.repository.GoalRepository goalRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @BeforeEach
     void setup() {
+        goalRepository.deleteAll();
         userRepository.deleteAll();
     }
 

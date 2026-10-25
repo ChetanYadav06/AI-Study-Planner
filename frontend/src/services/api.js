@@ -60,6 +60,7 @@ export const getGoals = async () => {
   const response = await api.get('/goals');
   return response.data;
 };
+export const getUserGoals = getGoals;
 
 export const createGoal = async (data) => {
   const response = await api.post('/goals', data);
@@ -83,6 +84,12 @@ export const deleteGoal = async (id) => {
 
 export const getDashboardStats = async () => {
   const response = await api.get('/dashboard/stats');
+  return response.data;
+};
+
+// AI Roadmap API — longer timeout since Gemini calls can take 10-30s
+export const generateRoadmap = async (data) => {
+  const response = await api.post('/ai/roadmap', data, { timeout: 60000 });
   return response.data;
 };
 

@@ -2,18 +2,21 @@ import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/common/Navbar';
 import { Sidebar } from './components/common/Sidebar';
-import { Phase1Overview } from './components/dashboard/Phase1Overview';
+import { StudentPortalLanding } from './components/dashboard/StudentPortalLanding';
 import { StudentDashboard } from './components/dashboard/StudentDashboard';
 import { ProfileView } from './components/profile/ProfileView';
 import { AuthModal } from './components/auth/AuthModal';
+import { CreateGoalModal } from './components/goals/CreateGoalModal';
+import { MyRoadmapsView } from './components/roadmap/MyRoadmapsView';
 
 const AppContent = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('login');
+  const [createGoalModalOpen, setCreateGoalModalOpen] = useState(false);
   const { isAuthenticated } = useAuth();
 
-  const handleOpenAuth = (mode) => {
+  const handleOpenAuth = (mode = 'login') => {
     setAuthMode(mode);
     setAuthModalOpen(true);
   };
@@ -24,6 +27,14 @@ const AppContent = () => {
       return;
     }
     setActiveTab('profile');
+  };
+
+  const handleOpenCreateGoal = () => {
+    if (!isAuthenticated) {
+      handleOpenAuth('login');
+      return;
+    }
+    setCreateGoalModalOpen(true);
   };
 
   return (
@@ -41,45 +52,43 @@ const AppContent = () => {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           onOpenAuth={handleOpenAuth}
+          onOpenCreateGoal={handleOpenCreateGoal}
         />
 
         {/* Content View Area */}
         <main className="flex-1 p-6 md:p-8 overflow-y-auto">
           {activeTab === 'dashboard' && (
             isAuthenticated ? (
-              <StudentDashboard onNavigateTab={setActiveTab} />
-            ) : (
-              <Phase1Overview
-                onOpenAuth={handleOpenAuth}
-                onNavigateProfile={handleNavigateProfile}
+              <StudentDashboard
+                onNavigateTab={setActiveTab}
+                onOpenCreateGoal={handleOpenCreateGoal}
               />
+            ) : (
+              <StudentPortalLanding onOpenAuth={handleOpenAuth} />
             )
           )}
 
-          {activeTab === 'create-roadmap' && (
+          {activeTab === 'my-roadmaps' && (
             isAuthenticated ? (
-              <StudentDashboard onNavigateTab={setActiveTab} />
+              <MyRoadmapsView onNavigateTab={setActiveTab} />
             ) : (
-              <Phase1Overview
-                onOpenAuth={handleOpenAuth}
-                onNavigateProfile={handleNavigateProfile}
-              />
+              <StudentPortalLanding onOpenAuth={handleOpenAuth} />
             )
           )}
 
           {activeTab === 'profile' && <ProfileView />}
 
-          {activeTab !== 'dashboard' && activeTab !== 'create-roadmap' && activeTab !== 'profile' && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center shadow-xs">
-              <h2 className="text-xl font-bold text-slate-800 capitalize mb-2">
+          {activeTab !== 'dashboard' && activeTab !== 'my-roadmaps' && activeTab !== 'profile' && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center shadow-xs max-w-lg mx-auto mt-8">
+              <h2 className="text-lg font-bold text-slate-800 capitalize mb-2">
                 {activeTab.replace('-', ' ')}
               </h2>
-              <p className="text-sm text-slate-500 max-w-md mx-auto">
-                This feature will be activated in upcoming phases. You can manage your goals from the Student Dashboard.
+              <p className="text-xs text-slate-500 leading-relaxed">
+                This feature is currently being integrated. You can manage your learning goals and track daily commitments directly from the Student Dashboard.
               </p>
               <button
                 onClick={() => setActiveTab('dashboard')}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition"
+                className="mt-5 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition cursor-pointer shadow-xs"
               >
                 Return to Dashboard
               </button>
@@ -93,6 +102,15 @@ const AppContent = () => {
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         initialMode={authMode}
+      />
+
+      {/* Global Create Goal Modal triggered from sidebar */}
+      <CreateGoalModal
+        isOpen={createGoalModalOpen}
+        onClose={() => setCreateGoalModalOpen(false)}
+        onGoalCreated={() => {
+          setActiveTab('dashboard');
+        }}
       />
     </div>
   );
