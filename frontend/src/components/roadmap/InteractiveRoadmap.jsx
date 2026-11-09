@@ -27,6 +27,8 @@ import {
   Compass,
   FileText,
   Target,
+  RotateCcw,
+  AlertTriangle,
   X
 } from 'lucide-react';
 import { updateRoadmapProgress, saveRoadmap } from '../../services/api';
@@ -53,6 +55,8 @@ export const InteractiveRoadmap = ({
 
   // View state: 'map' (Interactive Visual Learning Map) vs 'plan' (Structured Daily Learning Plan)
   const [activeView, setActiveView] = useState('map');
+  const [showRegenModal, setShowRegenModal] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   // Initial load from roadmap object or localStorage
   const [progressData, setProgressData] = useState(() => {
@@ -443,6 +447,17 @@ export const InteractiveRoadmap = ({
             >
               <Save className="w-3.5 h-3.5" />
               <span>{savingToCloud ? 'Saving...' : 'Save to Cloud'}</span>
+            </button>
+          )}
+
+          {onRegenerate && (
+            <button
+              onClick={() => setShowRegenModal(true)}
+              disabled={regenerating}
+              className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-2xl bg-white hover:bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200 shadow-2xs transition cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
+              <span>{regenerating ? 'Regenerating...' : 'Regenerate'}</span>
             </button>
           )}
 
@@ -1130,6 +1145,51 @@ export const InteractiveRoadmap = ({
                 </div>
               </a>
             ))}
+          </div>
+        </div>
+      )}
+      {/* Regeneration Confirmation Modal */}
+      {showRegenModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+            <div className="flex items-center space-x-3 text-amber-600 mb-4">
+              <div className="p-2.5 rounded-2xl bg-amber-50 border border-amber-200">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-black text-slate-900">Confirm Roadmap Regeneration</h3>
+            </div>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Regenerating replaces this roadmap and resets your {Object.keys(completedTasks).filter(k => completedTasks[k]).length} completed tasks. This cannot be undone.
+            </p>
+            <div className="mt-6 flex items-center justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowRegenModal(false)}
+                disabled={regenerating}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setRegenerating(true);
+                  try {
+                    await onRegenerate();
+                    setShowRegenModal(false);
+                  } catch (err) {
+                    console.error('Regeneration error:', err);
+                  } finally {
+                    setRegenerating(false);
+                  }
+                }}
+                disabled={regenerating}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white transition shadow-xs cursor-pointer inline-flex items-center space-x-1.5"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>{regenerating ? 'Regenerating...' : 'Regenerate'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

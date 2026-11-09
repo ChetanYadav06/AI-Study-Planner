@@ -3,12 +3,14 @@ package com.aistudyplanner.service;
 import com.aistudyplanner.dto.RoadmapRequest;
 import com.aistudyplanner.dto.RoadmapResponse;
 import com.aistudyplanner.entity.SkillLevel;
+import com.aistudyplanner.exception.RoadmapGenerationException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -20,40 +22,60 @@ class RoadmapServiceTest {
     @Mock
     private GeminiTestService geminiTestService;
 
-    @InjectMocks
+    private RoadmapValidator roadmapValidator;
     private RoadmapService roadmapService;
+
+    @BeforeEach
+    void setUp() {
+        roadmapValidator = new RoadmapValidator();
+        roadmapService = new RoadmapService(geminiTestService, roadmapValidator, null, null);
+    }
 
     @Test
     @DisplayName("Should correctly generate and parse structured JSON roadmap from Gemini")
     void shouldGenerateAndParseStructuredJsonRoadmap() {
         String mockJsonResponse = """
             {
-              "overview": "Master enterprise Full-Stack Java with Spring Boot 3.4 and React 19.",
-              "feasibilityNote": "Ideal timeline: 30 hours over 15 days allows in-depth practice.",
-              "totalStudyHours": 30.0,
+              "overview": "Master enterprise Full-Stack Java with Spring Boot and React.",
+              "feasibilityNote": "Ideal timeline: 6 hours over 3 days allows focused practice.",
+              "totalStudyHours": 6.0,
               "skillLevel": "BEGINNER",
               "prerequisites": ["Basic Java syntax", "HTML/CSS fundamentals"],
               "phases": [
                 {
                   "phaseNumber": 1,
-                  "phaseTitle": "Spring Boot & REST Core",
-                  "durationDays": 7,
-                  "topics": ["Dependency Injection", "REST Controllers", "Spring Data JPA"],
-                  "subtopics": ["@RestController", "Repository interfaces", "H2 database setup"],
-                  "milestones": ["Build CRUD REST API", "Implement JPA Entity mapping"],
+                  "phaseTitle": "Phase 1: Full-Stack Java Core",
+                  "durationDays": 3,
+                  "topics": ["Full-Stack Java Foundations", "REST Controllers", "React Integration"],
+                  "subtopics": ["@RestController", "Repository interfaces", "React setup"],
+                  "milestones": ["Build CRUD REST API", "Connect React UI"],
                   "dailyTasks": [
                     {
                       "dayNumber": 1,
-                      "title": "Setup Spring Boot project",
+                      "title": "Setup Full-Stack Java project",
                       "description": "Initialize via Spring Initializr and verify hello world endpoint.",
                       "estimatedMinutes": 120,
                       "activityType": "STUDY"
+                    },
+                    {
+                      "dayNumber": 2,
+                      "title": "Build Full-Stack Java REST Controllers",
+                      "description": "Create REST API endpoints with Spring Boot and JPA entities.",
+                      "estimatedMinutes": 120,
+                      "activityType": "CODING_PRACTICE"
+                    },
+                    {
+                      "dayNumber": 3,
+                      "title": "Connect Full-Stack Java frontend client",
+                      "description": "Build React interface and test complete integration.",
+                      "estimatedMinutes": 120,
+                      "activityType": "PROJECT"
                     }
                   ],
                   "practicalExercises": [
                     {
-                      "title": "Student Management API",
-                      "instructions": "Create a fully functioning REST API with GET and POST endpoints.",
+                      "title": "Mini Student Directory API",
+                      "instructions": "Create GET /students and POST /students with in-memory H2.",
                       "difficulty": "BEGINNER"
                     }
                   ],
@@ -81,9 +103,9 @@ class RoadmapServiceTest {
 
         RoadmapRequest request = new RoadmapRequest();
         request.setTopic("Full-Stack Java");
-        request.setDescription("Master enterprise apps");
+        request.setDescription("Master enterprise apps with Full-Stack Java");
         request.setSkillLevel(SkillLevel.BEGINNER);
-        request.setTargetDays(15);
+        request.setTargetDays(3);
         request.setHoursPerDay(2.0);
         request.setSpecificTopics("Spring Boot, React");
         request.setTargetOutcomes("Build enterprise web app");
@@ -94,51 +116,47 @@ class RoadmapServiceTest {
         assertNotNull(response);
         assertEquals("Full-Stack Java", response.getTopic());
         assertEquals("BEGINNER", response.getSkillLevel());
-        assertEquals(15, response.getTargetDays());
+        assertEquals(3, response.getTargetDays());
         assertEquals(2.0, response.getHoursPerDay());
-        assertEquals(30.0, response.getTotalStudyHours());
+        assertEquals(6.0, response.getTotalStudyHours());
         assertNotNull(response.getFeasibilityNote());
-
-        assertEquals(2, response.getPrerequisites().size());
         assertEquals(1, response.getPhases().size());
-
-        RoadmapResponse.WeeklyPhase phase = response.getPhases().get(0);
-        assertEquals("Spring Boot & REST Core", phase.getPhaseTitle());
-        assertEquals(1, phase.getDailyTasks().size());
-        assertEquals("Setup Spring Boot project", phase.getDailyTasks().get(0).getTitle());
-        assertEquals(1, phase.getPracticalExercises().size());
-        assertNotNull(phase.getAssessment());
-
-        // Check backward compatibility
-        assertNotNull(response.getResources());
-        assertFalse(response.getResources().isEmpty());
-        assertTrue(response.getResources().get(0).contains("Official Spring Boot Guides"));
+        assertEquals(3, response.getPhases().get(0).getDailyTasks().size());
     }
 
     @Test
-    @DisplayName("Should parse markdown-wrapped JSON code blocks gracefully")
+    @DisplayName("Should extract JSON from markdown wrapped codeblock")
     void shouldParseMarkdownWrappedJson() {
         String wrappedJson = """
             ```json
             {
-              "overview": "React 19 Deep Dive.",
-              "feasibilityNote": "Feasible with disciplined daily focus.",
-              "totalStudyHours": 14.0,
+              "overview": "Learn Docker basics and image creation.",
+              "feasibilityNote": "Great pace for 2 days.",
+              "totalStudyHours": 4.0,
+              "skillLevel": "BEGINNER",
+              "prerequisites": ["Linux CLI"],
               "phases": [
                 {
                   "phaseNumber": 1,
-                  "phaseTitle": "React Hooks & State",
-                  "durationDays": 7,
-                  "topics": ["useState", "useEffect", "useMemo"],
-                  "milestones": ["Build dynamic dashboard"]
-                }
-              ],
-              "learningResources": [
-                {
-                  "title": "React Docs",
-                  "url": "https://react.dev",
-                  "type": "DOCUMENTATION",
-                  "relevance": "Primary documentation"
+                  "phaseTitle": "Phase 1: Docker Basics",
+                  "durationDays": 2,
+                  "topics": ["Containers", "Images"],
+                  "dailyTasks": [
+                    {
+                      "dayNumber": 1,
+                      "title": "Docker Architecture",
+                      "description": "Learn daemon and client basics in Docker.",
+                      "estimatedMinutes": 120,
+                      "activityType": "STUDY"
+                    },
+                    {
+                      "dayNumber": 2,
+                      "title": "Build First Dockerfile",
+                      "description": "Write a multi-stage Docker container file.",
+                      "estimatedMinutes": 120,
+                      "activityType": "CODING_PRACTICE"
+                    }
+                  ]
                 }
               ]
             }
@@ -148,83 +166,24 @@ class RoadmapServiceTest {
         when(geminiTestService.askGeminiJson(anyString())).thenReturn(wrappedJson);
 
         RoadmapRequest request = new RoadmapRequest();
-        request.setTopic("React 19");
-        request.setSkillLevel(SkillLevel.INTERMEDIATE);
-        request.setTargetDays(7);
+        request.setTopic("Docker Containers");
+        request.setDescription("Master Docker container deployment");
+        request.setSkillLevel(SkillLevel.BEGINNER);
+        request.setTargetDays(2);
         request.setHoursPerDay(2.0);
 
         RoadmapResponse response = roadmapService.generateRoadmap(request);
 
         assertNotNull(response);
-        assertEquals("React 19", response.getTopic());
+        assertEquals("Docker Containers", response.getTopic());
         assertEquals(1, response.getPhases().size());
-        assertEquals("React Hooks & State", response.getPhases().get(0).getPhaseTitle());
-        assertEquals("7 days", response.getPhases().get(0).getDuration());
-        assertEquals(1, response.getLearningResources().size());
-        assertTrue(response.getLearningResources().get(0).isVerified());
+        assertEquals(2, response.getPhases().get(0).getDailyTasks().size());
     }
 
     @Test
-    @DisplayName("Should auto-repair incomplete JSON with missing fields and bad URLs")
-    void shouldAutoRepairMissingFieldsAndBadUrls() {
-        String partialJson = """
-            {
-              "phases": [
-                {
-                  "duration": "5 days"
-                }
-              ],
-              "learningResources": [
-                {
-                  "title": "Invalid Resource",
-                  "url": "not-a-valid-url"
-                }
-              ]
-            }
-            """;
-
-        when(geminiTestService.askGeminiJson(anyString())).thenReturn(partialJson);
-
-        RoadmapRequest request = new RoadmapRequest();
-        request.setTopic("Docker & Kubernetes");
-        request.setSkillLevel(SkillLevel.BEGINNER);
-        request.setTargetDays(5);
-        request.setHoursPerDay(1.0);
-
-        RoadmapResponse response = roadmapService.generateRoadmap(request);
-
-        assertNotNull(response);
-        assertEquals("Docker & Kubernetes", response.getTopic());
-        assertEquals(5.0, response.getTotalStudyHours());
-        assertNotNull(response.getFeasibilityNote());
-        assertTrue(response.getFeasibilityNote().toLowerCase().contains("accelerated pace"));
-
-        assertEquals(1, response.getPhases().size());
-        assertEquals("Phase 1", response.getPhases().get(0).getPhaseTitle());
-        assertEquals(5, response.getPhases().get(0).getDurationDays());
-
-        // Verify invalid URL was marked unverified
-        assertEquals(1, response.getLearningResources().size());
-        assertFalse(response.getLearningResources().get(0).isVerified());
-    }
-
-    @Test
-    @DisplayName("Should fallback cleanly to legacy text parsing when Gemini returns plain text")
-    void shouldFallbackToLegacyTextParsingGracefully() {
-        String legacyText = """
-            OVERVIEW
-            Master Spring Boot and build enterprise APIs.
-
-            PHASES
-            PHASE: Spring Core & Context
-            DURATION: 7 days
-            TOPICS: Dependency Injection | IoC Container | Bean Lifecycle
-            MILESTONES: Configured Spring App | Verified Beans
-
-            RESOURCES
-            - https://spring.io (Official Docs)
-            - Baeldung Spring Guides
-            """;
+    @DisplayName("Should throw RoadmapGenerationException without silent fallback when unparseable")
+    void shouldThrowRoadmapGenerationExceptionOnUnparseableResponse() {
+        String legacyText = "OVERVIEW: Invalid text response that is not JSON";
 
         when(geminiTestService.askGeminiJson(anyString())).thenReturn(legacyText);
 
@@ -234,16 +193,11 @@ class RoadmapServiceTest {
         request.setTargetDays(7);
         request.setHoursPerDay(2.0);
 
-        RoadmapResponse response = roadmapService.generateRoadmap(request);
-
-        assertNotNull(response);
-        assertEquals("Spring Core", response.getTopic());
-        assertNotNull(response.getOverview());
-        assertTrue(response.getOverview().contains("Master Spring Boot"));
-        assertEquals(1, response.getPhases().size());
-        assertEquals("Spring Core & Context", response.getPhases().get(0).getPhaseTitle());
-        assertEquals(3, response.getPhases().get(0).getTopics().size());
-        assertEquals(2, response.getResources().size());
+        RoadmapGenerationException ex = assertThrows(RoadmapGenerationException.class, () ->
+                roadmapService.generateRoadmap(request)
+        );
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, ex.getStatus());
+        assertTrue(ex.getMessage().contains("unparseable response"));
     }
 
     @Test

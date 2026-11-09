@@ -23,7 +23,8 @@ import {
   getSavedRoadmaps,
   deleteSavedRoadmap,
   generateRoadmap,
-  saveRoadmap
+  saveRoadmap,
+  replaceRoadmap
 } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { RoadmapWizard } from './RoadmapWizard';
@@ -191,6 +192,30 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
           onBack={() => setViewMode('LIST')}
           onProgressUpdate={(newPct) => {
             setSavedRoadmaps(prev => prev.map(r => r.id === activeSavedId ? { ...r, progressPercentage: newPct } : r));
+          }}
+          onRegenerate={async () => {
+            if (!activeRoadmap) return;
+            const payload = {
+              topic: activeRoadmap.topic,
+              skillLevel: activeRoadmap.skillLevel || 'INTERMEDIATE',
+              targetDays: activeRoadmap.targetDays,
+              hoursPerDay: activeGoal?.hoursPerDay || activeRoadmap.hoursPerDay || 2.0,
+              description: activeGoal?.description || ''
+            };
+            const result = await generateRoadmap(payload);
+            if (activeSavedId) {
+              await replaceRoadmap(activeSavedId, {
+                roadmapJson: JSON.stringify(result),
+                title: `${result.topic} (${result.targetDays} Days)`,
+                targetDays: result.targetDays,
+                hoursPerDay: result.hoursPerDay
+              });
+              result.completedTasksJson = '[]';
+              result.completedMilestonesJson = '[]';
+              result.progressPercentage = 0;
+            }
+            setActiveRoadmap(result);
+            fetchRoadmaps();
           }}
         />
       )}

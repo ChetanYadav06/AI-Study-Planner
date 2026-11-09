@@ -1,0 +1,57 @@
+{
+  "testCases": [
+    {
+      "description": "Standard sequential tasks with dayNumbers 1 and 2 in phase 0",
+      "phaseIndex": 0,
+      "tasks": [
+        { "dayNumber": 1, "title": "Intro" },
+        { "dayNumber": 2, "title": "Basics" }
+      ],
+      "expectedCanonicalIds": ["0-task-1", "0-task-2"]
+    },
+    {
+      "description": "Duplicate dayNumbers within the same phase (two Day 1 tasks)",
+      "phaseIndex": 0,
+      "tasks": [
+        { "dayNumber": 1, "title": "Day 1 Morning" },
+        { "dayNumber": 1, "title": "Day 1 Evening" }
+      ],
+      "expectedCanonicalIds": ["0-task-1", "0-task-1-b"]
+    },
+    {
+      "description": "Triple duplicate dayNumbers within the same phase (three Day 3 tasks)",
+      "phaseIndex": 1,
+      "tasks": [
+        { "dayNumber": 3, "title": "Part A" },
+        { "dayNumber": 3, "title": "Part B" },
+        { "dayNumber": 3, "title": "Part C" }
+      ],
+      "expectedCanonicalIds": ["1-task-3", "1-task-3-b", "1-task-3-c"]
+    },
+    {
+      "description": "Task with dayNumber 0",
+      "phaseIndex": 0,
+      "tasks": [
+        { "dayNumber": 0, "title": "Orientation Day 0" }
+      ],
+      "expectedCanonicalIds": ["0-task-0"]
+    },
+    {
+      "description": "Tasks with missing or null dayNumber (falls back to task index tIdx)",
+      "phaseIndex": 0,
+      "tasks": [
+        { "title": "Missing dayNumber at idx 0" },
+        { "title": "Missing dayNumber at idx 1" }
+      ],
+      "expectedCanonicalIds": ["0-task-0", "0-task-1"]
+    },
+    {
+      "description": "Explicit preexisting task ID is preserved intact",
+      "phaseIndex": 0,
+      "tasks": [
+        { "id": "custom-uuid-task-99", "dayNumber": 1, "title": "Custom ID task" }
+      ],
+      "expectedCanonicalIds": ["custom-uuid-task-99"]
+    }
+  ]
+}

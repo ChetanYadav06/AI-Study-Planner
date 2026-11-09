@@ -107,6 +107,36 @@ public class SavedRoadmapService {
         return new SavedRoadmapResponse(saved);
     }
 
+    @Transactional
+    public SavedRoadmapResponse replaceRoadmap(String email, Long id, com.aistudyplanner.dto.ReplaceRoadmapRequest request) {
+        SavedRoadmap roadmap = roadmapRepository.findByIdAndUserEmail(id, email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Roadmap not found."));
+
+        if (request.getRoadmapJson() != null && !request.getRoadmapJson().isBlank()) {
+            roadmap.setRoadmapJson(request.getRoadmapJson());
+        }
+        if (request.getTitle() != null && !request.getTitle().isBlank()) {
+            roadmap.setTitle(request.getTitle().trim());
+        }
+        if (request.getTargetDays() != null) {
+            roadmap.setTargetDays(request.getTargetDays());
+        }
+        if (request.getHoursPerDay() != null) {
+            roadmap.setHoursPerDay(request.getHoursPerDay());
+        }
+
+        // Reset completed tasks and milestones upon regeneration swap
+        roadmap.setCompletedTasksJson("[]");
+        roadmap.setCompletedMilestonesJson("[]");
+        roadmap.setProgressPercentage(0);
+
+        // Sync linked goal progress and status
+        syncProgressAndLinkedGoal(roadmap);
+
+        SavedRoadmap saved = roadmapRepository.save(roadmap);
+        return new SavedRoadmapResponse(saved);
+    }
+
     /**
      * Recomputes roadmap progress percentage from valid task completions and syncs the linked goal.
      */

@@ -737,9 +737,18 @@ export const RoadmapWizard = ({
             </div>
 
             {error && (
-              <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center space-x-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
+              <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                  <span>{error || 'Could not generate a roadmap. Please try again.'}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs self-end sm:self-center transition cursor-pointer shadow-2xs"
+                >
+                  Retry Generation
+                </button>
               </div>
             )}
 

@@ -5,6 +5,7 @@
 **/application-local.properties
 **/application-secret.properties
 *.sql
+!scripts/*.sql
 *.dump
 
 # Local database and generated files

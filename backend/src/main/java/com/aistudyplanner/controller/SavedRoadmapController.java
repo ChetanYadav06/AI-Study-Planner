@@ -54,6 +54,15 @@ public class SavedRoadmapController {
         return ResponseEntity.ok(updated);
     }
 
+    @PutMapping("/{id}/replace")
+    public ResponseEntity<SavedRoadmapResponse> replaceRoadmap(
+            Authentication authentication,
+            @PathVariable Long id,
+            @Valid @RequestBody com.aistudyplanner.dto.ReplaceRoadmapRequest request) {
+        SavedRoadmapResponse updated = service.replaceRoadmap(authentication.getName(), id, request);
+        return ResponseEntity.ok(updated);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, String>> deleteSavedRoadmap(
             Authentication authentication,

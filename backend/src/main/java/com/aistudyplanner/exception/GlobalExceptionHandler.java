@@ -32,6 +32,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
+    @ExceptionHandler(RoadmapGenerationException.class)
+    public ResponseEntity<Map<String, Object>> handleRoadmapGenerationException(RoadmapGenerationException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("timestamp", LocalDateTime.now().toString());
+        response.put("status", ex.getStatus().value());
+        response.put("error", ex.getStatus().getReasonPhrase());
+        response.put("message", ex.getMessage());
+
+        return ResponseEntity.status(ex.getStatus()).body(response);
+    }
+
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, Object>> handleResponseStatusException(ResponseStatusException ex) {
         Map<String, Object> response = new HashMap<>();
