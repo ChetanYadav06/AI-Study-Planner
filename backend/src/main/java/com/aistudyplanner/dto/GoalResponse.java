@@ -17,13 +17,22 @@ public class GoalResponse {
     private SkillLevel skillLevel;
     private GoalStatus status;
     private Integer progressPercentage;
+    private String subject;
+    private String specificTopics;
+    private String targetOutcome;
+    private String priority;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private boolean hasLinkedRoadmap;
 
     public GoalResponse() {
     }
 
     public GoalResponse(Goal goal) {
+        this(goal, false);
+    }
+
+    public GoalResponse(Goal goal, boolean hasLinkedRoadmap) {
         this.id = goal.getId();
         this.userId = goal.getUser() != null ? goal.getUser().getId() : null;
         this.title = goal.getTitle();
@@ -33,8 +42,21 @@ public class GoalResponse {
         this.skillLevel = goal.getSkillLevel();
         this.status = goal.getStatus();
         this.progressPercentage = goal.getProgressPercentage();
+        this.subject = goal.getSubject();
+        this.specificTopics = goal.getSpecificTopics();
+        this.targetOutcome = goal.getTargetOutcome();
+        this.priority = goal.getPriority();
         this.createdAt = goal.getCreatedAt();
         this.updatedAt = goal.getUpdatedAt();
+        this.hasLinkedRoadmap = hasLinkedRoadmap;
+    }
+
+    public boolean isHasLinkedRoadmap() {
+        return hasLinkedRoadmap;
+    }
+
+    public void setHasLinkedRoadmap(boolean hasLinkedRoadmap) {
+        this.hasLinkedRoadmap = hasLinkedRoadmap;
     }
 
     public Long getId() {
@@ -107,6 +129,38 @@ public class GoalResponse {
 
     public void setProgressPercentage(Integer progressPercentage) {
         this.progressPercentage = progressPercentage;
+    }
+
+    public String getSubject() {
+        return subject;
+    }
+
+    public void setSubject(String subject) {
+        this.subject = subject;
+    }
+
+    public String getSpecificTopics() {
+        return specificTopics;
+    }
+
+    public void setSpecificTopics(String specificTopics) {
+        this.specificTopics = specificTopics;
+    }
+
+    public String getTargetOutcome() {
+        return targetOutcome;
+    }
+
+    public void setTargetOutcome(String targetOutcome) {
+        this.targetOutcome = targetOutcome;
+    }
+
+    public String getPriority() {
+        return priority;
+    }
+
+    public void setPriority(String priority) {
+        this.priority = priority;
     }
 
     public LocalDateTime getCreatedAt() {

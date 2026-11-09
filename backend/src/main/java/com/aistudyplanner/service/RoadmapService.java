@@ -3,10 +3,15 @@ package com.aistudyplanner.service;
 import com.aistudyplanner.dto.RoadmapRequest;
 import com.aistudyplanner.dto.RoadmapResponse;
 import com.aistudyplanner.dto.RoadmapResponse.*;
+import com.aistudyplanner.entity.StudentProfile;
+import com.aistudyplanner.entity.StudentTopicKnowledge;
+import com.aistudyplanner.repository.StudentProfileRepository;
+import com.aistudyplanner.repository.StudentTopicKnowledgeRepository;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -21,16 +26,44 @@ public class RoadmapService {
 
     private final GeminiTestService geminiTestService;
     private final ObjectMapper objectMapper;
+    private final StudentProfileRepository profileRepository;
+    private final StudentTopicKnowledgeRepository topicKnowledgeRepository;
 
     public RoadmapService(GeminiTestService geminiTestService) {
+        this(geminiTestService, null, null);
+    }
+
+    @Autowired
+    public RoadmapService(
+            GeminiTestService geminiTestService,
+            @Autowired(required = false) StudentProfileRepository profileRepository,
+            @Autowired(required = false) StudentTopicKnowledgeRepository topicKnowledgeRepository) {
         this.geminiTestService = geminiTestService;
+        this.profileRepository = profileRepository;
+        this.topicKnowledgeRepository = topicKnowledgeRepository;
         this.objectMapper = new ObjectMapper()
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
     }
 
     public RoadmapResponse generateRoadmap(RoadmapRequest request) {
-        String prompt = buildPrompt(request);
+        return generateRoadmap(request, null);
+    }
+
+    public RoadmapResponse generateRoadmap(RoadmapRequest request, String userEmail) {
+        StudentProfile profile = null;
+        List<StudentTopicKnowledge> skills = List.of();
+
+        if (userEmail != null && !userEmail.isBlank()) {
+            if (profileRepository != null) {
+                profile = profileRepository.findByUserEmail(userEmail).orElse(null);
+            }
+            if (topicKnowledgeRepository != null) {
+                skills = topicKnowledgeRepository.findByStudentEmail(userEmail);
+            }
+        }
+
+        String prompt = buildPrompt(request, profile, skills);
         String rawResponse = "";
 
         try {
@@ -49,6 +82,10 @@ public class RoadmapService {
     }
 
     public String buildPrompt(RoadmapRequest request) {
+        return buildPrompt(request, null, List.of());
+    }
+
+    public String buildPrompt(RoadmapRequest request, StudentProfile profile, List<StudentTopicKnowledge> studentSkills) {
         double totalHours = request.getTargetDays() * request.getHoursPerDay();
         int weeks = Math.max(1, (int) Math.ceil(request.getTargetDays() / 7.0));
         int dailyMinutes = (int) Math.round(request.getHoursPerDay() * 60);
@@ -56,7 +93,7 @@ public class RoadmapService {
         String skillLevelGuidance = switch (request.getSkillLevel()) {
             case BEGINNER -> """
                 - Tailor for a BEGINNER:
-                  - Start from the ground up, assuming zero or minimal prerequisite knowledge.
+                  - Start from the ground up, assuming minimal prerequisite knowledge.
                   - Break complex ideas into bite-sized analogies and concrete syntax examples.
                   - Emphasize foundational mental models, prerequisite validation, and confidence-building practical exercises.
                 """;
@@ -86,6 +123,70 @@ public class RoadmapService {
             personalizationDetails.append("- Existing Student Background / Prior Knowledge: ")
                     .append(request.getPriorKnowledge().trim())
                     .append(" (Skip redundant basics already mastered!)\n");
+        }
+
+        // Incorporate Student Profile preferences & context
+        if (profile != null) {
+            personalizationDetails.append("\n[STUDENT LEARNING PROFILE & PREFERENCES]\n");
+            if (profile.getCareerGoal() != null && !profile.getCareerGoal().isBlank()) {
+                personalizationDetails.append("- Career Goal: ").append(profile.getCareerGoal().trim()).append("\n");
+            }
+            if (profile.getEducationLevel() != null && !profile.getEducationLevel().isBlank()) {
+                personalizationDetails.append("- Academic Background: ").append(profile.getEducationLevel().trim());
+                if (profile.getAcademicBackground() != null && !profile.getAcademicBackground().isBlank()) {
+                    personalizationDetails.append(" (").append(profile.getAcademicBackground().trim()).append(")");
+                }
+                personalizationDetails.append("\n");
+            }
+            if (profile.getExplanationStyle() != null && !profile.getExplanationStyle().isBlank()) {
+                personalizationDetails.append("- Preferred Explanation Style: ").append(profile.getExplanationStyle().trim())
+                        .append(" (Ensure explanations match this pedagogy)\n");
+            }
+            if (profile.getPracticeStyle() != null && !profile.getPracticeStyle().isBlank()) {
+                personalizationDetails.append("- Preferred Practice Style: ").append(profile.getPracticeStyle().trim())
+                        .append(" (Tailor daily exercises to this format)\n");
+            }
+            if (profile.getLearningMethods() != null && !profile.getLearningMethods().isBlank()) {
+                personalizationDetails.append("- Preferred Learning Formats: ").append(profile.getLearningMethods().trim()).append("\n");
+            }
+            if (profile.getAdditionalContext() != null && !profile.getAdditionalContext().isBlank()) {
+                personalizationDetails.append("- Student AI Tutor Notes: ").append(profile.getAdditionalContext().trim()).append("\n");
+            }
+        }
+
+        // Incorporate Student Topic Knowledge
+        if (studentSkills != null && !studentSkills.isEmpty()) {
+            List<String> mastered = new ArrayList<>();
+            List<String> intermediate = new ArrayList<>();
+            List<String> beginner = new ArrayList<>();
+            List<String> unlearned = new ArrayList<>();
+
+            for (StudentTopicKnowledge k : studentSkills) {
+                switch (k.getKnowledgeLevel()) {
+                    case MASTERED -> mastered.add(k.getTopicName());
+                    case INTERMEDIATE -> intermediate.add(k.getTopicName());
+                    case BEGINNER -> beginner.add(k.getTopicName());
+                    case NOT_LEARNED -> unlearned.add(k.getTopicName());
+                }
+            }
+
+            personalizationDetails.append("\n[KNOWLEDGE-AWARE PEDAGOGICAL CONSTRAINTS]\n");
+            if (!mastered.isEmpty()) {
+                personalizationDetails.append("- ALREADY MASTERED: ").append(String.join(", ", mastered))
+                        .append("\n  * RULE: Strictly exclude basic tutorials on these topics! Only include a rapid verification test or prerequisite checkpoint if essential.\n");
+            }
+            if (!intermediate.isEmpty()) {
+                personalizationDetails.append("- INTERMEDIATE / REVISION NEEDED: ").append(String.join(", ", intermediate))
+                        .append("\n  * RULE: Fast-track intro syntax; focus on rigorous practice, edge cases, and realistic problem-solving.\n");
+            }
+            if (!beginner.isEmpty()) {
+                personalizationDetails.append("- BEGINNER / FOUNDATIONS IN PROGRESS: ").append(String.join(", ", beginner))
+                        .append("\n  * RULE: Provide structured explanation, scaffolded examples, and guided practice exercises.\n");
+            }
+            if (!unlearned.isEmpty()) {
+                personalizationDetails.append("- UNFAMILIAR / NOT YET LEARNED: ").append(String.join(", ", unlearned))
+                        .append("\n  * RULE: Build solid intuition from scratch with clear conceptual breakdown before assigning problems.\n");
+            }
         }
 
         String feasibilityGuidance;
@@ -146,7 +247,12 @@ public class RoadmapService {
                       "title": "Actionable task title",
                       "description": "Specific study and practice instruction for this day",
                       "estimatedMinutes": %d,
-                      "activityType": "STUDY" // Allowed: STUDY, PRACTICE, REVISION, ASSESSMENT
+                      "activityType": "STUDY",
+                      "learningObjectives": ["Clear learning objective 1", "Clear learning objective 2"],
+                      "subtopics": ["Granular subtopic 1", "Granular subtopic 2", "Granular subtopic 3"],
+                      "conceptExplanation": "Short 1-2 sentence core concept summary or key mental model",
+                      "practiceTasks": ["Actionable coding or hands-on practice step 1", "Practice step 2"],
+                      "quizQuestion": "Quick self-assessment check question on this daily concept"
                     }
                   ],
                   "practicalExercises": [

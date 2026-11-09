@@ -22,10 +22,14 @@ public class GoalService {
 
     private final GoalRepository goalRepository;
     private final UserRepository userRepository;
+    private final com.aistudyplanner.repository.SavedRoadmapRepository savedRoadmapRepository;
 
-    public GoalService(GoalRepository goalRepository, UserRepository userRepository) {
+    public GoalService(GoalRepository goalRepository,
+                       UserRepository userRepository,
+                       com.aistudyplanner.repository.SavedRoadmapRepository savedRoadmapRepository) {
         this.goalRepository = goalRepository;
         this.userRepository = userRepository;
+        this.savedRoadmapRepository = savedRoadmapRepository;
     }
 
     private User getAuthenticatedUser(String email) {
@@ -45,6 +49,18 @@ public class GoalService {
                 request.getHoursPerDay(),
                 request.getSkillLevel()
         );
+        if (request.getSubject() != null) {
+            goal.setSubject(request.getSubject().trim());
+        }
+        if (request.getSpecificTopics() != null) {
+            goal.setSpecificTopics(request.getSpecificTopics().trim());
+        }
+        if (request.getTargetOutcome() != null) {
+            goal.setTargetOutcome(request.getTargetOutcome().trim());
+        }
+        if (request.getPriority() != null) {
+            goal.setPriority(request.getPriority().trim().toUpperCase());
+        }
 
         Goal savedGoal = goalRepository.save(goal);
         return new GoalResponse(savedGoal);
@@ -55,7 +71,7 @@ public class GoalService {
         User user = getAuthenticatedUser(userEmail);
         return goalRepository.findByUserIdOrderByCreatedAtDesc(user.getId())
                 .stream()
-                .map(GoalResponse::new)
+                .map(g -> new GoalResponse(g, savedRoadmapRepository.existsByGoalId(g.getId())))
                 .collect(Collectors.toList());
     }
 
@@ -64,7 +80,7 @@ public class GoalService {
         User user = getAuthenticatedUser(userEmail);
         Goal goal = goalRepository.findByIdAndUserId(goalId, user.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Learning goal not found."));
-        return new GoalResponse(goal);
+        return new GoalResponse(goal, savedRoadmapRepository.existsByGoalId(goal.getId()));
     }
 
     @Transactional
@@ -72,6 +88,11 @@ public class GoalService {
         User user = getAuthenticatedUser(userEmail);
         Goal goal = goalRepository.findByIdAndUserId(goalId, user.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Learning goal not found."));
+
+        if (savedRoadmapRepository.existsByGoalId(goalId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Manual progress updates are disabled for goals with an active AI roadmap. Track progress by completing roadmap tasks.");
+        }
 
         if (request.getStatus() != null) {
             goal.setStatus(request.getStatus());
@@ -119,7 +140,7 @@ public class GoalService {
 
         // Default initial streak to 1 if active goals exist, else 0
         int studyStreakDays = activeGoals > 0 || completedGoals > 0 ? 1 : 0;
-        int roadmapsGenerated = 0; // Phase 4 will increment this when roadmaps are saved
+        int roadmapsGenerated = (int) savedRoadmapRepository.countByUserEmail(userEmail);
 
         return new DashboardStatsResponse(
                 totalGoals,

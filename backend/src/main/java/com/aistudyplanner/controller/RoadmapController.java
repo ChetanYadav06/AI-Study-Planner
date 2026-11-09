@@ -5,6 +5,7 @@ import com.aistudyplanner.dto.RoadmapResponse;
 import com.aistudyplanner.service.RoadmapService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,14 +20,15 @@ public class RoadmapController {
 
     /**
      * POST /api/ai/roadmap
-     * Generates a personalized AI study roadmap for the authenticated student.
-     * Request body: { topic, description, skillLevel, targetDays, hoursPerDay, goalId? }
+     * Generates a personalized, knowledge-aware AI study roadmap for the authenticated student.
      */
     @PostMapping("/roadmap")
     public ResponseEntity<RoadmapResponse> generateRoadmap(
+            Authentication authentication,
             @Valid @RequestBody RoadmapRequest request) {
 
-        RoadmapResponse roadmap = roadmapService.generateRoadmap(request);
+        String email = authentication != null ? authentication.getName() : null;
+        RoadmapResponse roadmap = roadmapService.generateRoadmap(request, email);
         return ResponseEntity.ok(roadmap);
     }
 }

@@ -37,10 +37,26 @@ class GoalControllerIntegrationTest {
     private GoalRepository goalRepository;
 
     @Autowired
+    private com.aistudyplanner.repository.SavedRoadmapRepository roadmapRepository;
+
+    @Autowired
+    private com.aistudyplanner.repository.StudentTopicKnowledgeRepository topicRepository;
+
+    @Autowired
+    private com.aistudyplanner.repository.StudentProfileRepository profileRepository;
+
+    @Autowired
+    private com.aistudyplanner.repository.StudySessionRepository studySessionRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @BeforeEach
     void setup() {
+        studySessionRepository.deleteAll();
+        roadmapRepository.deleteAll();
+        topicRepository.deleteAll();
+        profileRepository.deleteAll();
         goalRepository.deleteAll();
         userRepository.deleteAll();
     }

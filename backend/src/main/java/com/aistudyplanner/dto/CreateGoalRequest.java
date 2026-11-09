@@ -25,6 +25,17 @@ public class CreateGoalRequest {
     @NotNull(message = "Skill level is required.")
     private SkillLevel skillLevel;
 
+    @Size(max = 100, message = "Subject cannot exceed 100 characters.")
+    private String subject;
+
+    @Size(max = 3000, message = "Specific topics cannot exceed 3000 characters.")
+    private String specificTopics;
+
+    @Size(max = 3000, message = "Target outcome cannot exceed 3000 characters.")
+    private String targetOutcome;
+
+    private String priority = "MEDIUM";
+
     public CreateGoalRequest() {
     }
 
@@ -74,5 +85,37 @@ public class CreateGoalRequest {
 
     public void setSkillLevel(SkillLevel skillLevel) {
         this.skillLevel = skillLevel;
+    }
+
+    public String getSubject() {
+        return subject;
+    }
+
+    public void setSubject(String subject) {
+        this.subject = subject;
+    }
+
+    public String getSpecificTopics() {
+        return specificTopics;
+    }
+
+    public void setSpecificTopics(String specificTopics) {
+        this.specificTopics = specificTopics;
+    }
+
+    public String getTargetOutcome() {
+        return targetOutcome;
+    }
+
+    public void setTargetOutcome(String targetOutcome) {
+        this.targetOutcome = targetOutcome;
+    }
+
+    public String getPriority() {
+        return priority;
+    }
+
+    public void setPriority(String priority) {
+        this.priority = priority;
     }
 }

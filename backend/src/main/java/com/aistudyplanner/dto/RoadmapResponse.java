@@ -30,6 +30,11 @@ public class RoadmapResponse {
         private String description;
         private int estimatedMinutes;
         private String activityType; // STUDY | PRACTICE | REVISION | ASSESSMENT
+        private List<String> learningObjectives = new ArrayList<>();
+        private List<String> subtopics = new ArrayList<>();
+        private String conceptExplanation;
+        private List<String> practiceTasks = new ArrayList<>();
+        private String quizQuestion;
 
         public DailyTask() {}
 
@@ -55,6 +60,27 @@ public class RoadmapResponse {
 
         public String getActivityType() { return activityType; }
         public void setActivityType(String activityType) { this.activityType = activityType; }
+
+        public List<String> getLearningObjectives() { return learningObjectives; }
+        public void setLearningObjectives(List<String> learningObjectives) {
+            this.learningObjectives = learningObjectives != null ? learningObjectives : new ArrayList<>();
+        }
+
+        public List<String> getSubtopics() { return subtopics; }
+        public void setSubtopics(List<String> subtopics) {
+            this.subtopics = subtopics != null ? subtopics : new ArrayList<>();
+        }
+
+        public String getConceptExplanation() { return conceptExplanation; }
+        public void setConceptExplanation(String conceptExplanation) { this.conceptExplanation = conceptExplanation; }
+
+        public List<String> getPracticeTasks() { return practiceTasks; }
+        public void setPracticeTasks(List<String> practiceTasks) {
+            this.practiceTasks = practiceTasks != null ? practiceTasks : new ArrayList<>();
+        }
+
+        public String getQuizQuestion() { return quizQuestion; }
+        public void setQuizQuestion(String quizQuestion) { this.quizQuestion = quizQuestion; }
     }
 
     public static class PracticalExercise {

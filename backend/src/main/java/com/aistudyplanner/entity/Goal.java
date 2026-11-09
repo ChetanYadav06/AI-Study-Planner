@@ -38,6 +38,18 @@ public class Goal {
     @Column(name = "progress_percentage", nullable = false)
     private Integer progressPercentage = 0;
 
+    @Column(length = 100)
+    private String subject;
+
+    @Column(name = "specific_topics", columnDefinition = "TEXT")
+    private String specificTopics;
+
+    @Column(name = "target_outcome", columnDefinition = "TEXT")
+    private String targetOutcome;
+
+    @Column(length = 20)
+    private String priority = "MEDIUM";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -145,6 +157,38 @@ public class Goal {
 
     public void setProgressPercentage(Integer progressPercentage) {
         this.progressPercentage = progressPercentage;
+    }
+
+    public String getSubject() {
+        return subject;
+    }
+
+    public void setSubject(String subject) {
+        this.subject = subject;
+    }
+
+    public String getSpecificTopics() {
+        return specificTopics;
+    }
+
+    public void setSpecificTopics(String specificTopics) {
+        this.specificTopics = specificTopics;
+    }
+
+    public String getTargetOutcome() {
+        return targetOutcome;
+    }
+
+    public void setTargetOutcome(String targetOutcome) {
+        this.targetOutcome = targetOutcome;
+    }
+
+    public String getPriority() {
+        return priority;
+    }
+
+    public void setPriority(String priority) {
+        this.priority = priority;
     }
 
     public LocalDateTime getCreatedAt() {

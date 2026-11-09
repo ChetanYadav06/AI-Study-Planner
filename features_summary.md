@@ -147,15 +147,31 @@
 
 ---
 
-## ⏳ Phases 4–8 (Not Yet Implemented)
+## 🚀 Student Profile & Knowledge-Aware Interactive AI Roadmap Experience (Fully Implemented)
 
-| Phase | Description |
-|---|---|
-| **Phase 4** | Gemini AI integration — generate day-wise study roadmaps from a learning goal |
-| **Phase 5** | Timetable generation, roadmap save/manage, task scheduling |
-| **Phase 6** | Task completion tracking, study timer, session recording |
-| **Phase 7** | Progress analytics with charts (Recharts already installed), UI refinement |
-| **Phase 8** | End-to-end testing, security audit, final polish |
+### 1. Student Learning Profile (`/api/profile`, `ProfileView.jsx`)
+- **Profile Overview**: Displays student account credentials, education level, academic background, career goal, and overall experience level (`BEGINNER`, `INTERMEDIATE`, `ADVANCED`).
+- **Profile Readiness Meter**: Dynamically calculated percentage based on actual saved profile data and skills count.
+- **Study Schedule**: Configurable daily study hours, days per week, and preferred focus time windows.
+- **Learning Preferences**: Interactive selectors for learning methods (video, reading, coding practice, projects, quizzes), explanation styles (simple, step-by-step, technical, examples-first), and practice formats (coding problems, MCQs, mini-projects, real-world scenarios).
+- **AI Tutor Guidance**: Dedicated context area ("What should your AI study planner know about you?") securely fed into Gemini prompts.
 
-> [!NOTE]
-> The Gemini API key config is already wired into `application.properties` via `$env:GEMINI_API_KEY` — ready for Phase 4 activation.
+### 2. My Skills & Topic-Level Knowledge Engine (`/api/skills`, `StudentTopicKnowledge.java`)
+- **Knowledge Level Tracking**: `MASTERED`, `INTERMEDIATE`, `BEGINNER`, `NOT_LEARNED`.
+- **Full CRUD & Search**: Fast search, domain suggestions, 1-click level cycle/upgrade, and deletion.
+- **Bulk Diagnostic Import**: Supports batch updating from roadmap wizard starting point checks.
+- **Student Data Isolation**: Fully enforced at the repository and service layers via authenticated principal.
+
+### 3. Creative 5-Step AI Roadmap Generation Wizard (`RoadmapWizard.jsx`)
+- **Step 1: Goal Definition**: Curriculum presets (Java DSA, Full-Stack, SQL, Machine Learning) or custom topic with goal linking.
+- **Step 2: Starting Knowledge Calibration**: Automatic extraction of topic-specific skills; intuitive 1-click ratings ("I already know this", "I know the basics", "I need to learn this", "I'm not sure" with diagnostic check tip). Automatically persists knowledge to backend.
+- **Step 3: Target & Study Budget**: Duration days, daily commitment, realistic workload check with total study hours calculator.
+- **Step 4: Pedagogy Customization**: Explanation style and practice format adjustments without overwriting permanent profile.
+- **Step 5: Review & Synthesize**: Summary specification and animated AI generation with error handling.
+
+### 5. Visual Interactive Roadmap & Backend Progress Persistence (`InteractiveRoadmap.jsx`, `SavedRoadmap.java`)
+- **Connected Milestone Journey Track**: Visual stage progression from Start to Mastery with milestone status nodes.
+- **Expandable Topic & Daily Task Cards**: Title, activity tags (`STUDY`, `PRACTICE`, `REVISION`, `ASSESSMENT`), estimated duration, objectives, and prerequisites.
+- **Prerequisite Locking**: Dynamic states (`LOCKED`, `READY_TO_LEARN`, `IN_PROGRESS`, `COMPLETED`).
+- **MySQL Progress Persistence**: Checking/unchecking tasks and milestones saves directly to MySQL via `/api/ai/roadmaps/{id}/progress`.
+- **Knowledge-Aware Gemini Synthesis**: Mastered topics bypass introductory syntax, intermediate topics receive applied practice, and beginner topics receive foundational theory.

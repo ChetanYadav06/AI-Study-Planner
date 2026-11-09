@@ -8,13 +8,27 @@ import { ProfileView } from './components/profile/ProfileView';
 import { AuthModal } from './components/auth/AuthModal';
 import { CreateGoalModal } from './components/goals/CreateGoalModal';
 import { MyRoadmapsView } from './components/roadmap/MyRoadmapsView';
+import { StudyPlannerView } from './components/views/StudyPlannerView';
+import { ActiveStudyView } from './components/views/ActiveStudyView';
+import { ProgressView } from './components/views/ProgressView';
+import { SavedResourcesView } from './components/views/SavedResourcesView';
 
 const AppContent = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [createGoalModalOpen, setCreateGoalModalOpen] = useState(false);
+  const [selectedGoalForRoadmap, setSelectedGoalForRoadmap] = useState(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [accentColor, setAccentColor] = useState(() => localStorage.getItem('ai_study_planner_accent') || 'teal');
+
   const { isAuthenticated } = useAuth();
+
+  const handleAccentChange = (color) => {
+    setAccentColor(color);
+    localStorage.setItem('ai_study_planner_accent', color);
+  };
 
   const handleOpenAuth = (mode = 'login') => {
     setAuthMode(mode);
@@ -37,31 +51,49 @@ const AppContent = () => {
     setCreateGoalModalOpen(true);
   };
 
+  const handleNavigateRoadmap = (goal = null) => {
+    if (!isAuthenticated) {
+      handleOpenAuth('login');
+      return;
+    }
+    setSelectedGoalForRoadmap(goal);
+    setActiveTab('my-roadmaps');
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      {/* Top Navigation */}
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-[#1F2937]">
+      {/* Top Navbar */}
       <Navbar
         onOpenAuth={handleOpenAuth}
         onNavigateProfile={handleNavigateProfile}
+        onToggleMobileMenu={() => setMobileSidebarOpen(!mobileSidebarOpen)}
       />
 
-      {/* Main Container */}
-      <div className="flex-1 flex max-w-7xl w-full mx-auto">
-        {/* Navigation Sidebar */}
+      {/* Main Layout Area */}
+      <div className="flex-1 flex w-full max-w-[1536px] mx-auto items-start">
+        {/* Floating Sidebar */}
         <Sidebar
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           onOpenAuth={handleOpenAuth}
           onOpenCreateGoal={handleOpenCreateGoal}
+          isCollapsed={sidebarCollapsed}
+          setIsCollapsed={setSidebarCollapsed}
+          mobileOpen={mobileSidebarOpen}
+          setMobileOpen={setMobileSidebarOpen}
+          accentColor={accentColor}
+          onAccentChange={handleAccentChange}
         />
 
-        {/* Content View Area */}
-        <main className="flex-1 p-6 md:p-8 overflow-y-auto">
+        {/* Content View Canvas */}
+        <main className="flex-1 p-4 sm:p-6 md:p-8 min-w-0 overflow-y-auto">
           {activeTab === 'dashboard' && (
             isAuthenticated ? (
               <StudentDashboard
                 onNavigateTab={setActiveTab}
                 onOpenCreateGoal={handleOpenCreateGoal}
+                onNavigateRoadmap={handleNavigateRoadmap}
+                accentColor={accentColor}
               />
             ) : (
               <StudentPortalLanding onOpenAuth={handleOpenAuth} />
@@ -70,7 +102,39 @@ const AppContent = () => {
 
           {activeTab === 'my-roadmaps' && (
             isAuthenticated ? (
-              <MyRoadmapsView onNavigateTab={setActiveTab} />
+              <MyRoadmapsView
+                onNavigateTab={setActiveTab}
+                initialGoal={selectedGoalForRoadmap}
+              />
+            ) : (
+              <StudentPortalLanding onOpenAuth={handleOpenAuth} />
+            )
+          )}
+
+          {activeTab === 'study-planner' && (
+            isAuthenticated ? (
+              <StudyPlannerView
+                onOpenCreateGoal={handleOpenCreateGoal}
+                onNavigateRoadmap={handleNavigateRoadmap}
+              />
+            ) : (
+              <StudentPortalLanding onOpenAuth={handleOpenAuth} />
+            )
+          )}
+
+          {activeTab === 'active-study' && (
+            isAuthenticated ? (
+              <ActiveStudyView
+                onNavigateRoadmap={handleNavigateRoadmap}
+              />
+            ) : (
+              <StudentPortalLanding onOpenAuth={handleOpenAuth} />
+            )
+          )}
+
+          {activeTab === 'my-progress' && (
+            isAuthenticated ? (
+              <ProgressView />
             ) : (
               <StudentPortalLanding onOpenAuth={handleOpenAuth} />
             )
@@ -78,21 +142,12 @@ const AppContent = () => {
 
           {activeTab === 'profile' && <ProfileView />}
 
-          {activeTab !== 'dashboard' && activeTab !== 'my-roadmaps' && activeTab !== 'profile' && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center shadow-xs max-w-lg mx-auto mt-8">
-              <h2 className="text-lg font-bold text-slate-800 capitalize mb-2">
-                {activeTab.replace('-', ' ')}
-              </h2>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                This feature is currently being integrated. You can manage your learning goals and track daily commitments directly from the Student Dashboard.
-              </p>
-              <button
-                onClick={() => setActiveTab('dashboard')}
-                className="mt-5 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition cursor-pointer shadow-xs"
-              >
-                Return to Dashboard
-              </button>
-            </div>
+          {activeTab === 'saved-resources' && (
+            isAuthenticated ? (
+              <SavedResourcesView />
+            ) : (
+              <StudentPortalLanding onOpenAuth={handleOpenAuth} />
+            )
           )}
         </main>
       </div>
@@ -104,7 +159,7 @@ const AppContent = () => {
         initialMode={authMode}
       />
 
-      {/* Global Create Goal Modal triggered from sidebar */}
+      {/* Global Create Goal Modal triggered from sidebar or buttons */}
       <CreateGoalModal
         isOpen={createGoalModalOpen}
         onClose={() => setCreateGoalModalOpen(false)}

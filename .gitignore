@@ -4,6 +4,8 @@
 !.env.example
 **/application-local.properties
 **/application-secret.properties
+*.sql
+*.dump
 
 # Local database and generated files
 .mysql/

@@ -55,6 +55,72 @@ export const getUserProfile = async () => {
   return response.data;
 };
 
+// Student Learning Profile API
+export const getStudentProfile = async () => {
+  const response = await api.get('/profile');
+  return response.data;
+};
+
+export const updateStudentProfile = async (data) => {
+  const response = await api.put('/profile', data);
+  return response.data;
+};
+
+// Topic Knowledge / Skills API
+export const getSkills = async (search = '') => {
+  const params = search ? { search } : {};
+  const response = await api.get('/skills', { params });
+  return response.data;
+};
+
+export const getTopicKnowledge = getSkills;
+
+export const upsertSkill = async (data) => {
+  const response = await api.post('/skills', data);
+  return response.data;
+};
+
+export const bulkUpsertSkills = async (skills) => {
+  const response = await api.post('/skills/bulk', { skills });
+  return response.data;
+};
+
+export const updateSkillLevel = async (id, level) => {
+  const response = await api.patch(`/skills/${id}`, null, { params: { level } });
+  return response.data;
+};
+
+export const deleteSkill = async (id) => {
+  const response = await api.delete(`/skills/${id}`);
+  return response.data;
+};
+
+// Saved Roadmaps API
+export const saveRoadmap = async (data) => {
+  const response = await api.post('/ai/roadmaps/save', data);
+  return response.data;
+};
+
+export const getSavedRoadmaps = async () => {
+  const response = await api.get('/ai/roadmaps');
+  return response.data;
+};
+
+export const getSavedRoadmapById = async (id) => {
+  const response = await api.get(`/ai/roadmaps/${id}`);
+  return response.data;
+};
+
+export const updateRoadmapProgress = async (id, data) => {
+  const response = await api.patch(`/ai/roadmaps/${id}/progress`, data);
+  return response.data;
+};
+
+export const deleteSavedRoadmap = async (id) => {
+  const response = await api.delete(`/ai/roadmaps/${id}`);
+  return response.data;
+};
+
 // Goals API
 export const getGoals = async () => {
   const response = await api.get('/goals');
@@ -84,6 +150,22 @@ export const deleteGoal = async (id) => {
 
 export const getDashboardStats = async () => {
   const response = await api.get('/dashboard/stats');
+  return response.data;
+};
+
+// Study Sessions API
+export const createStudySession = async (data) => {
+  const response = await api.post('/sessions', data);
+  return response.data;
+};
+
+export const getStudySessions = async (params = {}) => {
+  const response = await api.get('/sessions', { params });
+  return response.data;
+};
+
+export const getStudySessionsSummary = async (params = {}) => {
+  const response = await api.get('/sessions/summary', { params });
   return response.data;
 };
 
