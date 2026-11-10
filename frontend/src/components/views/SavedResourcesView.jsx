@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Bookmark, ExternalLink, BookOpen, Sparkles, Filter, Code, FileText, Video } from 'lucide-react';
+import { ExternalLink, Bookmark } from 'lucide-react';
 import { getSavedRoadmaps } from '../../services/api';
+import { Card } from '../ui/Card';
+import { PageHeader } from '../ui/PageHeader';
+import { EmptyState } from '../ui/EmptyState';
 
 export const SavedResourcesView = () => {
   const [roadmaps, setRoadmaps] = useState([]);
@@ -41,103 +44,100 @@ export const SavedResourcesView = () => {
   ];
 
   const allDisplayResources = resources.length > 0 ? resources : defaultResources;
+  const filterTabs = ['ALL', 'DOCUMENTATION', 'PRACTICE', 'GUIDE'];
+
   const filtered = filterType === 'ALL'
     ? allDisplayResources
     : allDisplayResources.filter(r => (r.type || 'DOCUMENTATION').toUpperCase() === filterType);
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-16 animate-fade-slide">
-      {/* Header Banner */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <div>
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-200/60 text-xs font-bold uppercase tracking-wider mb-2">
-            <Bookmark className="w-3.5 h-3.5 text-teal-600" />
-            <span>Curated Academic Repository</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Saved Learning Resources
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xl leading-relaxed">
-            Documentation, video courses, and coding practice links curated by your AI study planner.
-          </p>
-        </div>
+    <div className="space-y-6 max-w-5xl mx-auto pb-16">
+      {/* PageHeader primitive: title + subtitle, no eyebrow */}
+      <PageHeader
+        title="Resources"
+        subtitle="Links saved for your roadmaps."
+      />
 
-        {/* Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 self-start sm:self-center">
-          {['ALL', 'DOCUMENTATION', 'PRACTICE', 'GUIDE'].map((type) => (
+      {/* Simple text-tab filter row */}
+      <div className="flex items-center gap-1 border-b border-[#e5e7eb] overflow-x-auto">
+        {filterTabs.map((type) => {
+          const isActive = filterType === type;
+          return (
             <button
               key={type}
+              type="button"
               onClick={() => setFilterType(type)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                filterType === type
-                  ? 'bg-teal-600 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150 cursor-pointer min-h-[40px] whitespace-nowrap focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 ${
+                isActive
+                  ? 'border-[#0f766e] text-[#0f766e]'
+                  : 'border-transparent text-[#4b5563] hover:text-[#111827] hover:border-[#e5e7eb]'
               }`}
             >
-              {type}
+              {type === 'ALL' ? 'All' : type.charAt(0) + type.slice(1).toLowerCase()}
             </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Resources Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {filtered.map((res, idx) => {
-          const hasUrl = Boolean(res.url && res.url.trim());
-          const cardBody = (
-            <>
-              <div>
-                <div className="flex items-start justify-between gap-2">
-                  <span className="text-[10px] font-black px-2.5 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200/60 uppercase">
-                    {res.type || 'DOCUMENTATION'}
-                  </span>
-                  {hasUrl && (
-                    <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-teal-600 transition" />
-                  )}
-                </div>
-
-                <h3 className="text-sm font-bold text-slate-900 mt-2.5 group-hover:text-teal-700 transition leading-snug">
-                  {res.title}
-                </h3>
-                {res.relevance && (
-                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed line-clamp-2">
-                    {res.relevance}
-                  </p>
-                )}
-              </div>
-
-              {hasUrl && (
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-teal-600 font-bold">
-                  <span>Open resource</span>
-                  <span>↗</span>
-                </div>
-              )}
-            </>
-          );
-
-          return hasUrl ? (
-            <a
-              key={idx}
-              href={res.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-5 rounded-3xl bg-white border border-slate-200/80 hover:border-teal-400 card-hover-lift transition-all flex flex-col justify-between group shadow-xs"
-            >
-              {cardBody}
-            </a>
-          ) : (
-            <div
-              key={idx}
-              className="p-5 rounded-3xl bg-white border border-slate-200/80 flex flex-col justify-between shadow-xs"
-            >
-              {cardBody}
-            </div>
           );
         })}
       </div>
+
+      {/* Resource cards list */}
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon={Bookmark}
+          title="No resources found"
+          description={`No ${filterType.toLowerCase()} resources currently match your filter.`}
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filtered.map((res, idx) => {
+            const hasUrl = Boolean(res.url && res.url.trim());
+            const typeLabel = (res.type || 'DOCUMENTATION').toUpperCase();
+
+            return (
+              <Card
+                key={idx}
+                className="p-5 flex flex-col justify-between hover:border-[#cbd5e1] transition-colors duration-150"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-[#4b5563]">
+                      {typeLabel}
+                    </span>
+                    {hasUrl && (
+                      <ExternalLink className="w-4 h-4 text-[#4b5563] shrink-0" aria-hidden="true" />
+                    )}
+                  </div>
+
+                  <h2 className="text-sm font-semibold text-[#111827] leading-snug">
+                    {res.title}
+                  </h2>
+
+                  {res.relevance && (
+                    <p className="text-sm text-[#4b5563] leading-relaxed">
+                      {res.relevance}
+                    </p>
+                  )}
+                </div>
+
+                {hasUrl && (
+                  <div className="mt-4 pt-3 border-t border-[#e5e7eb] flex items-center justify-between">
+                    <a
+                      href={res.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-medium text-[#0f766e] hover:text-[#115e59] inline-flex items-center gap-1 focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 rounded-sm"
+                    >
+                      <span>Open resource</span>
+                      <span aria-hidden="true">↗</span>
+                    </a>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
 
 export default SavedResourcesView;
-

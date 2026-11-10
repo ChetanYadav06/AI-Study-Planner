@@ -61,28 +61,27 @@ const AppContent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-[#1F2937]">
-      {/* Top Navbar */}
-      <Navbar
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col md:flex-row text-[#111827]">
+      {/* Sidebar: Desktop Flush Left / Mobile Drawer */}
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
         onOpenAuth={handleOpenAuth}
-        onNavigateProfile={handleNavigateProfile}
-        onToggleMobileMenu={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+        onOpenCreateGoal={handleOpenCreateGoal}
+        isCollapsed={sidebarCollapsed}
+        setIsCollapsed={setSidebarCollapsed}
+        mobileOpen={mobileSidebarOpen}
+        setMobileOpen={setMobileSidebarOpen}
+        accentColor={accentColor}
+        onAccentChange={handleAccentChange}
       />
 
-      {/* Main Layout Area */}
-      <div className="flex-1 flex w-full max-w-[1536px] mx-auto items-start">
-        {/* Floating Sidebar */}
-        <Sidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+        {/* Top Navbar */}
+        <Navbar
           onOpenAuth={handleOpenAuth}
-          onOpenCreateGoal={handleOpenCreateGoal}
-          isCollapsed={sidebarCollapsed}
-          setIsCollapsed={setSidebarCollapsed}
-          mobileOpen={mobileSidebarOpen}
-          setMobileOpen={setMobileSidebarOpen}
-          accentColor={accentColor}
-          onAccentChange={handleAccentChange}
+          onNavigateProfile={handleNavigateProfile}
+          onToggleMobileMenu={() => setMobileSidebarOpen(!mobileSidebarOpen)}
         />
 
         {/* Content View Canvas */}

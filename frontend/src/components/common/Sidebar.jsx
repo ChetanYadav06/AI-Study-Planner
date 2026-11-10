@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   LayoutDashboard,
   Map,
@@ -14,12 +14,7 @@ import {
   SlidersHorizontal,
   Settings,
   LogOut,
-  Sun,
-  Sparkles,
-  CalendarDays,
-  PlusCircle,
-  Brain,
-  Check
+  BookOpen
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { SettingsModal } from './SettingsModal';
@@ -36,7 +31,7 @@ export const Sidebar = ({
   accentColor = 'teal',
   onAccentChange
 }) => {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [customizeOpen, setCustomizeOpen] = useState(false);
@@ -61,21 +56,13 @@ export const Sidebar = ({
     });
   };
 
-  // Format today's date (e.g. "Sat, Oct 31")
-  const todayFormatted = new Intl.DateTimeFormat('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric'
-  }).format(new Date());
-
-  // Master navigation list
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, core: true },
     { id: 'my-roadmaps', label: 'My Roadmaps', icon: Map, core: true },
     { id: 'study-planner', label: 'Study Planner', icon: Calendar, core: false },
     { id: 'active-study', label: 'Active Study', icon: Zap, core: false },
     { id: 'my-progress', label: 'My Progress', icon: TrendingUp, core: false },
-    { id: 'profile', label: 'My Learning Profile', icon: User, core: true },
+    { id: 'profile', label: 'Learning Profile', icon: User, core: true },
     { id: 'saved-resources', label: 'Saved Resources', icon: Bookmark, core: false },
   ];
 
@@ -95,40 +82,28 @@ export const Sidebar = ({
     if (setMobileOpen) setMobileOpen(false);
   };
 
-  // Active theme style (Teal or Indigo)
-  const isTeal = accentColor === 'teal';
-  const activeStyle = isTeal
-    ? 'bg-[#F0FDFA] border-[#0D9488]/30 text-[#0F172A] font-semibold shadow-2xs'
-    : 'bg-[#EEF2FF] border-[#4338CA]/30 text-[#0F172A] font-semibold shadow-2xs';
-
-  const activeIconColor = isTeal ? 'text-[#0D9488]' : 'text-[#4338CA]';
-  const activeIndicatorColor = isTeal ? 'bg-[#0D9488]' : 'bg-[#4338CA]';
-
   const sidebarContent = (
     <aside
-      className={`bg-white border border-[#E2E8F0] shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[26px] flex flex-col justify-between select-none transition-all duration-300 ease-in-out h-full overflow-y-auto max-h-full ${
-        isCollapsed ? 'w-[78px] p-3' : 'w-[270px] p-4 sm:p-5'
+      className={`bg-white border-r border-[#e5e7eb] flex flex-col justify-between select-none h-full overflow-y-auto ${
+        isCollapsed ? 'w-[64px] p-2.5' : 'w-[250px] p-4'
       }`}
     >
-      {/* ── TOP SECTION: Header & Search & Nav ── */}
+      {/* ── TOP SECTION: Brand, Collapse Toggle, Search, Nav ── */}
       <div className="space-y-4 flex-1 flex flex-col min-h-0">
-        {/* Header: Logo, Name, Collapse Toggle */}
-        <div className="flex items-center justify-between pb-2 border-b border-[#E2E8F0]/70">
+        {/* Brand Header */}
+        <div className="flex items-center justify-between pb-3 border-b border-[#e5e7eb]">
           <div
             onClick={() => handleNavClick('dashboard')}
-            className="flex items-center space-x-2.5 cursor-pointer group truncate"
+            className="flex items-center gap-2.5 cursor-pointer truncate"
           >
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#4338CA] to-[#7C3AED] flex items-center justify-center text-white shadow-xs shrink-0 group-hover:scale-105 transition-transform duration-200">
-              <Sparkles className="w-4 h-4 text-cyan-300" />
+            <div className="w-8 h-8 rounded-md bg-[#f0fdfa] border border-[#0f766e]/20 flex items-center justify-center text-[#0f766e] shrink-0">
+              <BookOpen className="w-4 h-4" />
             </div>
 
             {!isCollapsed && (
               <div className="truncate">
-                <span className="text-sm font-black tracking-tight text-[#1F2937] block leading-tight">
+                <span className="text-sm font-semibold text-[#111827] block leading-tight">
                   AI Study Planner
-                </span>
-                <span className="text-[10px] font-bold text-[#64748B] tracking-wider uppercase block">
-                  Learning Studio
                 </span>
               </div>
             )}
@@ -136,8 +111,9 @@ export const Sidebar = ({
 
           {/* Desktop Collapse Toggle */}
           <button
+            type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden md:flex p-1.5 rounded-xl text-[#64748B] hover:text-[#1F2937] hover:bg-slate-100 transition cursor-pointer"
+            className="hidden md:flex p-1.5 rounded-md text-[#4b5563] hover:text-[#111827] hover:bg-[#f8fafc] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-label="Toggle sidebar collapse"
           >
@@ -148,18 +124,20 @@ export const Sidebar = ({
         {/* Search Field */}
         {!isCollapsed ? (
           <div className="relative">
-            <Search className="w-4 h-4 text-[#64748B] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-[#4b5563] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Search navigation..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-7 py-2 rounded-xl bg-slate-50/80 border border-[#E2E8F0] text-xs text-[#1F2937] placeholder-[#64748B] outline-none focus:border-teal-500/60 focus:bg-white transition"
+              className="w-full pl-9 pr-7 py-2 rounded-md bg-[#f8fafc] border border-[#e5e7eb] text-sm text-[#111827] placeholder-[#4b5563] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 transition-colors duration-150"
             />
             {searchQuery && (
               <button
+                type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#4b5563] hover:text-[#111827] p-0.5 cursor-pointer"
+                aria-label="Clear search"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -167,100 +145,86 @@ export const Sidebar = ({
           </div>
         ) : (
           <button
+            type="button"
             onClick={() => setIsCollapsed(false)}
-            className="w-full py-2 rounded-xl bg-slate-50 border border-[#E2E8F0] flex items-center justify-center text-[#64748B] hover:text-[#1F2937] hover:bg-slate-100 transition cursor-pointer"
-            title="Search"
+            className="w-full py-2 rounded-md bg-[#f8fafc] border border-[#e5e7eb] flex items-center justify-center text-[#4b5563] hover:text-[#111827] transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
+            title="Search navigation"
+            aria-label="Expand sidebar to search"
           >
             <Search className="w-4 h-4" />
           </button>
         )}
 
-        {/* Main Navigation List */}
-        <div className="flex-1 overflow-y-auto pr-0.5 space-y-1">
-          <nav className="space-y-1.5">
+        {/* Navigation Items */}
+        <div className="flex-1 overflow-y-auto space-y-1">
+          <nav className="space-y-1">
             {visibleNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
 
               return (
-                <div key={item.id} className="relative group">
-                  <button
-                    onClick={() => handleNavClick(item.id)}
-                    className={`w-full flex items-center ${
-                      isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3.5 py-2.5'
-                    } rounded-2xl text-xs transition-all duration-200 cursor-pointer ${
-                      isActive
-                        ? `${activeStyle} border`
-                        : 'text-[#64748B] hover:bg-slate-50/90 hover:text-[#1F2937] border border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3 truncate">
-                      <Icon className={`w-4 h-4 shrink-0 transition-colors ${
-                        isActive ? activeIconColor : 'text-[#64748B] group-hover:text-[#1F2937]'
-                      }`} />
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleNavClick(item.id)}
+                  title={item.label}
+                  className={`w-full flex items-center ${
+                    isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'
+                  } rounded-md text-sm transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 ${
+                    isActive
+                      ? 'bg-[#f0fdfa] text-[#0f766e] font-medium'
+                      : 'text-[#4b5563] hover:text-[#111827] hover:bg-[#f8fafc]'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#0f766e]' : 'text-[#4b5563]'}`} />
 
-                      {!isCollapsed && (
-                        <span className="truncate tracking-tight font-medium">
-                          {item.label}
-                        </span>
-                      )}
-                    </div>
-
-                    {!isCollapsed && isActive && (
-                      <div className={`w-1.5 h-1.5 rounded-full ${activeIndicatorColor}`} />
-                    )}
-                  </button>
-
-                  {/* Tooltip on Collapsed State */}
-                  {isCollapsed && (
-                    <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-xl shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-50">
+                  {!isCollapsed && (
+                    <span className="ml-3 truncate">
                       {item.label}
-                    </div>
+                    </span>
                   )}
-                </div>
+                </button>
               );
             })}
           </nav>
         </div>
       </div>
 
-      {/* ── LOWER SECTION: Customization, Settings, Theme, Date, Logout ── */}
-      <div className="pt-3 border-t border-[#E2E8F0] space-y-2.5 shrink-0">
-        {/* Customize Sidebar Button */}
+      {/* ── BOTTOM SECTION: Customization, Settings, Logout ── */}
+      <div className="pt-3 border-t border-[#e5e7eb] space-y-2 shrink-0">
+        {/* Customize Sidebar */}
         {!isCollapsed ? (
-          <div className="relative">
+          <div>
             <button
+              type="button"
               onClick={() => setCustomizeOpen(!customizeOpen)}
-              className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[11px] font-bold text-[#64748B] hover:text-[#1F2937] hover:bg-slate-50 transition cursor-pointer"
+              className="w-full flex items-center justify-between px-2 py-1.5 rounded-md text-xs text-[#4b5563] hover:text-[#111827] hover:bg-[#f8fafc] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
             >
-              <div className="flex items-center space-x-2">
+              <span className="flex items-center gap-1.5">
                 <SlidersHorizontal className="w-3.5 h-3.5" />
                 <span>Customize sidebar</span>
-              </div>
-              <span className="text-[10px] text-slate-400 font-mono">
-                {hiddenItems.length > 0 ? `${hiddenItems.length} hidden` : 'All visible'}
               </span>
+              <span>{hiddenItems.length > 0 ? `${hiddenItems.length} hidden` : ''}</span>
             </button>
 
-            {/* Customization Dropdown Panel */}
             {customizeOpen && (
-              <div className="p-3 mb-2 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2 animate-fade-slide">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                  Show or Hide Modules
+              <div className="p-3 my-2 rounded-md bg-[#f8fafc] border border-[#e5e7eb] text-xs space-y-2">
+                <p className="font-medium text-[#111827]">
+                  Navigation modules
                 </p>
                 {navItems.filter(i => !i.core).map(item => {
                   const isVisible = !hiddenItems.includes(item.id);
                   return (
                     <label
                       key={item.id}
-                      className="flex items-center justify-between py-1 px-1.5 rounded-lg hover:bg-white text-slate-700 cursor-pointer text-xs"
+                      className="flex items-center justify-between py-1 text-[#4b5563] hover:text-[#111827] cursor-pointer"
                     >
                       <span>{item.label}</span>
                       <input
                         type="checkbox"
                         checked={isVisible}
                         onChange={() => toggleItemVisibility(item.id)}
-                        className="w-3.5 h-3.5 accent-teal-600 rounded cursor-pointer"
+                        className="w-3.5 h-3.5 accent-[#0f766e] rounded cursor-pointer"
                       />
                     </label>
                   );
@@ -269,58 +233,46 @@ export const Sidebar = ({
             )}
           </div>
         ) : (
-          <div className="relative group flex justify-center">
+          <div className="flex justify-center">
             <button
+              type="button"
               onClick={() => setIsCollapsed(false)}
-              className="p-2 text-[#64748B] hover:text-[#1F2937] hover:bg-slate-50 rounded-xl transition cursor-pointer"
+              className="p-2 text-[#4b5563] hover:text-[#111827] hover:bg-[#f8fafc] rounded-md transition-colors duration-150 cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
               title="Customize sidebar"
+              aria-label="Expand sidebar to customize"
             >
               <SlidersHorizontal className="w-4 h-4" />
             </button>
-            <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-xl shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-              Customize Sidebar
-            </div>
           </div>
         )}
 
-        {/* Current Date Indicator */}
-        {!isCollapsed && (
-          <div className="px-3 py-1.5 rounded-xl bg-slate-50/70 border border-[#E2E8F0]/60 flex items-center justify-between text-[11px] text-[#64748B]">
-            <div className="flex items-center space-x-1.5">
-              <CalendarDays className="w-3.5 h-3.5 text-teal-600" />
-              <span className="font-semibold text-slate-700">{todayFormatted}</span>
-            </div>
-            <span className="text-[10px] text-emerald-600 font-bold flex items-center space-x-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span>Live Sync</span>
-            </span>
-          </div>
-        )}
-
-        {/* Settings & Appearance Trigger */}
-        <div className="flex items-center justify-between gap-1">
+        {/* Settings & Logout Controls */}
+        <div className="space-y-1">
           <button
+            type="button"
             onClick={() => setSettingsOpen(true)}
-            className={`flex items-center space-x-2 py-2 text-xs font-medium text-[#64748B] hover:text-[#1F2937] hover:bg-slate-50 rounded-xl transition cursor-pointer ${
-              isCollapsed ? 'justify-center w-full px-0' : 'px-3 flex-1'
-            }`}
-            title="Settings & Appearance"
+            className={`w-full flex items-center ${
+              isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'
+            } rounded-md text-sm text-[#4b5563] hover:text-[#111827] hover:bg-[#f8fafc] transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2`}
+            title="Settings"
+            aria-label="Settings"
           >
             <Settings className="w-4 h-4 shrink-0" />
-            {!isCollapsed && <span>Settings</span>}
+            {!isCollapsed && <span className="ml-3">Settings</span>}
           </button>
 
-          {/* Logout Button */}
           {isAuthenticated && (
             <button
+              type="button"
               onClick={logout}
-              className={`flex items-center space-x-2 py-2 text-xs font-medium text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer ${
-                isCollapsed ? 'justify-center w-full px-0' : 'px-2.5'
-              }`}
+              className={`w-full flex items-center ${
+                isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'
+              } rounded-md text-sm text-[#4b5563] hover:text-[#b91c1c] hover:bg-red-50 transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2`}
               title="Sign Out"
+              aria-label="Sign Out"
             >
               <LogOut className="w-4 h-4 shrink-0" />
-              {!isCollapsed && <span>Logout</span>}
+              {!isCollapsed && <span className="ml-3">Sign Out</span>}
             </button>
           )}
         </div>
@@ -338,8 +290,8 @@ export const Sidebar = ({
 
   return (
     <>
-      {/* Desktop Floating Sidebar */}
-      <div className="hidden md:block my-4 ml-4 md:my-5 md:ml-6 sticky top-[calc(var(--header-h,4rem)+1rem)] h-[calc(100vh-var(--header-h,4rem)-2rem)] shrink-0 z-30">
+      {/* Desktop Full-Height Panel */}
+      <div className="hidden md:block sticky top-0 h-screen shrink-0 z-30">
         {sidebarContent}
       </div>
 
@@ -348,12 +300,13 @@ export const Sidebar = ({
         <div className="fixed inset-0 z-50 md:hidden flex">
           {/* Backdrop overlay */}
           <div
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity animate-in fade-in"
+            className="fixed inset-0 bg-black/40 transition-opacity duration-150"
             onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
           />
 
-          {/* Drawer container */}
-          <div className="relative my-4 ml-4 h-[calc(100vh-2rem)] z-50 animate-in slide-in-from-left duration-200">
+          {/* Drawer container: flush to left edge, full height, never clipped by header */}
+          <div className="relative w-[250px] max-w-[80vw] h-full z-50 bg-white">
             {sidebarContent}
           </div>
         </div>
