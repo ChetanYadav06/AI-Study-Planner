@@ -270,16 +270,18 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
             )}
           </Button>
 
-          {/* Sample Demo Helper Button */}
-          <div className="pt-1 text-center">
-            <button
-              type="button"
-              onClick={fillDemoCredentials}
-              className="text-xs text-accent hover:underline cursor-pointer"
-            >
-              Fill sample credentials
-            </button>
-          </div>
+          {/* Sample Demo Helper Button (Development Only) */}
+          {import.meta.env.DEV && (
+            <div className="pt-1 text-center">
+              <button
+                type="button"
+                onClick={fillDemoCredentials}
+                className="text-xs text-accent hover:underline cursor-pointer"
+              >
+                Fill sample credentials (Dev only)
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>
