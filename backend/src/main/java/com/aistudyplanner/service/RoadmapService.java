@@ -408,7 +408,7 @@ public class RoadmapService {
                       "title": "Actionable task title",
                       "description": "Specific study and practice instruction for this day",
                       "estimatedMinutes": %d,
-                      "activityType": "STUDY",
+                      "activityType": "STUDY | PRACTICE | PROJECT | REVIEW | CODING_PRACTICE | QUIZ | ASSESSMENT",
                       "learningObjectives": ["Objective 1", "Objective 2"],
                       "subtopics": ["Subtopic 1", "Subtopic 2"],
                       "conceptExplanation": "Short 1-2 sentence core concept summary",
