@@ -1,36 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Sparkles,
   ArrowRight,
   ArrowLeft,
-  Check,
   Target,
   Brain,
   Clock,
   Calendar,
   Layers,
-  Sliders,
-  CheckCircle2,
   AlertCircle,
   Loader2,
-  Zap,
-  BookOpen,
   Code2,
   Database,
   Cpu,
-  GraduationCap,
   Plus,
   Trash2
 } from 'lucide-react';
 import { getStudentProfile, getSkills, bulkUpsertSkills } from '../../services/api';
-import { formatEnum } from '../../utils/formatters';
+import { Button, PageHeader, Card } from '../ui';
 
 const PRESET_TRACKS = [
   {
     topic: 'Java Data Structures & Algorithms',
     category: 'Placement Mastery',
     icon: Code2,
-    gradient: 'from-indigo-600 to-violet-600',
     description: 'Arrays, LinkedLists, Trees, DP, and Graph algorithms with Java interview problem-solving.',
     defaultDays: 45,
     defaultHours: 2.5,
@@ -42,7 +34,6 @@ const PRESET_TRACKS = [
     topic: 'Full-Stack Spring Boot & React 19',
     category: 'Enterprise Web',
     icon: Layers,
-    gradient: 'from-blue-600 to-cyan-600',
     description: 'Enterprise REST APIs, Spring Security JWT, JPA Hibernate, and modern React 19 architecture.',
     defaultDays: 30,
     defaultHours: 2.0,
@@ -54,7 +45,6 @@ const PRESET_TRACKS = [
     topic: 'SQL & Database Engineering for Interviews',
     category: 'Backend Core',
     icon: Database,
-    gradient: 'from-violet-600 to-purple-600',
     description: 'SQL Joins, window functions, indexing, normalization, and high-performance query optimization.',
     defaultDays: 21,
     defaultHours: 1.5,
@@ -66,7 +56,6 @@ const PRESET_TRACKS = [
     topic: 'Machine Learning Fundamentals with Python',
     category: 'AI & Data',
     icon: Cpu,
-    gradient: 'from-teal-600 to-emerald-600',
     description: 'Pandas preprocessing, NumPy, supervised ML regression & classification, and model metrics.',
     defaultDays: 30,
     defaultHours: 2.0,
@@ -77,10 +66,10 @@ const PRESET_TRACKS = [
 ];
 
 const KNOWLEDGE_CHOICES = [
-  { level: 'MASTERED', label: 'Mastered', badge: 'bg-emerald-50 text-emerald-700 border-emerald-300' },
-  { level: 'INTERMEDIATE', label: 'Familiar', badge: 'bg-indigo-50 text-indigo-700 border-indigo-300' },
-  { level: 'BEGINNER', label: 'Beginner', badge: 'bg-sky-50 text-sky-700 border-sky-300' },
-  { level: 'NOT_LEARNED', label: 'Not Learned', badge: 'bg-slate-100 text-slate-700 border-slate-300' }
+  { level: 'MASTERED', label: 'Mastered' },
+  { level: 'INTERMEDIATE', label: 'Familiar' },
+  { level: 'BEGINNER', label: 'Beginner' },
+  { level: 'NOT_LEARNED', label: 'Not Learned' }
 ];
 
 const SYNTHESIS_STAGES = [
@@ -367,30 +356,30 @@ export const RoadmapWizard = ({
 
   if (loading) {
     return (
-      <div className="bg-slate-900 rounded-3xl p-10 sm:p-14 text-white text-center shadow-2xl border border-slate-800 animate-fade-in max-w-2xl mx-auto my-12">
-        <div className="w-16 h-16 rounded-3xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center mx-auto mb-6 text-indigo-400 animate-pulse">
-          <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="bg-surface rounded-[10px] p-8 border border-line text-center max-w-xl mx-auto my-12">
+        <div className="w-10 h-10 rounded-[6px] bg-accent-soft border border-line flex items-center justify-center mx-auto mb-4 text-accent">
+          <Loader2 className="w-5 h-5 animate-spin" />
         </div>
 
-        <div className="space-y-4 max-w-lg mx-auto">
+        <div className="space-y-3 max-w-md mx-auto">
           <div>
-            <span className="text-[11px] font-black uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20 inline-block mb-2">
+            <span className="text-xs font-mono font-medium text-accent">
               Gemini AI Engine
             </span>
-            <h3 className="text-xl md:text-2xl font-black mt-1">Synthesizing Your Curriculum</h3>
-            <p className="text-xs text-slate-300 mt-2 font-medium min-h-[36px] transition-all duration-300">
+            <h3 className="text-base font-semibold text-ink mt-1">Synthesizing Your Curriculum</h3>
+            <p className="text-xs text-muted mt-1.5 min-h-[36px]">
               {SYNTHESIS_STAGES[synthesisStageIdx]}
             </p>
           </div>
 
-          <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden p-0.5 max-w-xs mx-auto">
+          <div className="w-full bg-page rounded-[4px] h-1.5 overflow-hidden max-w-xs mx-auto">
             <div
-              className="gradient-accent h-1 rounded-full transition-all duration-500"
+              className="bg-accent h-full rounded-[4px] transition-all duration-500"
               style={{ width: `${((synthesisStageIdx + 1) / SYNTHESIS_STAGES.length) * 100}%` }}
             />
           </div>
 
-          <p className="text-[11px] text-amber-300 font-medium">
+          <p className="text-xs text-muted">
             This can take up to 2 minutes while Gemini generates and validates your complete curriculum.
           </p>
         </div>
@@ -399,47 +388,43 @@ export const RoadmapWizard = ({
   }
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden max-w-4xl mx-auto animate-fade-slide">
+    <div className="bg-surface rounded-[10px] border border-line overflow-hidden max-w-3xl mx-auto">
       {/* ── WIZARD PROGRESS HEADER ── */}
-      <div className="bg-slate-950 text-white p-7 md:p-9 relative overflow-hidden border-b border-slate-800">
-        <div className="absolute -top-10 -right-10 w-72 h-72 bg-indigo-600/30 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-6 border-b border-line">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold border border-indigo-400/30 mb-2">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-300" />
-              <span>Interactive Curriculum Architect</span>
-            </div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">Create Your Study Roadmap</h2>
-            <p className="text-xs text-slate-400 mt-1 max-w-lg leading-relaxed">
+            <h2 className="text-lg font-semibold text-ink">Create Your Study Roadmap</h2>
+            <p className="text-xs text-muted mt-0.5">
               Step {currentStep} of 5: {STEPS[currentStep - 1].title}
             </p>
           </div>
 
           {onCancel && (
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={onCancel}
-              className="self-start sm:self-center text-xs font-semibold px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition cursor-pointer border border-white/10"
+              className="self-start sm:self-center"
             >
               Exit Wizard
-            </button>
+            </Button>
           )}
         </div>
 
         {/* Dynamic Step Progress Track */}
-        <div className="grid grid-cols-5 gap-2.5 mt-7">
+        <div className="grid grid-cols-5 gap-2 mt-5">
           {STEPS.map((s) => {
             const isDone = s.num < currentStep;
             const isCurrent = s.num === currentStep;
             return (
-              <div key={s.num} className="space-y-1.5">
+              <div key={s.num} className="space-y-1">
                 <div
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    isDone ? 'bg-emerald-400' : isCurrent ? 'gradient-primary shadow-xs' : 'bg-white/15'
+                  className={`h-1.5 rounded-[4px] transition-all duration-300 ${
+                    isDone ? 'bg-success' : isCurrent ? 'bg-accent' : 'bg-line'
                   }`}
                 />
-                <span className={`hidden sm:block text-[10px] font-bold truncate ${
-                  isCurrent ? 'text-white' : isDone ? 'text-emerald-400' : 'text-slate-500'
+                <span className={`hidden sm:block text-xs font-medium truncate ${
+                  isCurrent ? 'text-accent' : isDone ? 'text-ink' : 'text-muted'
                 }`}>
                   {s.title}
                 </span>
@@ -450,9 +435,9 @@ export const RoadmapWizard = ({
       </div>
 
       {/* ── WIZARD BODY ── */}
-      <div className="p-7 md:p-10 min-h-[420px] flex flex-col justify-between">
+      <div className="p-6 min-h-[380px] flex flex-col justify-between">
         {stepError && (
-          <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center space-x-2 animate-fade-slide">
+          <div className="mb-4 p-3 rounded-[8px] bg-danger/10 border border-danger/30 text-danger text-xs font-medium flex items-center space-x-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{stepError}</span>
           </div>
@@ -460,29 +445,29 @@ export const RoadmapWizard = ({
 
         {/* ── STEP 1: What do you want to achieve? ── */}
         {currentStep === 1 && (
-          <div className="space-y-6 animate-fade-slide">
+          <div className="space-y-5">
             <div>
-              <h3 className="text-lg md:text-xl font-extrabold text-slate-900">Step 1: Choose Your Learning Target</h3>
-              <p className="text-xs text-slate-500 mt-1">
+              <h3 className="text-sm font-semibold text-ink">Step 1: Choose Your Learning Target</h3>
+              <p className="text-xs text-muted mt-0.5">
                 Select an enterprise curriculum template or craft a custom goal.
               </p>
             </div>
 
             {/* Link from existing registered goals */}
             {goals.length > 0 && (
-              <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-200/80">
-                <label className="block text-xs font-bold text-indigo-950 mb-1.5">
+              <div className="p-3.5 rounded-[8px] bg-page border border-line">
+                <label className="block text-xs font-medium text-ink mb-1.5">
                   Link with your registered learning goal:
                 </label>
                 <select
                   value={selectedGoalId}
                   onChange={(e) => handleSelectGoal(e.target.value)}
-                  className="w-full p-2.5 text-xs rounded-xl bg-white border border-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium"
+                  className="w-full p-2 text-xs rounded-[6px] bg-surface border border-line text-ink focus:border-accent outline-none font-medium"
                 >
                   <option value="">-- Or choose from your active goals --</option>
                   {goals.map(g => (
                     <option key={g.id} value={g.id}>
-                      {g.title} ({g.skillLevel} • {g.targetDays} days)
+                      {g.title} ({g.skillLevel} · {g.targetDays} days)
                     </option>
                   ))}
                 </select>
@@ -491,10 +476,10 @@ export const RoadmapWizard = ({
 
             {/* Preset Curriculum Tracks Grid */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-2">
+              <label className="block text-xs font-medium text-ink mb-2">
                 Popular Curriculum Blueprints:
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {PRESET_TRACKS.map(sug => {
                   const isSelected = topic.toLowerCase() === sug.topic.toLowerCase();
                   const Icon = sug.icon;
@@ -503,28 +488,28 @@ export const RoadmapWizard = ({
                       type="button"
                       key={sug.topic}
                       onClick={() => handleSelectPreset(sug)}
-                      className={`p-4 rounded-2xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+                      className={`p-3.5 rounded-[8px] border text-left transition cursor-pointer flex flex-col justify-between ${
                         isSelected
-                          ? 'border-indigo-600 bg-indigo-50/40 ring-2 ring-indigo-500/20 shadow-xs'
-                          : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300'
+                          ? 'border-accent bg-accent-soft text-accent'
+                          : 'border-line bg-surface hover:border-slate-300 text-ink'
                       }`}
                     >
                       <div>
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 bg-indigo-100/60 px-2 py-0.5 rounded-md">
+                          <span className="text-xs font-medium text-accent">
                             {sug.category}
                           </span>
-                          <div className={`w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center ${
-                            isSelected ? 'text-indigo-600 shadow-xs' : 'text-slate-500'
+                          <div className={`w-7 h-7 rounded-[4px] bg-page border border-line flex items-center justify-center ${
+                            isSelected ? 'text-accent' : 'text-muted'
                           }`}>
-                            <Icon className="w-4 h-4" />
+                            <Icon className="w-3.5 h-3.5" />
                           </div>
                         </div>
-                        <h4 className="text-sm font-extrabold text-slate-900 mt-2">{sug.topic}</h4>
-                        <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">{sug.description}</p>
+                        <h4 className="text-xs font-semibold text-ink mt-1.5">{sug.topic}</h4>
+                        <p className="text-xs text-muted mt-1 line-clamp-2 leading-relaxed">{sug.description}</p>
                       </div>
 
-                      <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                      <div className="mt-3 pt-2.5 border-t border-line flex items-center justify-between text-xs text-muted">
                         <span>{sug.defaultDays} days</span>
                         <span>{sug.defaultHours}h daily pace</span>
                       </div>
@@ -535,8 +520,8 @@ export const RoadmapWizard = ({
             </div>
 
             {/* Custom Input */}
-            <div className="pt-2">
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+            <div>
+              <label className="block text-xs font-medium text-ink mb-1">
                 Or enter custom subject or goal title:
               </label>
               <input
@@ -547,7 +532,7 @@ export const RoadmapWizard = ({
                   setSelectedGoalId('');
                 }}
                 placeholder="e.g. Master Golang Microservices & Kubernetes or React Native"
-                className="w-full p-3.5 text-xs rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 shadow-2xs transition"
+                className="w-full p-2.5 text-xs rounded-[6px] bg-surface border border-line text-ink focus:border-accent outline-none transition"
               />
             </div>
           </div>
@@ -555,20 +540,19 @@ export const RoadmapWizard = ({
 
         {/* ── STEP 2: Understand Starting Point ── */}
         {currentStep === 2 && (
-          <div className="space-y-6 animate-fade-slide">
+          <div className="space-y-5">
             <div>
-              <div className="flex items-center space-x-2">
-                <Brain className="w-5 h-5 text-indigo-600" />
-                <h3 className="text-lg md:text-xl font-extrabold text-slate-900">Step 2: Calibrate Your Baseline Knowledge</h3>
+              <div className="flex items-center space-x-1.5">
+                <Brain className="w-4 h-4 text-accent" />
+                <h3 className="text-sm font-semibold text-ink">Step 2: Calibrate Your Baseline Knowledge</h3>
               </div>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-muted mt-0.5">
                 Rate your comfort with topics in <strong>{topic}</strong>. Topics rated here guide pedagogical pacing.
               </p>
             </div>
 
             {diagnosticNote && (
-              <div className="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-bold flex items-center space-x-2 animate-fade-slide">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
+              <div className="p-3 rounded-[8px] bg-accent-soft border border-line text-accent text-xs font-medium flex items-center space-x-2">
                 <span>{diagnosticNote}</span>
               </div>
             )}
@@ -580,40 +564,41 @@ export const RoadmapWizard = ({
                 value={newCustomTopic}
                 onChange={(e) => setNewCustomTopic(e.target.value)}
                 placeholder="Add a topic you know or want to focus on (e.g. Async IO, Docker, PyTorch)"
-                className="flex-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium"
+                className="flex-1 p-2 text-xs rounded-[6px] bg-surface border border-line text-ink focus:border-accent outline-none font-medium"
               />
-              <button
+              <Button
                 type="submit"
-                className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs inline-flex items-center space-x-1.5 transition cursor-pointer"
+                variant="primary"
+                size="sm"
+                icon={Plus}
               >
-                <Plus className="w-4 h-4" />
-                <span>Add Topic</span>
-              </button>
+                Add Topic
+              </Button>
             </form>
 
             {topicsList.length === 0 ? (
-              <div className="p-8 text-center rounded-2xl bg-slate-50 border border-dashed border-slate-300 text-slate-500">
-                <p className="text-xs font-medium">
+              <div className="p-6 text-center rounded-[8px] bg-page border border-line text-muted">
+                <p className="text-xs">
                   No predefined topics for this subject. Feel free to add topics above or click <strong>Continue</strong> to proceed.
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {topicsList.map(tName => {
                   const currentRating = topicRatings[tName] || 'NOT_LEARNED';
                   return (
-                    <div key={tName} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div key={tName} className="p-3 rounded-[8px] bg-page border border-line flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                       <div className="flex items-center space-x-2">
-                        <span className="text-xs font-bold text-slate-900">{tName}</span>
+                        <span className="text-xs font-medium text-ink">{tName}</span>
                         {userTouchedTopics.has(tName) && (
-                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                            Rated
+                          <span className="text-xs text-accent">
+                            (rated)
                           </span>
                         )}
                       </div>
 
                       <div className="flex items-center space-x-2">
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="flex flex-wrap gap-1">
                           {KNOWLEDGE_CHOICES.map(opt => {
                             const isSelected = currentRating === opt.level;
                             return (
@@ -621,10 +606,10 @@ export const RoadmapWizard = ({
                                 type="button"
                                 key={opt.level}
                                 onClick={() => handleRateTopic(tName, opt.level)}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                                className={`px-2.5 py-1 rounded-[4px] text-xs font-medium border transition cursor-pointer ${
                                   isSelected
-                                    ? `${opt.badge} ring-2 ring-indigo-500/30 shadow-xs`
-                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                                    ? 'border-accent bg-accent-soft text-accent'
+                                    : 'bg-surface border-line text-muted hover:text-ink'
                                 }`}
                               >
                                 {opt.label}
@@ -635,7 +620,7 @@ export const RoadmapWizard = ({
                         <button
                           type="button"
                           onClick={() => handleRemoveTopic(tName)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-200/60 transition cursor-pointer"
+                          className="p-1 text-muted hover:text-danger rounded-[4px] hover:bg-surface transition cursor-pointer"
                           title="Remove topic"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -651,19 +636,23 @@ export const RoadmapWizard = ({
 
         {/* ── STEP 3: Define Target & Study Budget ── */}
         {currentStep === 3 && (
-          <div className="space-y-6 animate-fade-slide">
+          <div className="space-y-5">
             <div>
-              <h3 className="text-lg md:text-xl font-extrabold text-slate-900">Step 3: Duration & Time Commitment</h3>
-              <p className="text-xs text-slate-500 mt-1">
+              <h3 className="text-sm font-semibold text-ink">Step 3: Duration & Time Commitment</h3>
+              <p className="text-xs text-muted mt-0.5">
                 Ensure workload matches your study bandwidth so you never get overwhelmed.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Target Duration: <span className="text-indigo-600 font-black">{targetDays} days</span>
-                </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-4 rounded-[8px] bg-page border border-line space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-ink flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-accent" />
+                    <span>Target Duration</span>
+                  </span>
+                  <span className="text-xs font-mono font-medium text-accent">{targetDays} days</span>
+                </div>
                 <input
                   type="range"
                   min="7"
@@ -671,19 +660,23 @@ export const RoadmapWizard = ({
                   step="1"
                   value={targetDays}
                   onChange={(e) => setTargetDays(Number(e.target.value))}
-                  className="w-full accent-indigo-600 cursor-pointer"
+                  className="w-full accent-accent h-1.5 rounded-[4px] cursor-pointer"
                 />
-                <div className="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
+                <div className="flex justify-between text-xs text-muted">
                   <span>1 Week (7d)</span>
                   <span>1 Month (30d)</span>
                   <span>3 Months (90d)</span>
                 </div>
               </div>
 
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Daily Study Hours: <span className="text-indigo-600 font-black">{hoursPerDay} hours/day</span>
-                </label>
+              <div className="p-4 rounded-[8px] bg-page border border-line space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-ink flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-accent" />
+                    <span>Daily Study Hours</span>
+                  </span>
+                  <span className="text-xs font-mono font-medium text-accent">{hoursPerDay}h / day</span>
+                </div>
                 <input
                   type="range"
                   min="0.5"
@@ -691,9 +684,9 @@ export const RoadmapWizard = ({
                   step="0.5"
                   value={hoursPerDay}
                   onChange={(e) => setHoursPerDay(Number(e.target.value))}
-                  className="w-full accent-indigo-600 cursor-pointer"
+                  className="w-full accent-accent h-1.5 rounded-[4px] cursor-pointer"
                 />
-                <div className="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
+                <div className="flex justify-between text-xs text-muted">
                   <span>0.5h (Light)</span>
                   <span>2h (Standard)</span>
                   <span>6h (Intensive)</span>
@@ -702,7 +695,7 @@ export const RoadmapWizard = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+              <label className="block text-xs font-medium text-ink mb-1">
                 Specific Modules, Libraries, or Topics to Cover:
               </label>
               <input
@@ -710,12 +703,12 @@ export const RoadmapWizard = ({
                 value={specificTopics}
                 onChange={(e) => setSpecificTopics(e.target.value)}
                 placeholder="e.g. PyTorch, Hugging Face, FAISS vector search, Prompt chaining"
-                className="w-full p-3.5 text-xs rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-2xs transition"
+                className="w-full p-2.5 text-xs rounded-[6px] bg-surface border border-line text-ink focus:border-accent outline-none transition"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+              <label className="block text-xs font-medium text-ink mb-1">
                 Primary Goal / Expected Outcome:
               </label>
               <textarea
@@ -723,7 +716,7 @@ export const RoadmapWizard = ({
                 value={targetOutcomes}
                 onChange={(e) => setTargetOutcomes(e.target.value)}
                 placeholder="e.g. Deploy custom RAG agent application to portfolio and pass technical interview"
-                className="w-full p-3.5 text-xs rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-2xs transition"
+                className="w-full p-2.5 text-xs rounded-[6px] bg-surface border border-line text-ink focus:border-accent outline-none transition resize-none"
               />
             </div>
           </div>
@@ -731,18 +724,18 @@ export const RoadmapWizard = ({
 
         {/* ── STEP 4: Preferences & Learning Media ── */}
         {currentStep === 4 && (
-          <div className="space-y-6 animate-fade-slide">
+          <div className="space-y-5">
             <div>
-              <h3 className="text-lg md:text-xl font-extrabold text-slate-900">Step 4: AI Pedagogy & Practice Format</h3>
-              <p className="text-xs text-slate-500 mt-1">
+              <h3 className="text-sm font-semibold text-ink">Step 4: Pedagogy & Practice Format</h3>
+              <p className="text-xs text-muted mt-0.5">
                 Customizes how concepts are broken down and daily practice format.
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                <label className="block text-xs font-bold text-slate-700 mb-2">Explanation Pedagogy:</label>
-                <div className="space-y-2">
+              <div className="p-3.5 rounded-[8px] bg-page border border-line">
+                <label className="block text-xs font-medium text-ink mb-2">Explanation Pedagogy:</label>
+                <div className="space-y-1.5">
                   {[
                     { id: 'STEP_BY_STEP', label: 'Step-by-Step Breakdown' },
                     { id: 'FIRST_PRINCIPLES', label: 'First Principles & Theory' },
@@ -752,10 +745,10 @@ export const RoadmapWizard = ({
                       type="button"
                       key={opt.id}
                       onClick={() => setExplanationStyle(opt.id)}
-                      className={`w-full p-2.5 rounded-xl text-left text-xs font-bold border transition cursor-pointer ${
+                      className={`w-full p-2 rounded-[6px] text-left text-xs font-medium border transition cursor-pointer ${
                         explanationStyle === opt.id
-                          ? 'bg-indigo-50 border-indigo-600 text-indigo-700 shadow-2xs'
-                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                          ? 'bg-accent-soft border-accent text-accent'
+                          : 'bg-surface border-line text-ink hover:border-slate-300'
                       }`}
                     >
                       {opt.label}
@@ -764,9 +757,9 @@ export const RoadmapWizard = ({
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                <label className="block text-xs font-bold text-slate-700 mb-2">Preferred Practice Format:</label>
-                <div className="space-y-2">
+              <div className="p-3.5 rounded-[8px] bg-page border border-line">
+                <label className="block text-xs font-medium text-ink mb-2">Preferred Practice Format:</label>
+                <div className="space-y-1.5">
                   {[
                     { id: 'CODING_PROBLEMS', label: 'Coding Problems & Sandboxes' },
                     { id: 'MINI_PROJECTS', label: 'Real-World Mini Projects' },
@@ -776,10 +769,10 @@ export const RoadmapWizard = ({
                       type="button"
                       key={opt.id}
                       onClick={() => setPracticeStyle(opt.id)}
-                      className={`w-full p-2.5 rounded-xl text-left text-xs font-bold border transition cursor-pointer ${
+                      className={`w-full p-2 rounded-[6px] text-left text-xs font-medium border transition cursor-pointer ${
                         practiceStyle === opt.id
-                          ? 'bg-indigo-50 border-indigo-600 text-indigo-700 shadow-2xs'
-                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                          ? 'bg-accent-soft border-accent text-accent'
+                          : 'bg-surface border-line text-ink hover:border-slate-300'
                       }`}
                     >
                       {opt.label}
@@ -793,57 +786,59 @@ export const RoadmapWizard = ({
 
         {/* ── STEP 5: Final Review & Synthesis ── */}
         {currentStep === 5 && (
-          <div className="space-y-6 animate-fade-slide">
+          <div className="space-y-5">
             <div>
-              <h3 className="text-lg md:text-xl font-extrabold text-slate-900">Step 5: Review Curriculum Specifications</h3>
-              <p className="text-xs text-slate-500 mt-1">
+              <h3 className="text-sm font-semibold text-ink">Step 5: Review Curriculum Specifications</h3>
+              <p className="text-xs text-muted mt-0.5">
                 Gemini will synthesize a personalized day-by-day learning journey calibrated to your baseline knowledge.
               </p>
             </div>
 
             {error && (
-              <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="p-3 rounded-[8px] bg-danger/10 border border-danger/30 text-danger text-xs font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div className="flex items-center space-x-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                  <AlertCircle className="w-4 h-4 shrink-0 text-danger" />
                   <span>{error || 'Could not generate a roadmap. Please try again.'}</span>
                 </div>
-                <button
+                <Button
                   type="button"
+                  variant="danger"
+                  size="sm"
                   onClick={handleFinish}
-                  className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs self-end sm:self-center transition cursor-pointer shadow-2xs"
+                  className="self-end sm:self-center"
                 >
                   Retry Generation
-                </button>
+                </Button>
               </div>
             )}
 
-            <div className="p-6 rounded-3xl bg-slate-50/80 border border-slate-200/90 space-y-5 text-xs">
-              <div className="flex justify-between items-start pb-4 border-b border-slate-200">
+            <div className="p-4 rounded-[8px] bg-page border border-line space-y-4 text-xs">
+              <div className="flex justify-between items-start pb-3 border-b border-line">
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Goal Subject</span>
-                  <div className="text-base font-black text-slate-900 mt-0.5">{topic}</div>
+                  <span className="text-xs text-muted font-medium">Goal Subject</span>
+                  <div className="text-sm font-semibold text-ink mt-0.5">{topic}</div>
                 </div>
-                <span className="px-3 py-1 rounded-full text-xs font-bold gradient-primary text-white shadow-2xs">
+                <span className="px-2 py-0.5 rounded-[4px] text-xs font-medium bg-accent-soft text-accent border border-line">
                   {skillLevel}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="p-3 bg-white rounded-2xl border border-slate-200">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Sprint</span>
-                  <span className="text-sm font-extrabold text-slate-900 mt-0.5 block">{targetDays} Days</span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="p-2.5 bg-surface rounded-[6px] border border-line">
+                  <span className="text-xs text-muted font-medium block">Duration</span>
+                  <span className="text-xs font-semibold text-ink mt-0.5 block">{targetDays} Days</span>
                 </div>
-                <div className="p-3 bg-white rounded-2xl border border-slate-200">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Pace</span>
-                  <span className="text-sm font-extrabold text-indigo-600 mt-0.5 block">{hoursPerDay}h / day</span>
+                <div className="p-2.5 bg-surface rounded-[6px] border border-line">
+                  <span className="text-xs text-muted font-medium block">Daily Pace</span>
+                  <span className="text-xs font-semibold text-accent mt-0.5 block">{hoursPerDay}h / day</span>
                 </div>
-                <div className="p-3 bg-white rounded-2xl border border-slate-200">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Total Hours</span>
-                  <span className="text-sm font-extrabold text-slate-900 mt-0.5 block">{Math.round(targetDays * hoursPerDay)} hrs</span>
+                <div className="p-2.5 bg-surface rounded-[6px] border border-line">
+                  <span className="text-xs text-muted font-medium block">Total Hours</span>
+                  <span className="text-xs font-semibold text-ink mt-0.5 block">{Math.round(targetDays * hoursPerDay)} hrs</span>
                 </div>
-                <div className="p-3 bg-white rounded-2xl border border-slate-200">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Rated Topics</span>
-                  <span className="text-sm font-extrabold text-slate-900 mt-0.5 block">{userTouchedTopics.size}</span>
+                <div className="p-2.5 bg-surface rounded-[6px] border border-line">
+                  <span className="text-xs text-muted font-medium block">Rated Topics</span>
+                  <span className="text-xs font-semibold text-ink mt-0.5 block">{userTouchedTopics.size}</span>
                 </div>
               </div>
             </div>
@@ -851,37 +846,42 @@ export const RoadmapWizard = ({
         )}
 
         {/* ── FOOTER NAVIGATION CONTROLS ── */}
-        <div className="pt-8 border-t border-slate-200/80 flex items-center justify-between">
-          <button
+        <div className="pt-6 border-t border-line flex items-center justify-between">
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={handlePrev}
-            className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-2xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+            icon={ArrowLeft}
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>{currentStep === 1 ? 'Cancel' : 'Back'}</span>
-          </button>
+            {currentStep === 1 ? 'Cancel' : 'Back'}
+          </Button>
 
           {currentStep < 5 ? (
-            <button
+            <Button
               type="button"
+              variant="primary"
+              size="sm"
               onClick={handleNext}
-              className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-xs cursor-pointer"
             >
               <span>Continue</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Button>
           ) : (
-            <button
+            <Button
               type="button"
+              variant="primary"
+              size="sm"
               onClick={handleFinish}
-              className="inline-flex items-center space-x-2 px-7 py-3 rounded-2xl gradient-primary text-white text-xs font-black transition shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 cursor-pointer"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>Generate Personalized Roadmap</span>
-            </button>
+              <span>Generate Roadmap</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Button>
           )}
         </div>
       </div>
     </div>
   );
 };
+
+export default RoadmapWizard;

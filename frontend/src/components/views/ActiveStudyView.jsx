@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Play, Pause, RotateCcw, CheckCircle2, Zap, Clock, BookOpen, Sparkles, FileText, ArrowRight, Check } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Play, Pause, RotateCcw, CheckCircle2, Clock, FileText, Check } from 'lucide-react';
 import { getSavedRoadmaps, updateRoadmapProgress, createStudySession } from '../../services/api';
 import { computeStudyQueue } from '../../utils/studyQueue';
 import { formatEnum } from '../../utils/formatters';
+import { PageHeader, Card, Button } from '../ui';
 
 const DURATION_BY_MODE = {
   focus: 25 * 60,
@@ -135,7 +136,7 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
         sessionType: type === 'focus' ? 'FOCUS' : 'BREAK',
         completed: completedFlag
       });
-      setSessionSavedMsg(`Logged ${Math.round(durationSec / 60)} min ${type} session!`);
+      setSessionSavedMsg(`Logged ${Math.round(durationSec / 60)}m ${type} session.`);
       setTimeout(() => setSessionSavedMsg(null), 4000);
     } catch (err) {
       console.error('Failed to record study session:', err);
@@ -161,7 +162,6 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
 
       if (remaining === 0) {
         clearInterval(interval);
-        // Completed session!
         const totalDuration = timerState.durationSeconds;
         recordSession(totalDuration, timerState.mode, true);
 
@@ -200,7 +200,6 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
   };
 
   const handlePauseTimer = () => {
-    // If paused, record partial session if >= 60s
     if (timerState.startedAt && timerState.sessionStartTime) {
       const sessionSeconds = Math.floor((Date.now() - timerState.startedAt) / 1000);
       if (sessionSeconds >= 60) {
@@ -278,9 +277,8 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
         progressPercentage: activeRoadmap.progressPercentage || 0
       });
 
-      // Reload roadmaps to re-evaluate the queue
       await loadRoadmaps();
-      setSessionSavedMsg(`Completed "${currentTask.task.title}"! Next task loaded.`);
+      setSessionSavedMsg(`Completed "${currentTask.task.title}". Next task queued.`);
       setTimeout(() => setSessionSavedMsg(null), 4000);
     } catch (err) {
       console.error('Failed to mark task complete:', err);
@@ -290,177 +288,173 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-16 animate-fade-slide">
-      {/* Header Banner */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <div>
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-200/60 text-xs font-bold uppercase tracking-wider mb-2">
-            <Zap className="w-3.5 h-3.5 text-teal-600" />
-            <span>Deep Work & Study Session</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Active Study Mode
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xl leading-relaxed">
-            Timestamp-synced focus pacing linked directly to your active curriculum.
-          </p>
-        </div>
+    <div className="space-y-6 max-w-4xl mx-auto pb-12">
+      <PageHeader
+        title="Focus session"
+        subtitle="Pick a task and start the timer."
+      />
 
-        {sessionSavedMsg && (
-          <div className="px-4 py-2 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center space-x-2 animate-fade-slide">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>{sessionSavedMsg}</span>
-          </div>
-        )}
-      </div>
+      {sessionSavedMsg && (
+        <div className="p-2.5 rounded-[6px] bg-accent-soft border border-line text-accent text-xs font-medium flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>{sessionSavedMsg}</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Pomodoro Focus Timer */}
-        <div className="lg:col-span-6 bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs flex flex-col items-center justify-between space-y-6 text-center">
-          <div className="flex items-center space-x-2 bg-slate-100 p-1.5 rounded-2xl">
+        <Card className="lg:col-span-6 p-6 flex flex-col items-center justify-between space-y-6 text-center">
+          <div className="flex items-center gap-1 bg-page p-1 rounded-[6px] border border-line">
             <button
+              type="button"
               onClick={() => handleSetMode('focus')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                timerState.mode === 'focus' ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              className={`px-3 py-1 rounded-[4px] text-xs font-medium transition cursor-pointer ${
+                timerState.mode === 'focus' ? 'bg-surface text-ink border border-line' : 'text-muted hover:text-ink'
               }`}
             >
               Focus (25m)
             </button>
             <button
+              type="button"
               onClick={() => handleSetMode('shortBreak')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                timerState.mode === 'shortBreak' ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              className={`px-3 py-1 rounded-[4px] text-xs font-medium transition cursor-pointer ${
+                timerState.mode === 'shortBreak' ? 'bg-surface text-ink border border-line' : 'text-muted hover:text-ink'
               }`}
             >
-              Short Break (5m)
+              Break (5m)
             </button>
             <button
+              type="button"
               onClick={() => handleSetMode('longBreak')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                timerState.mode === 'longBreak' ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              className={`px-3 py-1 rounded-[4px] text-xs font-medium transition cursor-pointer ${
+                timerState.mode === 'longBreak' ? 'bg-surface text-ink border border-line' : 'text-muted hover:text-ink'
               }`}
             >
-              Long Break (15m)
+              Long (15m)
             </button>
           </div>
 
           {/* Clock Display */}
-          <div className="relative my-4">
-            <div className="w-56 h-56 rounded-full border-4 border-slate-100 flex flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-white shadow-inner">
-              <span className="font-mono text-5xl font-black text-slate-900 tracking-tight">
+          <div className="my-2">
+            <div className="w-52 h-52 rounded-full border-2 border-accent flex flex-col items-center justify-center bg-surface">
+              <span className="font-mono text-4xl font-semibold text-ink tracking-tight">
                 {formatTimer(timerState.remainingSeconds)}
               </span>
-              <span className="text-[11px] font-bold text-teal-600 uppercase tracking-widest mt-2">
-                {timerState.running ? 'Timer Active' : 'Ready to Focus'}
+              <span className="text-xs text-muted mt-1">
+                {timerState.running ? 'Focusing' : 'Ready'}
               </span>
             </div>
           </div>
 
           {/* Timer Controls */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-2">
             {timerState.running ? (
-              <button
+              <Button
+                variant="outline"
+                size="md"
                 onClick={handlePauseTimer}
-                className="inline-flex items-center space-x-2 px-6 py-3 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-md shadow-amber-500/20 transition cursor-pointer"
+                icon={Pause}
               >
-                <Pause className="w-4 h-4" />
-                <span>Pause Session</span>
-              </button>
+                Pause
+              </Button>
             ) : (
-              <button
+              <Button
+                variant="primary"
+                size="md"
                 onClick={handleStartTimer}
-                className="inline-flex items-center space-x-2 px-6 py-3 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-md shadow-teal-500/20 transition cursor-pointer"
+                icon={Play}
               >
-                <Play className="w-4 h-4 fill-white" />
-                <span>Start Focus</span>
-              </button>
+                Start focus
+              </Button>
             )}
 
-            <button
+            <Button
+              variant="outline"
+              size="md"
               onClick={handleResetTimer}
-              className="p-3 rounded-2xl border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-800 transition cursor-pointer"
-              title="Reset Timer"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
+              icon={RotateCcw}
+              aria-label="Reset Timer"
+            />
           </div>
-        </div>
+        </Card>
 
         {/* Right Column: Active Task & Session Notes */}
-        <div className="lg:col-span-6 space-y-6">
+        <div className="lg:col-span-6 space-y-4">
           {/* Current Focus Task */}
-          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200/60">
-                Current Learning Focus
+          <Card className="p-5 space-y-3">
+            <div className="flex items-center justify-between pb-2.5 border-b border-line">
+              <span className="text-xs font-medium text-accent">
+                Current task
               </span>
               {activeRoadmap && (
-                <span className="text-xs text-slate-400 font-semibold truncate max-w-[180px]">
+                <span className="text-xs text-muted truncate max-w-[180px]">
                   {activeRoadmap.title}
                 </span>
               )}
             </div>
 
             {currentTask ? (
-              <div className="space-y-3 pt-1">
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs font-black font-mono text-teal-700 bg-teal-50 px-2 py-0.5 rounded">
+              <div className="space-y-2.5 pt-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-medium text-accent">
                     Day {currentTask.task.dayNumber}
                   </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
-                    {formatEnum(currentTask.task.activityType || 'Study')}
+                  <span className="text-xs text-muted">
+                    · {formatEnum(currentTask.task.activityType || 'Study')}
                   </span>
-                  <span className="text-[10px] text-slate-400 flex items-center space-x-1">
-                    <Clock className="w-3 h-3" />
-                    <span>{currentTask.task.estimatedMinutes != null ? `${currentTask.task.estimatedMinutes}m` : 'Flexible duration'}</span>
+                  <span className="text-xs text-muted">
+                    · {currentTask.task.estimatedMinutes != null ? `${currentTask.task.estimatedMinutes}m` : '90m'}
                   </span>
                 </div>
 
-                <h3 className="text-base font-bold text-slate-900 leading-snug">
+                <h3 className="text-sm font-semibold text-ink leading-snug">
                   {currentTask.task.title}
                 </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  {currentTask.task.description}
-                </p>
+                {currentTask.task.description && (
+                  <p className="text-xs text-muted leading-relaxed">
+                    {currentTask.task.description}
+                  </p>
+                )}
 
                 <div className="pt-2">
-                  <button
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={handleMarkTaskComplete}
                     disabled={markingDone}
-                    className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition cursor-pointer disabled:opacity-50"
+                    icon={Check}
                   >
-                    <Check className="w-4 h-4 stroke-[3]" />
-                    <span>{markingDone ? 'Syncing...' : 'Mark Task Complete'}</span>
-                  </button>
+                    {markingDone ? 'Saving...' : 'Mark Task Complete'}
+                  </Button>
                 </div>
               </div>
             ) : (
-              <div className="py-6 text-center text-slate-400">
-                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-1" />
-                <p className="text-xs font-bold text-slate-700">All current tasks completed!</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">Explore new roadmap curricula in the Studio.</p>
+              <div className="py-6 text-center text-muted">
+                <CheckCircle2 className="w-6 h-6 text-success mx-auto mb-1" />
+                <p className="text-xs font-medium text-ink">All tasks completed</p>
+                <p className="text-xs text-muted mt-0.5">Explore new roadmap curricula in the Studio.</p>
               </div>
             )}
-          </div>
+          </Card>
 
           {/* Session Notes Scratchpad */}
-          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <div className="flex items-center space-x-2">
-                <FileText className="w-4 h-4 text-teal-600" />
-                <h3 className="text-xs font-bold text-slate-900">Task Scratchpad</h3>
+          <Card className="p-5 space-y-2.5">
+            <div className="flex items-center justify-between pb-2 border-b border-line">
+              <div className="flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-accent" />
+                <h3 className="text-xs font-medium text-ink">Task scratchpad</h3>
               </div>
-              <span className="text-[10px] text-slate-400 font-medium">Autosaved locally</span>
+              <span className="text-xs text-muted">Autosaved</span>
             </div>
 
             <textarea
               rows={4}
               value={notes}
               onChange={handleNotesChange}
-              placeholder="Jot down quick code snippets, questions, or key takeaways for this task..."
-              className="w-full p-3 rounded-2xl border border-slate-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-200 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition resize-none bg-slate-50/50"
+              placeholder="Jot down quick code snippets, questions, or key takeaways..."
+              className="w-full p-2.5 rounded-[6px] border border-line bg-surface text-xs text-ink placeholder:text-muted focus:border-accent outline-none transition resize-none"
             />
-          </div>
+          </Card>
         </div>
       </div>
     </div>

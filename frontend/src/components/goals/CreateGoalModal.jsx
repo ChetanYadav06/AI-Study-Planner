@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { X, Target, Clock, Calendar, Sparkles, Check, AlertCircle, Loader2, BookOpen, Rocket, Brain, ChevronDown, ChevronUp, Flag } from 'lucide-react';
+import { X, Target, Clock, Calendar, Check, AlertCircle, Loader2, BookOpen, Rocket, Brain, ChevronDown, ChevronUp } from 'lucide-react';
 import { createGoal } from '../../services/api';
+import { Button } from '../ui';
 
 const TOPIC_PRESETS = [
   {
     title: 'Full-Stack Spring Boot 3 & React',
     subject: 'Computer Science',
-    desc: 'Master full-stack architecture, REST APIs, JPA persistence, JWT security, and modern React 19 UI.',
+    desc: 'Master full-stack architecture, REST APIs, JPA persistence, JWT security, and modern React UI.',
     targetOutcome: 'Build and deploy a production-grade full-stack SaaS platform',
     days: 30,
     hours: 3.0,
@@ -46,9 +47,9 @@ const TOPIC_PRESETS = [
 ];
 
 const SKILL_LEVELS = [
-  { level: 'BEGINNER', label: 'Beginner', Icon: BookOpen, desc: 'Starting from scratch — fundamentals first', active: 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-300/30', inactive: 'border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/40', iconActive: 'text-emerald-600', labelActive: 'text-emerald-800' },
-  { level: 'INTERMEDIATE', label: 'Intermediate', Icon: Brain, desc: 'Core concepts — ready for architecture & design', active: 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-300/30', inactive: 'border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/40', iconActive: 'text-indigo-600', labelActive: 'text-indigo-800' },
-  { level: 'ADVANCED', label: 'Advanced', Icon: Rocket, desc: 'Production depth — edge cases & systems design', active: 'border-violet-500 bg-violet-50 ring-1 ring-violet-300/30', inactive: 'border-slate-200 hover:border-violet-300 hover:bg-violet-50/40', iconActive: 'text-violet-600', labelActive: 'text-violet-800' },
+  { level: 'BEGINNER', label: 'Beginner', Icon: BookOpen, desc: 'Starting from scratch — fundamentals first' },
+  { level: 'INTERMEDIATE', label: 'Intermediate', Icon: Brain, desc: 'Core concepts — ready for architecture & design' },
+  { level: 'ADVANCED', label: 'Advanced', Icon: Rocket, desc: 'Production depth — edge cases & systems design' },
 ];
 
 export const CreateGoalModal = ({ isOpen, onClose, onGoalCreated }) => {
@@ -130,53 +131,49 @@ export const CreateGoalModal = ({ isOpen, onClose, onGoalCreated }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-sm flex items-start justify-center p-4 pt-12 animate-fade-slide-up"
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center p-4 pt-12 overflow-y-auto"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 relative overflow-hidden"
+        className="bg-surface rounded-[10px] max-w-xl w-full border border-line relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 sm:px-8 pt-6 pb-4 border-b border-slate-100 bg-slate-900 text-white">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-cyan-400 shrink-0">
-              <Target className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-white leading-tight">Define Learning Goal</h2>
-              <p className="text-xs text-slate-300 mt-0.5">Configure your syllabus target and daily commitment</p>
-            </div>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-line">
+          <div>
+            <h2 className="text-base font-semibold text-ink">Define Learning Goal</h2>
+            <p className="text-xs text-muted mt-0.5">Configure your syllabus target and daily commitment</p>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition cursor-pointer"
+            aria-label="Close"
+            className="p-1.5 text-muted hover:text-ink rounded-[4px] hover:bg-page transition cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="px-6 sm:px-8 py-6 space-y-5">
+        <div className="p-6 space-y-5">
           {/* Quick Presets */}
           <div>
-            <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-2.5">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Recommended Curriculum Presets</span>
-            </p>
+            <p className="text-xs font-medium text-muted mb-2">Recommended Curriculum Presets</p>
             <div className="grid grid-cols-2 gap-2">
               {TOPIC_PRESETS.map((preset, idx) => (
                 <button
                   key={idx}
                   type="button"
                   onClick={() => handleApplyPreset(preset, idx)}
-                  className={`text-left p-3 rounded-2xl border text-xs transition cursor-pointer ${
+                  className={`text-left p-3 rounded-[8px] border text-xs transition cursor-pointer ${
                     selectedPresetIdx === idx
-                      ? 'border-indigo-500 bg-indigo-50/80 ring-2 ring-indigo-500/20 text-indigo-950'
-                      : 'border-slate-200 bg-slate-50/50 hover:border-indigo-300 hover:bg-indigo-50/40 text-slate-800'
+                      ? 'border-accent bg-accent-soft text-accent'
+                      : 'border-line bg-surface hover:border-slate-300 text-ink'
                   }`}
                 >
-                  <p className="font-bold truncate">{preset.title}</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
+                  <p className="font-medium truncate">{preset.title}</p>
+                  <p className="text-xs text-muted mt-0.5">
                     {preset.days}d · {preset.hours}h/day · {preset.level}
                   </p>
                 </button>
@@ -186,8 +183,8 @@ export const CreateGoalModal = ({ isOpen, onClose, onGoalCreated }) => {
 
           {/* Error Message */}
           {error && (
-            <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+            <div className="p-3 rounded-[8px] bg-danger/10 border border-danger/30 text-danger text-xs flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
@@ -195,8 +192,8 @@ export const CreateGoalModal = ({ isOpen, onClose, onGoalCreated }) => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Goal Title */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Goal Title <span className="text-rose-500">*</span>
+              <label className="block text-xs font-medium text-ink mb-1.5">
+                Goal Title <span className="text-danger">*</span>
               </label>
               <input
                 type="text"
@@ -204,45 +201,49 @@ export const CreateGoalModal = ({ isOpen, onClose, onGoalCreated }) => {
                 value={title}
                 onChange={(e) => { setTitle(e.target.value); setSelectedPresetIdx(null); }}
                 placeholder="e.g. Master Java Data Structures & Algorithms"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm text-slate-900 placeholder:text-slate-400 transition"
+                className="w-full px-3 py-2 rounded-[6px] border border-line bg-surface focus:border-accent outline-none text-xs text-ink placeholder:text-muted transition"
               />
             </div>
 
             {/* Description */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Description / Key Focus Areas <span className="text-slate-400 font-normal">(optional)</span>
+              <label className="block text-xs font-medium text-ink mb-1.5">
+                Description / Key Focus Areas <span className="text-muted font-normal">(optional)</span>
               </label>
               <textarea
                 rows={2}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="e.g. Arrays, LinkedList, Binary Search, Trees, Dynamic Programming"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm text-slate-900 placeholder:text-slate-400 transition resize-none"
+                className="w-full px-3 py-2 rounded-[6px] border border-line bg-surface focus:border-accent outline-none text-xs text-ink placeholder:text-muted transition resize-none"
               />
             </div>
 
             {/* Skill Level Selection */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-2">Target Skill Level</label>
-              <div className="grid grid-cols-3 gap-2.5">
-                {SKILL_LEVELS.map(({ level, label, Icon, desc, active, inactive, iconActive, labelActive }) => {
+              <label className="block text-xs font-medium text-ink mb-2">Target Skill Level</label>
+              <div className="grid grid-cols-3 gap-2">
+                {SKILL_LEVELS.map(({ level, label, Icon, desc }) => {
                   const isSel = skillLevel === level;
                   return (
                     <button
                       key={level}
                       type="button"
                       onClick={() => setSkillLevel(level)}
-                      className={`p-3 rounded-2xl border text-left transition cursor-pointer relative ${isSel ? active : inactive}`}
+                      className={`p-3 rounded-[8px] border text-left transition cursor-pointer relative ${
+                        isSel
+                          ? 'border-accent bg-accent-soft text-accent'
+                          : 'border-line bg-surface hover:border-slate-300 text-ink'
+                      }`}
                     >
                       {isSel && (
                         <span className="absolute top-2.5 right-2.5">
-                          <Check className={`w-3.5 h-3.5 ${iconActive} stroke-[3]`} />
+                          <Check className="w-3.5 h-3.5 text-accent stroke-[2.5]" />
                         </span>
                       )}
-                      <Icon className={`w-4 h-4 mb-1.5 ${isSel ? iconActive : 'text-slate-400'}`} />
-                      <p className={`text-[11px] font-bold ${isSel ? labelActive : 'text-slate-700'}`}>{label}</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">{desc}</p>
+                      <Icon className={`w-4 h-4 mb-1.5 ${isSel ? 'text-accent' : 'text-muted'}`} />
+                      <p className={`text-xs font-medium ${isSel ? 'text-accent' : 'text-ink'}`}>{label}</p>
+                      <p className="text-xs text-muted mt-0.5 leading-tight">{desc}</p>
                     </button>
                   );
                 })}
@@ -251,50 +252,50 @@ export const CreateGoalModal = ({ isOpen, onClose, onGoalCreated }) => {
 
             {/* Duration & Daily Hours */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1.5">
+              <div className="bg-page border border-line rounded-[8px] p-3 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                  <span className="text-xs font-medium text-ink flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-accent" />
                     <span>Duration</span>
                   </span>
-                  <span className="text-xs font-mono font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md">
+                  <span className="text-xs font-mono font-medium text-accent">
                     {targetDays} Days
                   </span>
                 </div>
                 <input
                   type="range" min={7} max={180} step={1} value={targetDays}
                   onChange={(e) => setTargetDays(Number(e.target.value))}
-                  className="w-full accent-indigo-600 h-1.5 rounded-lg cursor-pointer"
+                  className="w-full accent-accent h-1.5 rounded-[4px] cursor-pointer"
                 />
                 <div className="flex justify-between">
                   {[14, 30, 60, 90, 120].map((d) => (
                     <button key={d} type="button" onClick={() => setTargetDays(d)}
-                      className={`text-[10px] px-1 py-0.5 rounded cursor-pointer transition ${targetDays === d ? 'font-bold text-indigo-600' : 'text-slate-400'}`}>
+                      className={`text-xs px-1 py-0.5 rounded-[4px] cursor-pointer transition ${targetDays === d ? 'font-medium text-accent' : 'text-muted'}`}>
                       {d}d
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1.5">
+              <div className="bg-page border border-line rounded-[8px] p-3 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-cyan-600" />
+                  <span className="text-xs font-medium text-ink flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-accent" />
                     <span>Daily Hours</span>
                   </span>
-                  <span className="text-xs font-mono font-bold text-cyan-700 bg-cyan-100 px-2 py-0.5 rounded-md">
+                  <span className="text-xs font-mono font-medium text-accent">
                     {hoursPerDay.toFixed(1)}h/day
                   </span>
                 </div>
                 <input
                   type="range" min={0.5} max={8.0} step={0.5} value={hoursPerDay}
                   onChange={(e) => setHoursPerDay(Number(e.target.value))}
-                  className="w-full accent-cyan-600 h-1.5 rounded-lg cursor-pointer"
+                  className="w-full accent-accent h-1.5 rounded-[4px] cursor-pointer"
                 />
                 <div className="flex justify-between">
                   {[1.0, 2.0, 3.0, 4.0, 6.0].map((h) => (
                     <button key={h} type="button" onClick={() => setHoursPerDay(h)}
-                      className={`text-[10px] px-1 py-0.5 rounded cursor-pointer transition ${hoursPerDay === h ? 'font-bold text-cyan-600' : 'text-slate-400'}`}>
+                      className={`text-xs px-1 py-0.5 rounded-[4px] cursor-pointer transition ${hoursPerDay === h ? 'font-medium text-accent' : 'text-muted'}`}>
                       {h}h
                     </button>
                   ))}
@@ -307,32 +308,32 @@ export const CreateGoalModal = ({ isOpen, onClose, onGoalCreated }) => {
               <button
                 type="button"
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer"
+                className="w-full flex items-center justify-between p-2.5 rounded-[6px] border border-line bg-page hover:bg-slate-100 text-ink text-xs font-medium transition cursor-pointer"
               >
-                <span>Advanced Details (Subject, Outcome & Priority)</span>
-                {showAdvanced ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+                <span>Advanced details (subject, outcome & priority)</span>
+                {showAdvanced ? <ChevronUp className="w-4 h-4 text-muted" /> : <ChevronDown className="w-4 h-4 text-muted" />}
               </button>
 
               {showAdvanced && (
-                <div className="mt-3 p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3">
+                <div className="mt-2.5 p-3.5 rounded-[8px] border border-line bg-page space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">Subject / Domain</label>
+                      <label className="block text-xs font-medium text-ink mb-1">Subject / Domain</label>
                       <input
                         type="text"
                         placeholder="e.g. Computer Science, Web Dev"
                         value={subject}
                         onChange={(e) => setSubject(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 outline-none focus:border-indigo-500"
+                        className="w-full px-3 py-1.5 rounded-[6px] border border-line bg-surface text-xs text-ink outline-none focus:border-accent"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">Priority</label>
+                      <label className="block text-xs font-medium text-ink mb-1">Priority</label>
                       <select
                         value={priority}
                         onChange={(e) => setPriority(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 outline-none focus:border-indigo-500"
+                        className="w-full px-3 py-1.5 rounded-[6px] border border-line bg-surface text-xs font-medium text-ink outline-none focus:border-accent"
                       >
                         <option value="HIGH">High Priority</option>
                         <option value="MEDIUM">Medium Priority</option>
@@ -342,13 +343,13 @@ export const CreateGoalModal = ({ isOpen, onClose, onGoalCreated }) => {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">Target Outcome</label>
+                    <label className="block text-xs font-medium text-ink mb-1">Target Outcome</label>
                     <input
                       type="text"
                       placeholder="e.g. Solve placement coding problems confidently"
                       value={targetOutcome}
                       onChange={(e) => setTargetOutcome(e.target.value)}
-                      className="w-full px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 outline-none focus:border-indigo-500"
+                      className="w-full px-3 py-1.5 rounded-[6px] border border-line bg-surface text-xs text-ink outline-none focus:border-accent"
                     />
                   </div>
                 </div>
@@ -356,35 +357,36 @@ export const CreateGoalModal = ({ isOpen, onClose, onGoalCreated }) => {
             </div>
 
             {/* Total Hours Summary */}
-            <div className="p-3.5 bg-gradient-to-r from-indigo-50 to-cyan-50 border border-indigo-100 rounded-2xl flex items-center justify-between">
-              <div className="text-xs text-slate-700">
-                <span className="font-bold text-slate-900">Total Commitment: </span>
-                <span className="font-mono font-extrabold text-indigo-700">{totalHours} hours</span>
-                <span className="text-slate-500"> across {targetDays} days</span>
+            <div className="p-3 bg-page border border-line rounded-[8px] flex items-center justify-between text-xs">
+              <div className="text-ink">
+                <span className="font-medium">Total commitment: </span>
+                <span className="font-mono font-medium text-accent">{totalHours} hours</span>
+                <span className="text-muted"> across {targetDays} days</span>
               </div>
-              <span className="px-2.5 py-0.5 rounded-full bg-white text-indigo-700 font-bold border border-indigo-200 text-[10px] uppercase tracking-wider shrink-0">
+              <span className="px-2 py-0.5 rounded-[4px] bg-surface text-accent font-medium border border-line text-xs">
                 {planTier}
               </span>
             </div>
 
             {/* Footer Buttons */}
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
-              <button
-                type="button" onClick={onClose} disabled={loading}
-                className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-line">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onClose}
+                disabled={loading}
               >
                 Cancel
-              </button>
-              <button
-                type="submit" disabled={loading}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl text-xs font-bold bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-700 hover:from-indigo-700 hover:to-violet-700 text-white shadow-md shadow-indigo-500/20 transition cursor-pointer disabled:opacity-50"
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                type="submit"
+                disabled={loading}
+                icon={loading ? Loader2 : Target}
               >
-                {loading ? (
-                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /><span>Saving...</span></>
-                ) : (
-                  <><Target className="w-3.5 h-3.5" /><span>Save Learning Goal</span></>
-                )}
-              </button>
+                {loading ? 'Saving...' : 'Save Learning Goal'}
+              </Button>
             </div>
           </form>
         </div>

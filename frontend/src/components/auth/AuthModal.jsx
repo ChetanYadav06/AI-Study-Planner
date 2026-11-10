@@ -7,11 +7,11 @@ import {
   User,
   Eye,
   EyeOff,
-  ArrowRight,
   AlertCircle,
   CheckCircle,
-  GraduationCap
+  Loader2
 } from 'lucide-react';
+import { Button } from '../ui/Button';
 
 export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
   const { login, register } = useAuth();
@@ -61,10 +61,10 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
     try {
       if (mode === 'login') {
         await login(email, password);
-        setSuccess('Successfully logged in!');
+        setSuccess('Successfully signed in.');
       } else {
         await register(name, email, password);
-        setSuccess('Account created successfully!');
+        setSuccess('Account created successfully.');
       }
 
       setTimeout(() => {
@@ -93,132 +93,139 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="auth-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+      onClick={onClose}
+    >
       <div
-        className="bg-white rounded-2xl border border-slate-200 max-w-md w-full shadow-2xl overflow-hidden relative"
+        className="bg-white rounded-lg border border-[#e5e7eb] max-w-md w-full shadow-md overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white relative">
+        <div className="p-5 border-b border-[#e5e7eb] flex items-center justify-between">
+          <div>
+            <h2 id="auth-modal-title" className="text-base font-semibold text-[#111827]">
+              {mode === 'login' ? 'Sign in' : 'Create account'}
+            </h2>
+            <p className="text-xs text-[#4b5563] mt-0.5">
+              {mode === 'login'
+                ? 'Sign in to access your roadmaps and study sessions.'
+                : 'Create an account to generate study roadmaps.'}
+            </p>
+          </div>
           <button
+            type="button"
             onClick={onClose}
-            className="absolute top-4 right-4 p-1 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition"
+            className="p-1.5 rounded-md text-[#4b5563] hover:text-[#111827] hover:bg-[#f8fafc] transition-colors duration-150 cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
+            aria-label="Close dialog"
           >
             <X className="w-5 h-5" />
           </button>
-
-          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-3">
-            <GraduationCap className="w-6 h-6 text-white" />
-          </div>
-          <h2 className="text-xl font-bold">
-            {mode === 'login' ? 'Welcome Back!' : 'Start Your Learning Journey'}
-          </h2>
-          <p className="text-xs text-blue-100 mt-1">
-            {mode === 'login'
-              ? 'Sign in to access your roadmaps, timetables, and study progress.'
-              : 'Create an account to generate personalized AI study roadmaps.'}
-          </p>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex border-b border-slate-200 bg-slate-50">
+        <div className="flex border-b border-[#e5e7eb] px-5 bg-[#f8fafc]">
           <button
             type="button"
             onClick={() => { setMode('login'); setError(null); }}
-            className={`flex-1 py-3 text-sm font-semibold transition border-b-2 ${
+            className={`py-2.5 px-3 text-xs font-medium border-b-2 transition-colors duration-150 cursor-pointer min-h-[36px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 ${
               mode === 'login'
-                ? 'border-blue-600 text-blue-700 bg-white'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-[#0f766e] text-[#0f766e]'
+                : 'border-transparent text-[#4b5563] hover:text-[#111827]'
             }`}
           >
-            Sign In
+            Sign in
           </button>
           <button
             type="button"
             onClick={() => { setMode('register'); setError(null); }}
-            className={`flex-1 py-3 text-sm font-semibold transition border-b-2 ${
+            className={`py-2.5 px-3 text-xs font-medium border-b-2 transition-colors duration-150 cursor-pointer min-h-[36px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 ${
               mode === 'register'
-                ? 'border-blue-600 text-blue-700 bg-white'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-[#0f766e] text-[#0f766e]'
+                : 'border-transparent text-[#4b5563] hover:text-[#111827]'
             }`}
           >
-            Create Account
+            Create account
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {error && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start space-x-2">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <div className="p-3 rounded-md bg-red-50 border border-red-200 text-[#b91c1c] text-xs flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center space-x-2">
-              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            <div className="p-3 rounded-md bg-[#f0fdfa] border border-[#0f766e]/20 text-[#0f766e] text-xs flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 shrink-0" />
               <span>{success}</span>
             </div>
           )}
 
           {/* Name Field (Register mode only) */}
           {mode === 'register' && (
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Full Name
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-[#111827]">
+                Full name
               </label>
               <div className="relative">
-                <User className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#4b5563]" />
                 <input
                   type="text"
                   required
                   placeholder="e.g. Alex Sharma"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-[#e5e7eb] text-[#111827] placeholder-[#4b5563] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
                 />
               </div>
             </div>
           )}
 
           {/* Email Field */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-              Email Address
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-[#111827]">
+              Email address
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+              <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#4b5563]" />
               <input
                 type="email"
                 required
                 placeholder="student@university.edu"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-[#e5e7eb] text-[#111827] placeholder-[#4b5563] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
               />
             </div>
           </div>
 
           {/* Password Field */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-[#111827]">
               Password
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+              <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#4b5563]" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
                 placeholder="At least 6 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-9 pr-10 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-9 pr-10 py-2 text-sm rounded-md border border-[#e5e7eb] text-[#111827] placeholder-[#4b5563] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4b5563] hover:text-[#111827] p-1 cursor-pointer"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -227,54 +234,50 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
 
           {/* Confirm Password (Register mode only) */}
           {mode === 'register' && (
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Confirm Password
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-[#111827]">
+                Confirm password
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#4b5563]" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
                   placeholder="Repeat your password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-[#e5e7eb] text-[#111827] placeholder-[#4b5563] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
                 />
               </div>
             </div>
           )}
 
           {/* Submit Button */}
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium text-sm rounded-xl transition shadow-xs flex items-center justify-center space-x-2"
+            variant="primary"
+            size="md"
+            className="w-full mt-2"
           >
             {loading ? (
-              <span className="flex items-center space-x-2">
-                <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
                 <span>Processing...</span>
               </span>
             ) : (
-              <>
-                <span>{mode === 'login' ? 'Sign In to Account' : 'Create Student Account'}</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
+              <span>{mode === 'login' ? 'Sign in' : 'Create account'}</span>
             )}
-          </button>
+          </Button>
 
-          {/* Quick Demo Helper Button */}
-          <div className="pt-2 text-center">
+          {/* Sample Demo Helper Button */}
+          <div className="pt-1 text-center">
             <button
               type="button"
               onClick={fillDemoCredentials}
-              className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+              className="text-xs text-[#0f766e] hover:underline cursor-pointer"
             >
-              Fill Sample {mode === 'login' ? 'Login' : 'Registration'} Data
+              Fill sample credentials
             </button>
           </div>
         </form>
@@ -282,3 +285,5 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
     </div>
   );
 };
+
+export default AuthModal;

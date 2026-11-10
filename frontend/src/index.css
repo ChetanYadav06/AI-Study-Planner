@@ -3,7 +3,7 @@
 @theme {
   --color-accent: #0f766e;
   --color-accent-hover: #115e59;
-  --color-accent-subtle: #f0fdfa;
+  --color-accent-soft: #f0fdfa;
 
   --color-ink: #111827;
   --color-muted: #4b5563;
@@ -61,39 +61,6 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-}
-
-/* ── Compatibility classes for unmigrated 4B/4C views ─────────── */
-/* These will be removed as ProfileView, Wizard and Dashboard are restyled in 4B/4C */
-.gradient-primary {
-  background: #0f766e;
-}
-
-.gradient-accent {
-  background: #0f766e;
-}
-
-.card-hover-lift {
-  transition: border-color 0.15s ease;
-}
-
-.card-hover-lift:hover {
-  border-color: #cbd5e1;
-}
-
-@keyframes fadeSlideUp {
-  0% {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-slide {
-  animation: fadeSlideUp 0.15s ease-out forwards;
 }
 
 /* ── Accessible Reduced Motion ────────────────────────────────── */

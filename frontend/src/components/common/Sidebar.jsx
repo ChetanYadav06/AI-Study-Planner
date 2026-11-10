@@ -27,9 +27,7 @@ export const Sidebar = ({
   isCollapsed,
   setIsCollapsed,
   mobileOpen,
-  setMobileOpen,
-  accentColor = 'teal',
-  onAccentChange
+  setMobileOpen
 }) => {
   const { isAuthenticated, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -282,8 +280,6 @@ export const Sidebar = ({
       <SettingsModal
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        accentColor={accentColor}
-        onAccentChange={onAccentChange}
       />
     </aside>
   );

@@ -21,14 +21,8 @@ const AppContent = () => {
   const [selectedGoalForRoadmap, setSelectedGoalForRoadmap] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [accentColor, setAccentColor] = useState(() => localStorage.getItem('ai_study_planner_accent') || 'teal');
 
   const { isAuthenticated } = useAuth();
-
-  const handleAccentChange = (color) => {
-    setAccentColor(color);
-    localStorage.setItem('ai_study_planner_accent', color);
-  };
 
   const handleOpenAuth = (mode = 'login') => {
     setAuthMode(mode);
@@ -72,8 +66,6 @@ const AppContent = () => {
         setIsCollapsed={setSidebarCollapsed}
         mobileOpen={mobileSidebarOpen}
         setMobileOpen={setMobileSidebarOpen}
-        accentColor={accentColor}
-        onAccentChange={handleAccentChange}
       />
 
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
@@ -92,7 +84,6 @@ const AppContent = () => {
                 onNavigateTab={setActiveTab}
                 onOpenCreateGoal={handleOpenCreateGoal}
                 onNavigateRoadmap={handleNavigateRoadmap}
-                accentColor={accentColor}
               />
             ) : (
               <StudentPortalLanding onOpenAuth={handleOpenAuth} />

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Calendar, Clock, PlusCircle, Target, CheckCircle2, ChevronRight, Sparkles, BookOpen, Coffee, Zap } from 'lucide-react';
+import { ChevronRight, PlusCircle, CheckCircle2, Coffee } from 'lucide-react';
 import { getGoals, getSavedRoadmaps, getStudentProfile, getStudySessions } from '../../services/api';
 import { computeGoalStats } from '../../utils/goalStats';
 import { formatEnum } from '../../utils/formatters';
 import { getCanonicalTaskId } from '../../utils/studyQueue';
+import { PageHeader, Card, Button, EmptyState } from '../ui';
 
 export const StudyPlannerView = ({ onOpenCreateGoal, onNavigateRoadmap }) => {
   const [goals, setGoals] = useState([]);
@@ -39,9 +40,7 @@ export const StudyPlannerView = ({ onOpenCreateGoal, onNavigateRoadmap }) => {
   const availableDaysCount = Math.max(1, Math.min(7, profile?.availableDaysPerWeek ?? 5));
 
   // Determine study vs rest days based on availableDaysCount (Monday-based: 1=Mon, 2=Tue, ... 5=Fri, 6=Sat, 0=Sun)
-  // Mapping day of week (0..6) to Monday-based index (0=Mon .. 6=Sun)
   const isStudyDayIndex = (dayIndex) => {
-    // Convert 0 (Sun) to 6, 1 (Mon) to 0, 2 (Tue) to 1 ...
     const mondayBased = (dayIndex + 6) % 7;
     return mondayBased < availableDaysCount;
   };
@@ -118,7 +117,6 @@ export const StudyPlannerView = ({ onOpenCreateGoal, onNavigateRoadmap }) => {
     const todayIndex = new Date().getDay();
     const scheduleByDay = {};
 
-    // Find the next study days in chronological order starting today
     let studyDaySlotCounter = 0;
 
     for (let offset = 0; offset < 7; offset++) {
@@ -168,7 +166,6 @@ export const StudyPlannerView = ({ onOpenCreateGoal, onNavigateRoadmap }) => {
     const diffTime = Math.max(0, now.getTime() - createdDate.getTime());
     const calendarDaysElapsed = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-    // Approximate study days elapsed based on weekly pace
     const expectedStudyDays = Math.max(1, Math.round((calendarDaysElapsed * availableDaysCount) / 7));
 
     let completedCount = 0;
@@ -184,23 +181,17 @@ export const StudyPlannerView = ({ onOpenCreateGoal, onNavigateRoadmap }) => {
     if (delta >= 1) {
       return {
         label: 'Ahead of Schedule',
-        color: 'text-emerald-600',
-        badge: 'bg-emerald-50 text-emerald-800 border-emerald-200',
         detail: `+${delta} ${delta === 1 ? 'day' : 'days'} ahead (${completedCount} completed vs ${expectedStudyDays} expected)`
       };
     } else if (Math.abs(delta) <= 1) {
       return {
         label: 'On Track',
-        color: 'text-teal-600',
-        badge: 'bg-teal-50 text-teal-800 border-teal-200',
         detail: `On pace (${completedCount} completed of ~${expectedStudyDays} expected study days)`
       };
     } else {
       const behindDays = Math.abs(delta);
       return {
         label: 'Behind Schedule',
-        color: 'text-amber-600',
-        badge: 'bg-amber-50 text-amber-800 border-amber-200',
         detail: `${behindDays} ${behindDays === 1 ? 'day' : 'days'} behind (${completedCount} completed vs ${expectedStudyDays} expected)`
       };
     }
@@ -210,146 +201,138 @@ export const StudyPlannerView = ({ onOpenCreateGoal, onNavigateRoadmap }) => {
   const selectedLoggedMinutes = loggedMinutesByWeekday[selectedDay] || 0;
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-16 animate-fade-slide">
-      {/* Header Banner */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <div>
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-200/60 text-xs font-bold uppercase tracking-wider mb-2">
-            <Calendar className="w-3.5 h-3.5 text-teal-600" />
-            <span>Weekly Study Schedule ({availableDaysCount} Days/Week)</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Study Planner & Timetable
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xl leading-relaxed">
-            Sequential roadmap pacing aligned with your target study days and logged deep work sessions.
-          </p>
-        </div>
-
-        <button
-          onClick={onOpenCreateGoal}
-          className="inline-flex items-center space-x-2 px-5 py-3 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-teal-500/20 transition cursor-pointer shrink-0 self-start sm:self-center"
-        >
-          <PlusCircle className="w-4 h-4" />
-          <span>Add Study Goal</span>
-        </button>
-      </div>
+    <div className="space-y-6 max-w-4xl mx-auto pb-12">
+      <PageHeader
+        title="Study planner"
+        subtitle="What's scheduled this week."
+        action={
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={onOpenCreateGoal}
+            icon={PlusCircle}
+          >
+            Add goal
+          </Button>
+        }
+      />
 
       {/* Days Selector Strip */}
-      <div className="grid grid-cols-7 gap-2 bg-white rounded-3xl border border-slate-200/80 p-3 shadow-xs">
-        {daysOfWeek.map((dayName, idx) => {
-          const isSelected = selectedDay === idx;
-          const isToday = new Date().getDay() === idx;
-          const daySchedule = weeklySchedule[idx];
-          const isRest = !daySchedule?.isStudyDay;
+      <Card className="p-2">
+        <div className="grid grid-cols-7 gap-1">
+          {daysOfWeek.map((dayName, idx) => {
+            const isSelected = selectedDay === idx;
+            const isToday = new Date().getDay() === idx;
+            const daySchedule = weeklySchedule[idx];
+            const isRest = !daySchedule?.isStudyDay;
 
-          return (
-            <button
-              key={idx}
-              onClick={() => setSelectedDay(idx)}
-              className={`p-3 rounded-2xl text-center transition cursor-pointer flex flex-col items-center justify-center relative ${
-                isSelected
-                  ? 'bg-teal-500 text-white shadow-sm font-bold'
-                  : isRest
-                  ? 'bg-slate-50/60 text-slate-400 hover:bg-slate-100'
-                  : 'hover:bg-slate-50 text-slate-700'
-              }`}
-            >
-              <span className={`text-[11px] uppercase tracking-wider ${isSelected ? 'text-teal-100' : 'text-slate-400'}`}>
-                {shortDays[idx]}
-              </span>
-              <span className="text-sm font-black mt-0.5">
-                {isToday ? 'Today' : `D${idx + 1}`}
-              </span>
-              <span className={`text-[9px] mt-1 font-semibold ${isSelected ? 'text-teal-100' : isRest ? 'text-slate-400 italic' : 'text-teal-600'}`}>
-                {isRest ? 'Rest' : 'Study'}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setSelectedDay(idx)}
+                className={`p-2.5 rounded-[6px] text-center transition cursor-pointer flex flex-col items-center justify-center ${
+                  isSelected
+                    ? 'bg-accent text-surface font-medium'
+                    : isRest
+                    ? 'bg-page text-muted hover:bg-slate-100'
+                    : 'hover:bg-page text-ink'
+                }`}
+              >
+                <span className={`text-xs ${isSelected ? 'text-surface/80' : 'text-muted'}`}>
+                  {shortDays[idx]}
+                </span>
+                <span className="text-xs font-semibold mt-0.5">
+                  {isToday ? 'Today' : `D${idx + 1}`}
+                </span>
+                <span className={`text-xs mt-0.5 ${isSelected ? 'text-surface/90' : isRest ? 'text-muted' : 'text-accent'}`}>
+                  {isRest ? 'Rest' : 'Study'}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </Card>
 
       {/* Day Overview Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Selected Day Status */}
-        <div className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Selected Day</span>
-          <div className="flex items-center space-x-2 mt-1">
-            <h3 className="text-xl font-black text-slate-900">{daysOfWeek[selectedDay]}</h3>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-              selectedDayInfo.isStudyDay ? 'bg-teal-50 text-teal-800 border-teal-200' : 'bg-slate-100 text-slate-600 border-slate-200'
-            }`}>
-              {selectedDayInfo.isStudyDay ? 'Study Day' : 'Rest Day'}
-            </span>
+      <Card className="p-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-line">
+          {/* Selected Day Status */}
+          <div className="p-3 text-center md:text-left">
+            <span className="text-xs text-muted block">Selected day</span>
+            <div className="flex items-center justify-center md:justify-start gap-2 mt-1">
+              <span className="text-base font-semibold text-ink">{daysOfWeek[selectedDay]}</span>
+              <span className="text-xs px-2 py-0.5 rounded-[4px] bg-page border border-line text-muted">
+                {selectedDayInfo.isStudyDay ? 'Study' : 'Rest'}
+              </span>
+            </div>
+            <p className="text-xs text-muted mt-1">
+              {selectedDayInfo.isStudyDay
+                ? `Focus pacing for ${daysOfWeek[selectedDay]}`
+                : `Rest day based on ${availableDaysCount}d schedule`}
+            </p>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            {selectedDayInfo.isStudyDay
-              ? `Scheduled focus pacing for ${daysOfWeek[selectedDay]}`
-              : `Recovery day based on your ${availableDaysCount}-day study schedule`}
-          </p>
-        </div>
 
-        {/* Planned vs Logged Minutes */}
-        <div className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Focus Minutes</span>
-          <div className="flex items-baseline space-x-2 mt-1">
-            <h3 className="text-xl font-black text-teal-600">{selectedLoggedMinutes}m</h3>
-            <span className="text-xs font-bold text-slate-400">/ {selectedDayInfo.plannedMinutes}m planned</span>
+          {/* Planned vs Logged Minutes */}
+          <div className="p-3 text-center md:text-left">
+            <span className="text-xs text-muted block">Focus minutes</span>
+            <div className="flex items-baseline justify-center md:justify-start gap-1.5 mt-1">
+              <span className="text-base font-semibold text-accent font-mono">{selectedLoggedMinutes}m</span>
+              <span className="text-xs text-muted">/ {selectedDayInfo.plannedMinutes}m planned</span>
+            </div>
+            <p className="text-xs text-muted mt-1">
+              {selectedLoggedMinutes > 0
+                ? `${Math.round((selectedLoggedMinutes / (selectedDayInfo.plannedMinutes || 1)) * 100)}% of planned focus logged`
+                : 'No sessions logged today'}
+            </p>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            {selectedLoggedMinutes > 0
-              ? `${Math.round((selectedLoggedMinutes / (selectedDayInfo.plannedMinutes || 1)) * 100)}% of planned focus logged`
-              : 'No focus sessions logged for this day yet'}
-          </p>
-        </div>
 
-        {/* Computed Schedule Status */}
-        <div className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Curriculum Pacing</span>
-          {scheduleStatus ? (
-            <div className="mt-1">
-              <div className="flex items-center space-x-2">
-                <h3 className={`text-xl font-black ${scheduleStatus.color}`}>
+          {/* Computed Schedule Status */}
+          <div className="p-3 text-center md:text-left">
+            <span className="text-xs text-muted block">Curriculum pacing</span>
+            {scheduleStatus ? (
+              <div className="mt-1">
+                <span className="text-base font-semibold text-ink block">
                   {scheduleStatus.label}
-                </h3>
+                </span>
+                <p className="text-xs text-muted mt-1">
+                  {scheduleStatus.detail}
+                </p>
               </div>
-              <p className="text-xs text-slate-500 mt-1">
-                {scheduleStatus.detail}
-              </p>
-            </div>
-          ) : (
-            <div className="mt-1">
-              <h3 className="text-xl font-black text-slate-700">Pacing Active</h3>
-              <p className="text-xs text-slate-500 mt-1">Roadmap pacing active</p>
-            </div>
-          )}
+            ) : (
+              <div className="mt-1">
+                <span className="text-base font-semibold text-ink block">Pacing Active</span>
+                <p className="text-xs text-muted mt-1">Roadmap pacing active</p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </Card>
 
       {/* Scheduled Study Slots */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 p-6 md:p-8 shadow-xs space-y-4">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-          <h2 className="text-base font-bold text-slate-900 flex items-center space-x-2">
-            <Clock className="w-4 h-4 text-teal-600" />
-            <span>Planned Tasks & Modules for {daysOfWeek[selectedDay]}</span>
-          </h2>
-          <span className="text-xs font-semibold text-slate-400">
+      <Card className="p-6 space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-line">
+          <div>
+            <h2 className="text-sm font-semibold text-ink">Planned tasks for {daysOfWeek[selectedDay]}</h2>
+            <p className="text-xs text-muted mt-0.5">Tasks scheduled for this study day</p>
+          </div>
+          <span className="text-xs font-mono text-muted">
             {selectedDayInfo.isStudyDay && selectedDayInfo.roadmapDay
-              ? `${selectedDayInfo.roadmapDay.tasks.length} Daily ${selectedDayInfo.roadmapDay.tasks.length === 1 ? 'Task' : 'Tasks'}`
+              ? `${selectedDayInfo.roadmapDay.tasks.length} tasks`
               : selectedDayInfo.isStudyDay
-              ? 'No tasks queued'
-              : 'Rest Period'}
+              ? '0 tasks'
+              : 'Rest'}
           </span>
         </div>
 
         {selectedDayInfo.isStudyDay ? (
           selectedDayInfo.roadmapDay && selectedDayInfo.roadmapDay.tasks.length > 0 ? (
-            <div className="space-y-3">
-              <div className="p-3 bg-teal-50/60 rounded-2xl border border-teal-100 flex items-center justify-between">
-                <span className="text-xs font-bold text-teal-900 font-mono">
-                  Roadmap Day {selectedDayInfo.roadmapDay.dayNumber} Focus
+            <div className="space-y-2">
+              <div className="p-2.5 bg-page rounded-[6px] border border-line flex items-center justify-between text-xs">
+                <span className="font-medium text-ink">
+                  Roadmap Day {selectedDayInfo.roadmapDay.dayNumber} focus
                 </span>
-                <span className="text-xs text-teal-700 font-semibold">
+                <span className="text-muted font-mono">
                   {selectedDayInfo.plannedMinutes} mins estimated
                 </span>
               </div>
@@ -357,39 +340,40 @@ export const StudyPlannerView = ({ onOpenCreateGoal, onNavigateRoadmap }) => {
               {selectedDayInfo.roadmapDay.tasks.map((taskItem, idx) => (
                 <div
                   key={taskItem.taskId}
-                  className="p-4 rounded-2xl border border-slate-200/80 hover:border-teal-300 bg-slate-50/50 hover:bg-white transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
+                  className="p-3 rounded-[8px] border border-line bg-surface hover:border-slate-300 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
-                  <div className="flex items-start space-x-3.5">
-                    <div className="w-10 h-10 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                  <div className="flex items-start gap-3">
+                    <div className="w-7 h-7 rounded-[4px] bg-page border border-line text-ink flex items-center justify-center font-mono text-xs shrink-0 mt-0.5">
                       {idx + 1}
                     </div>
                     <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-teal-100/70 text-teal-800">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-accent">
                           {formatEnum(taskItem.task.activityType || 'Study')}
                         </span>
-                        <span className="text-[10px] font-semibold text-slate-500">
-                          {taskItem.phaseTitle}
+                        <span className="text-xs text-muted">
+                          · {taskItem.phaseTitle}
                         </span>
                       </div>
-                      <h4 className="text-sm font-bold text-slate-900 mt-1 group-hover:text-teal-700 transition">
+                      <h4 className="text-xs font-semibold text-ink mt-0.5">
                         {taskItem.task.title}
                       </h4>
                       {taskItem.task.description && (
-                        <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{taskItem.task.description}</p>
+                        <p className="text-xs text-muted line-clamp-1 mt-0.5">{taskItem.task.description}</p>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-4 shrink-0 self-end sm:self-center">
+                  <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
                     <div className="text-right">
-                      <span className="text-xs font-bold text-slate-900 block">{taskItem.estimatedMinutes}m planned</span>
-                      <span className="text-[10px] text-teal-700 font-mono">Day {taskItem.dayNumber}</span>
+                      <span className="text-xs font-mono text-ink block">{taskItem.estimatedMinutes}m</span>
+                      <span className="text-xs text-muted">Day {taskItem.dayNumber}</span>
                     </div>
                     {primaryRoadmap && (
                       <button
+                        type="button"
                         onClick={() => onNavigateRoadmap && onNavigateRoadmap(primaryRoadmap)}
-                        className="p-2 rounded-xl bg-white border border-slate-200 hover:border-teal-400 text-teal-600 transition cursor-pointer shadow-2xs"
+                        className="p-1.5 rounded-[4px] border border-line hover:border-slate-300 text-muted hover:text-ink transition cursor-pointer"
                         title="Open Roadmap"
                       >
                         <ChevronRight className="w-4 h-4" />
@@ -400,24 +384,22 @@ export const StudyPlannerView = ({ onOpenCreateGoal, onNavigateRoadmap }) => {
               ))}
             </div>
           ) : (
-            <div className="py-12 text-center text-slate-400 space-y-2">
-              <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-500" />
-              <p className="text-sm font-semibold text-slate-700">All planned roadmap tasks completed!</p>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                You have finished all queued tasks for your active curriculum.
-              </p>
+            <div className="py-8 text-center text-muted space-y-1">
+              <CheckCircle2 className="w-6 h-6 mx-auto text-success mb-1" />
+              <p className="text-xs font-medium text-ink">All planned roadmap tasks completed</p>
+              <p className="text-xs text-muted">You have finished all queued tasks for your active curriculum.</p>
             </div>
           )
         ) : (
-          <div className="py-12 text-center text-slate-400 space-y-2 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-            <Coffee className="w-8 h-8 mx-auto text-slate-400" />
-            <p className="text-sm font-semibold text-slate-700">Scheduled Rest & Recovery Day</p>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              Your profile is configured for {availableDaysCount} study days per week. Use this day to rest, reflect, or review past notes.
+          <div className="py-8 text-center text-muted space-y-1 bg-page rounded-[8px] border border-line">
+            <Coffee className="w-6 h-6 mx-auto text-muted mb-1" />
+            <p className="text-xs font-medium text-ink">Rest & recovery day</p>
+            <p className="text-xs text-muted">
+              Configured for {availableDaysCount} study days per week. Take time to rest or review past notes.
             </p>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 };
