@@ -1,22 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Map,
-  Sparkles,
-  Calendar,
-  Clock,
-  PlusCircle,
-  CheckCircle2,
   Trash2,
-  ArrowRight,
-  Target,
-  Brain,
-  RotateCw,
-  BookOpen,
-  ChevronRight,
-  TrendingUp,
-  AlertCircle,
-  Layers,
-  Zap
+  Map as MapIcon
 } from 'lucide-react';
 import {
   getGoals,
@@ -30,6 +15,12 @@ import { useAuth } from '../../context/AuthContext';
 import { RoadmapWizard } from './RoadmapWizard';
 import { InteractiveRoadmap } from './InteractiveRoadmap';
 import { formatEnum } from '../../utils/formatters';
+import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
+import { PageHeader } from '../ui/PageHeader';
+import { ProgressBar } from '../ui/ProgressBar';
+import { StatusText } from '../ui/StatusText';
+import { EmptyState } from '../ui/EmptyState';
 
 export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
   const { user } = useAuth();
@@ -91,7 +82,6 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
     try {
       const result = await generateRoadmap(payload);
 
-      // Save newly synthesized roadmap directly to MySQL
       let savedRecord = null;
       try {
         savedRecord = await saveRoadmap({
@@ -104,7 +94,7 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
           roadmapJson: JSON.stringify(result)
         });
       } catch (saveErr) {
-        console.warn('Could not auto-save generated roadmap to backend:', saveErr);
+        console.warn('Could not autosave generated roadmap to backend:', saveErr);
       }
 
       setActiveRoadmap(result);
@@ -117,12 +107,12 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
       }
 
       setViewMode('VIEW');
-      fetchRoadmaps(); // refresh list in background
+      fetchRoadmaps();
     } catch (err) {
-      console.error('Roadmap synthesis failed:', err);
+      console.error('Roadmap generation failed:', err);
       setGenerateError(
         err.response?.data?.message ||
-        'Gemini curriculum synthesis encountered a temporary network issue. Please retry.'
+        'Roadmap generation encountered a network issue. Please retry.'
       );
     } finally {
       setGenerating(false);
@@ -170,7 +160,7 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
   };
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-16 animate-fade-slide-up">
+    <div className="space-y-6 max-w-5xl mx-auto pb-16">
       {/* VIEW MODE: CREATE (WIZARD) */}
       {viewMode === 'CREATE' && (
         <RoadmapWizard
@@ -220,162 +210,125 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
         />
       )}
 
-      {/* VIEW MODE: LIST (SAVED ROADMAPS WORKSPACE) */}
+      {/* VIEW MODE: LIST (SAVED ROADMAPS) */}
       {viewMode === 'LIST' && (
-        <div className="space-y-8">
-          {/* Header Banner - Dark Atmospheric Styling */}
-          <div className="relative rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 text-white p-6 sm:p-8 md:p-10 shadow-xl">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 left-10 w-64 h-64 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div>
-                <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-black tracking-wider uppercase mb-3">
-                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>AI Learning Studio</span>
-                </div>
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight">
-                  My Study Roadmaps
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-300 mt-2 max-w-xl leading-relaxed">
-                  Day-by-day learning journeys synthesized from your topic knowledge profile and study goals.
-                </p>
-
-                {/* HUD Counters */}
-                <div className="flex items-center space-x-6 mt-6 pt-5 border-t border-slate-800/80">
-                  <div>
-                    <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Roadmaps</span>
-                    <div className="text-xl font-black text-white">{roadmapStats.total} Active</div>
-                  </div>
-                  <div className="h-7 w-px bg-slate-800" />
-                  <div>
-                    <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Avg. Completion</span>
-                    <div className="text-xl font-black text-cyan-400">{roadmapStats.avgProgress}%</div>
-                  </div>
-                  <div className="h-7 w-px bg-slate-800" />
-                  <div>
-                    <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Mastered</span>
-                    <div className="text-xl font-black text-emerald-400">{roadmapStats.completedCount} Completed</div>
-                  </div>
-                </div>
-              </div>
-
-              <button
+        <div className="space-y-6">
+          <PageHeader
+            title="Roadmaps"
+            subtitle="Your day-by-day study plans."
+            action={
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => {
                   setActiveGoal(null);
                   setViewMode('CREATE');
                 }}
-                className="inline-flex items-center space-x-2 px-6 py-3.5 bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-700 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl text-xs font-bold shadow-lg shadow-indigo-500/25 transition-all duration-200 cursor-pointer self-start md:self-center shrink-0"
               >
-                <PlusCircle className="w-4 h-4" />
-                <span>Create New Roadmap</span>
-              </button>
-            </div>
-          </div>
+                Create New Roadmap
+              </Button>
+            }
+          />
 
-          {/* Roadmaps Grid */}
+          {savedRoadmaps.length > 0 && (
+            <p className="text-sm text-[#4b5563]">
+              {roadmapStats.total} active, {roadmapStats.completedCount} completed
+            </p>
+          )}
+
+          {/* Roadmaps List */}
           {loadingRoadmaps ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="h-48 bg-white rounded-3xl border border-slate-200 animate-pulse" />
-              <div className="h-48 bg-white rounded-3xl border border-slate-200 animate-pulse" />
+            <div className="py-12 text-center text-sm text-[#4b5563]">
+              Loading roadmaps...
             </div>
           ) : savedRoadmaps.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-3">
               {savedRoadmaps.map((roadmap) => {
                 const isComplete = (roadmap.progressPercentage || 0) >= 100;
+                const linkedGoal = goals.find(g => g.id === roadmap.goalId);
+                const displayHours = linkedGoal?.hoursPerDay != null ? linkedGoal.hoursPerDay : roadmap.hoursPerDay;
+
                 return (
-                  <div
+                  <Card
                     key={roadmap.id}
                     onClick={() => handleOpenSavedRoadmap(roadmap)}
-                    className="p-6 rounded-3xl bg-white border border-slate-200/80 hover:border-indigo-300 card-hover-lift transition-all cursor-pointer flex flex-col justify-between group shadow-xs relative overflow-hidden"
+                    className="p-5 hover:border-[#cbd5e1] transition-colors duration-150 cursor-pointer space-y-3"
                   >
-                    <div>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/60 uppercase tracking-wider">
-                            {formatEnum(roadmap.skillLevel)}
-                          </span>
-                          {isComplete && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center space-x-1">
-                              <CheckCircle2 className="w-3 h-3" />
-                              <span>Complete</span>
-                            </span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm sm:text-base font-semibold text-[#111827] truncate">
+                            {roadmap.title}
+                          </h3>
+                          {isComplete ? (
+                            <StatusText status="success">Completed</StatusText>
+                          ) : (
+                            <StatusText status="accent">In progress</StatusText>
                           )}
                         </div>
 
-                        <button
-                          type="button"
+                        <p className="text-xs text-[#4b5563] flex items-center gap-2">
+                          <span>{formatEnum(roadmap.skillLevel)}</span>
+                          <span>•</span>
+                          <span>{roadmap.targetDays} days</span>
+                          <span>•</span>
+                          <span>{displayHours}h/day</span>
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={(e) => handleDeleteRoadmap(e, roadmap.id)}
-                          className="text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition p-1.5"
+                          className="text-[#4b5563] hover:text-[#b91c1c] p-2 min-h-[36px] min-w-[36px]"
                           title="Delete roadmap"
+                          aria-label="Delete roadmap"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       </div>
-
-                      <h3 className="text-base sm:text-lg font-bold text-slate-900 mt-3 group-hover:text-indigo-600 transition leading-snug">
-                        {roadmap.title}
-                      </h3>
-
-                      {(() => {
-                        const linkedGoal = goals.find(g => g.id === roadmap.goalId);
-                        const displayHours = linkedGoal?.hoursPerDay != null ? linkedGoal.hoursPerDay : roadmap.hoursPerDay;
-                        return (
-                          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-3">
-                            <span className="flex items-center space-x-1 font-semibold text-slate-700">
-                              <Calendar className="w-3.5 h-3.5 text-indigo-500" />
-                              <span>{roadmap.targetDays} Days</span>
-                            </span>
-                            <span>•</span>
-                            <span className="flex items-center space-x-1 font-semibold text-slate-700">
-                              <Clock className="w-3.5 h-3.5 text-cyan-600" />
-                              <span>{displayHours}h / day</span>
-                            </span>
-                          </div>
-                        );
-                      })()}
                     </div>
 
-                    <div className="mt-6 pt-4 border-t border-slate-100">
-                      <div className="flex justify-between text-xs font-semibold text-slate-600 mb-2">
-                        <span>Milestone Progress</span>
-                        <span className="font-mono font-bold text-indigo-600">
+                    <div className="pt-2 border-t border-[#e5e7eb] flex items-center justify-between gap-4 text-xs">
+                      <div className="flex-1 max-w-md flex items-center gap-3">
+                        <span className="text-[#4b5563] shrink-0 font-medium">
                           {roadmap.progressPercentage || 0}%
                         </span>
-                      </div>
-                      <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                        <div
-                          className="bg-gradient-to-r from-indigo-600 to-cyan-500 h-2.5 rounded-full transition-all duration-500"
-                          style={{ width: `${roadmap.progressPercentage || 0}%` }}
+                        <ProgressBar
+                          value={roadmap.progressPercentage || 0}
+                          ariaLabel={`Progress for ${roadmap.title}`}
                         />
                       </div>
+
+                      <span className="text-xs font-medium text-[#0f766e]">
+                        Open roadmap →
+                      </span>
                     </div>
-                  </div>
+                  </Card>
                 );
               })}
             </div>
           ) : (
-            <div className="p-12 sm:p-16 rounded-3xl bg-white border border-dashed border-slate-300 text-center space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
-                <Map className="w-8 h-8" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">No AI Study Roadmaps Generated Yet</h2>
-                <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-md mx-auto leading-relaxed">
-                  Synthesize a personalized day-by-day learning journey calibrated to your topic skills and daily availability.
-                </p>
-              </div>
-              <button
-                onClick={() => setViewMode('CREATE')}
-                className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-2xl text-xs font-bold transition shadow-md shadow-indigo-500/20 cursor-pointer"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Launch Interactive Wizard</span>
-              </button>
-            </div>
+            <EmptyState
+              icon={MapIcon}
+              title="No roadmaps yet"
+              description="Create a day-by-day study roadmap to begin your plan."
+              action={
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setViewMode('CREATE')}
+                >
+                  Create New Roadmap
+                </Button>
+              }
+            />
           )}
         </div>
       )}
     </div>
   );
 };
+
+export default MyRoadmapsView;

@@ -1,39 +1,30 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  Map,
   Calendar,
   Clock,
   BookOpen,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
   ExternalLink,
   Copy,
   Check,
   Save,
-  Zap,
   ArrowLeft,
   ArrowRight,
   TrendingUp,
-  Lock,
-  PlayCircle,
-  Code,
-  Layers,
-  Sparkles,
-  HelpCircle,
-  ListTodo,
-  CheckSquare,
-  Square,
-  Compass,
-  FileText,
-  Target,
   RotateCcw,
-  AlertTriangle,
-  X
+  Compass,
+  Code,
+  HelpCircle
 } from 'lucide-react';
 import { updateRoadmapProgress, saveRoadmap } from '../../services/api';
 import { formatEnum } from '../../utils/formatters';
 import { getCanonicalTaskId } from '../../utils/studyQueue';
+import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
+import { StatusText } from '../ui/StatusText';
+import { ProgressBar } from '../ui/ProgressBar';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 export const InteractiveRoadmap = ({
   roadmap,
@@ -53,7 +44,7 @@ export const InteractiveRoadmap = ({
   const subtopicsStorageKey = `ai_roadmap_subtopics_${stableId}`;
   const taskRefs = useRef({});
 
-  // View state: 'map' (Interactive Visual Learning Map) vs 'plan' (Structured Daily Learning Plan)
+  // View state: 'map' (Visual Learning Map) vs 'plan' (Structured Daily Learning Plan)
   const [activeView, setActiveView] = useState('map');
   const [showRegenModal, setShowRegenModal] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
@@ -163,7 +154,6 @@ export const InteractiveRoadmap = ({
   // Set default selected node once tasks load
   useEffect(() => {
     if (!selectedNodeId && allTasks.length > 0) {
-      // Pick first uncompleted task, or first task
       const firstUncompleted = allTasks.find(t => !completedTasks[t.id]);
       setSelectedNodeId(firstUncompleted ? firstUncompleted.id : allTasks[0].id);
     }
@@ -228,7 +218,6 @@ export const InteractiveRoadmap = ({
     return anyDone ? 'IN_PROGRESS' : 'READY_TO_LEARN';
   };
 
-  // Helper to ensure every task has rich, structured subtopics, learning objectives, and practice
   const getTaskContent = (taskItem) => {
     const task = taskItem.task;
     let subtopics = task.subtopics && task.subtopics.length > 0 ? task.subtopics : null;
@@ -237,7 +226,6 @@ export const InteractiveRoadmap = ({
     let quizQuestion = task.quizQuestion || null;
     let conceptExplanation = task.conceptExplanation || task.description || '';
 
-    // If subtopics are missing, synthesize them intelligently from title & description
     if (!subtopics || subtopics.length === 0) {
       const cleanTitle = task.title.replace(/^Day\s*\d+\s*[:—–-]\s*/i, '').trim();
       subtopics = [
@@ -251,9 +239,9 @@ export const InteractiveRoadmap = ({
 
     if (!learningObjectives || learningObjectives.length === 0) {
       learningObjectives = [
-        `Understand the key concepts and theoretical background of ${task.title}`,
+        `Understand key concepts and principles of ${task.title}`,
         `Write and execute working code implementations solving practical requirements`,
-        `Analyze trade-offs, complexity, and production best practices`
+        `Analyze trade-offs, complexity, and best practices`
       ];
     }
 
@@ -265,7 +253,7 @@ export const InteractiveRoadmap = ({
     }
 
     if (!quizQuestion) {
-      quizQuestion = `How does ${task.title} contribute to scalable application architecture and maintainable code?`;
+      quizQuestion = `How does ${task.title} contribute to scalable application architecture?`;
     }
 
     return {
@@ -297,7 +285,6 @@ export const InteractiveRoadmap = ({
     const mIds = Object.keys(newCompletedMilestones).filter(k => newCompletedMilestones[k]);
     const newPercent = totalItemsCount > 0 ? Math.min(100, Math.round(((tIds.length + mIds.length) / totalItemsCount) * 100)) : 0;
 
-    // Backend sync
     if (currentSavedId) {
       try {
         await updateRoadmapProgress(currentSavedId, {
@@ -314,26 +301,29 @@ export const InteractiveRoadmap = ({
     if (onProgressUpdate) {
       onProgressUpdate(newPercent);
     }
+    if (onSyncGoalProgress && goal?.id) {
+      onSyncGoalProgress(goal.id, newPercent);
+    }
   };
 
   // Toggle daily task
   const handleToggleTask = (taskId) => {
-    const willBeDone = !completedTasks[taskId];
+    const nextVal = !completedTasks[taskId];
+    const updatedTasks = {
+      ...completedTasks,
+      [taskId]: nextVal
+    };
+
     const taskItem = allTasks.find(t => t.id === taskId);
-    const updatedSubtopics = { ...completedSubtopics };
+    let updatedSubtopics = { ...completedSubtopics };
 
     if (taskItem) {
       const content = getTaskContent(taskItem);
       content.subtopics.forEach((_, sIdx) => {
-        const subKey = `${taskId}-sub-${sIdx}`;
-        updatedSubtopics[subKey] = willBeDone;
+        updatedSubtopics[`${taskId}-sub-${sIdx}`] = nextVal;
       });
     }
 
-    const updatedTasks = {
-      ...completedTasks,
-      [taskId]: willBeDone
-    };
     syncProgress(updatedTasks, completedMilestones, updatedSubtopics);
   };
 
@@ -346,7 +336,6 @@ export const InteractiveRoadmap = ({
       [subKey]: nextVal
     };
 
-    // Check if all subtopics for this task are now checked
     let allSubsDone = true;
     for (let i = 0; i < totalSubtopicsCount; i++) {
       const key = `${taskId}-sub-${i}`;
@@ -408,7 +397,6 @@ export const InteractiveRoadmap = ({
     setTimeout(() => setCopied(false), 2500);
   };
 
-  // Selected node object for Visual Map detail panel
   const selectedTaskItem = useMemo(() => {
     if (!selectedNodeId) return null;
     return allTasks.find(t => t.id === selectedNodeId) || allTasks[0] || null;
@@ -420,227 +408,221 @@ export const InteractiveRoadmap = ({
   }, [selectedTaskItem]);
 
   return (
-    <div className={`space-y-6 animate-fade-slide ${isModal ? 'p-1' : 'max-w-6xl mx-auto pb-16'}`}>
+    <div className={`space-y-6 ${isModal ? 'p-1' : 'max-w-6xl mx-auto pb-16'}`}>
       {/* Top Navigation & Actions Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         {onBack ? (
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={onBack}
-            className="inline-flex items-center space-x-2 text-xs font-bold text-slate-700 hover:text-teal-700 bg-white px-4 py-2.5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-xs transition-all cursor-pointer self-start"
+            className="gap-1.5 self-start"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Roadmaps</span>
-          </button>
+          </Button>
         ) : <div />}
 
-        <div className="flex items-center space-x-2.5 self-end">
+        <div className="flex items-center gap-2 self-end">
           {cloudSynced ? (
-            <span className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-2xl bg-teal-50 text-teal-800 text-xs font-bold border border-teal-200/60">
-              <Check className="w-3.5 h-3.5 text-teal-600 stroke-[3]" />
-              <span>Saved to Database</span>
-            </span>
+            <StatusText status="success">
+              Saved to database
+            </StatusText>
           ) : (
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={handleSaveToCloud}
               disabled={savingToCloud}
-              className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition cursor-pointer shadow-xs"
+              className="gap-1.5"
             >
               <Save className="w-3.5 h-3.5" />
               <span>{savingToCloud ? 'Saving...' : 'Save to Cloud'}</span>
-            </button>
+            </Button>
           )}
 
           {onRegenerate && (
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => setShowRegenModal(true)}
               disabled={regenerating}
-              className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-2xl bg-white hover:bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200 shadow-2xs transition cursor-pointer"
+              className="gap-1.5 text-[#b91c1c] hover:text-[#b91c1c]"
             >
-              <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
-              <span>{regenerating ? 'Regenerating...' : 'Regenerate'}</span>
-            </button>
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Regenerate</span>
+            </Button>
           )}
 
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={handleCopyMarkdown}
-            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-200 shadow-2xs transition cursor-pointer"
+            className="gap-1.5"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-teal-600 stroke-[3]" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-[#0f766e]" /> : <Copy className="w-3.5 h-3.5" />}
             <span>{copied ? 'Copied' : 'Export MD'}</span>
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* COMPACT ROADMAP HEADER (Phase 1 Refinement: Clean, generous spacing, not bloated) */}
-      <div className="bg-white rounded-3xl border border-[#E2E8F0] p-6 sm:p-7 shadow-xs relative overflow-hidden">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-5 border-b border-slate-100">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase bg-teal-50 text-teal-800 border border-teal-200/60">
-                {roadmap.skillLevel || 'CUSTOM'} CURRICULUM
+      {/* ROADMAP HEADER */}
+      <Card className="p-5 sm:p-6 space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#e5e7eb]">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-[#4b5563]">
+              <span className="font-medium text-[#111827]">
+                {formatEnum(roadmap.skillLevel)}
               </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase bg-indigo-50 text-indigo-700 border border-indigo-200/60">
-                {roadmap.targetDays} DAYS SPRINT
-              </span>
+              <span>•</span>
+              <span>{roadmap.targetDays} days</span>
               {goal && (
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200/60">
-                  Goal: {goal.title}
-                </span>
+                <>
+                  <span>•</span>
+                  <span>Goal: {goal.title}</span>
+                </>
               )}
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2 tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-semibold text-[#111827] tracking-tight">
               {roadmap.topic}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-3xl leading-relaxed">
-              {roadmap.overview}
-            </p>
+            {roadmap.overview && (
+              <p className="text-sm text-[#4b5563] max-w-3xl leading-relaxed">
+                {roadmap.overview}
+              </p>
+            )}
           </div>
 
-          {/* Quick HUD Metrics */}
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-center min-w-[100px]">
-              <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Total Hours</span>
-              <div className="text-xl font-black text-slate-900 mt-0.5">
+          <div className="flex items-center gap-4 shrink-0 text-sm">
+            <div className="p-3 rounded-md bg-[#f8fafc] border border-[#e5e7eb] text-center min-w-[90px]">
+              <span className="text-xs text-[#4b5563] block">Total hours</span>
+              <span className="text-lg font-semibold text-[#111827]">
                 {roadmap.totalStudyHours || (roadmap.targetDays * (goal?.hoursPerDay || roadmap.hoursPerDay))}h
-              </div>
+              </span>
             </div>
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-center min-w-[100px]">
-              <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Daily Pace</span>
-              <div className="text-xl font-black text-teal-600 mt-0.5">
+            <div className="p-3 rounded-md bg-[#f8fafc] border border-[#e5e7eb] text-center min-w-[90px]">
+              <span className="text-xs text-[#4b5563] block">Daily pace</span>
+              <span className="text-lg font-semibold text-[#0f766e]">
                 {(goal?.hoursPerDay || roadmap.hoursPerDay)}h/d
-              </div>
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Compact Progress Tracker Bar */}
-        <div className="mt-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center space-x-2">
-            <TrendingUp className="w-4 h-4 text-teal-600" />
-            <span className="text-xs font-bold text-slate-800">Overall Curriculum Completion:</span>
-            <span className="text-xs font-mono font-black text-teal-700">
-              {progressPercent}% ({totalCompletedCount}/{totalItemsCount} Activities)
+        {/* Progress Tracker Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 font-medium text-[#111827]">
+            <TrendingUp className="w-4 h-4 text-[#0f766e]" />
+            <span>Completion:</span>
+            <span className="font-semibold text-[#0f766e]">
+              {progressPercent}% ({totalCompletedCount}/{totalItemsCount} activities)
             </span>
           </div>
 
-          <div className="flex-1 max-w-md w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-            <div
-              className="bg-gradient-to-r from-teal-500 to-indigo-600 h-2.5 rounded-full transition-all duration-500"
-              style={{ width: `${progressPercent}%` }}
+          <div className="flex-1 max-w-md w-full">
+            <ProgressBar
+              value={progressPercent}
+              ariaLabel="Curriculum progress"
             />
           </div>
         </div>
 
         {roadmap.feasibilityNote && (
-          <div className="mt-4 p-3 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-amber-900 text-xs flex items-start space-x-2.5">
-            <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <span className="leading-relaxed"><strong>Pacing Advice:</strong> {roadmap.feasibilityNote}</span>
+          <div className="p-3 rounded-md bg-[#f8fafc] border border-[#e5e7eb] text-xs text-[#4b5563] flex items-start gap-2">
+            <Clock className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>Pacing advice: {roadmap.feasibilityNote}</span>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* NEXT RECOMMENDED ACTION BANNER */}
       {nextRecommendedAction && (
-        <div className="p-5 rounded-3xl bg-gradient-to-r from-teal-500/10 via-indigo-500/10 to-teal-500/10 border border-teal-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-start space-x-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-600 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-teal-500/20">
-              <Zap className="w-5 h-5 text-cyan-300" />
-            </div>
-
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-teal-800 bg-teal-100/80 px-2 py-0.5 rounded-md">
-                  NEXT RECOMMENDED ACTION
-                </span>
-                <span className="text-[11px] font-bold text-slate-500">
-                  {nextRecommendedAction.phaseTitle}
-                </span>
-              </div>
-              <h3 className="text-sm sm:text-base font-bold text-slate-900 mt-1">
-                Day {nextRecommendedAction.task.dayNumber}: {nextRecommendedAction.task.title}
-              </h3>
-              <p className="text-xs text-slate-600 mt-0.5 line-clamp-1">
+        <Card className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <span className="text-xs font-semibold text-[#0f766e] block uppercase">
+              Next recommended task
+            </span>
+            <h3 className="text-sm sm:text-base font-semibold text-[#111827]">
+              Day {nextRecommendedAction.task.dayNumber}: {nextRecommendedAction.task.title}
+            </h3>
+            {nextRecommendedAction.task.description && (
+              <p className="text-xs text-[#4b5563] line-clamp-1">
                 {nextRecommendedAction.task.description}
               </p>
-            </div>
+            )}
           </div>
 
-          <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
-            <button
-              type="button"
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => handleToggleTask(nextRecommendedAction.id)}
-              className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 text-xs font-bold transition shadow-2xs cursor-pointer"
             >
-              <Check className="w-4 h-4 stroke-[3]" />
-              <span>Mark Done</span>
-            </button>
-
-            <button
-              type="button"
+              Mark Done
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
               onClick={() => {
                 setSelectedNodeId(nextRecommendedAction.id);
                 setActiveView('map');
               }}
-              className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition shadow-xs cursor-pointer"
+              className="gap-1"
             >
-              <span>Inspect on Map</span>
+              <span>Inspect</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       )}
 
-      {/* PHASE 4: VIEW SWITCHER (Visual Learning Map vs. Structured Daily Plan) */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-1 p-1.5 bg-slate-100 rounded-2xl border border-slate-200/80 w-fit">
+      {/* VIEW SWITCHER TABS */}
+      <div className="flex items-center justify-between border-b border-[#e5e7eb]">
+        <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => setActiveView('map')}
-            className={`inline-flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+            className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 ${
               activeView === 'map'
-                ? 'bg-white text-teal-800 shadow-xs border border-slate-200/80'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'border-[#0f766e] text-[#0f766e]'
+                : 'border-transparent text-[#4b5563] hover:text-[#111827]'
             }`}
           >
-            <Compass className="w-4 h-4 text-teal-600" />
-            <span>Interactive Visual Map</span>
+            <Compass className="w-4 h-4" />
+            <span>Visual Map</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveView('plan')}
-            className={`inline-flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+            className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 ${
               activeView === 'plan'
-                ? 'bg-white text-teal-800 shadow-xs border border-slate-200/80'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'border-[#0f766e] text-[#0f766e]'
+                : 'border-transparent text-[#4b5563] hover:text-[#111827]'
             }`}
           >
-            <Calendar className="w-4 h-4 text-indigo-600" />
-            <span>Daily Learning Plan</span>
+            <Calendar className="w-4 h-4" />
+            <span>Daily Plan</span>
           </button>
         </div>
 
-        <span className="text-xs font-semibold text-slate-400 hidden sm:inline">
-          {roadmap.phases?.length || 0} Phases • {allTasks.length} Days Mapped
+        <span className="text-xs text-[#4b5563] hidden sm:inline">
+          {roadmap.phases?.length || 0} phases • {allTasks.length} days
         </span>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════════════════
-          PHASE 3: INTERACTIVE VISUAL LEARNING MAP WITH CONNECTED TOPIC NODES
-      ═════════════════════════════════════════════════════════════════════════════ */}
+      {/* ── VIEW MODE: VISUAL MAP ── */}
       {activeView === 'map' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Visual Graph & Topic Journey (8 cols on desktop) */}
-          <div className="lg:col-span-7 bg-white rounded-3xl border border-[#E2E8F0] p-6 shadow-xs space-y-6">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center space-x-2">
-                <Compass className="w-5 h-5 text-teal-600" />
-                <h2 className="text-base font-bold text-slate-900">Connected Curriculum Pathway</h2>
-              </div>
-              <span className="text-[11px] text-slate-400">Click any topic to view structured subtopics</span>
+          {/* Pathway / Nodes (7 cols) */}
+          <Card className="lg:col-span-7 p-5 sm:p-6 space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-[#e5e7eb]">
+              <h2 className="text-sm font-semibold text-[#111827]">Study Pathway</h2>
+              <span className="text-xs text-[#4b5563]">Select any topic to view details</span>
             </div>
 
-            {/* Sequential Phase Swimlanes */}
-            <div className="space-y-6">
+            <div className="space-y-4">
               {roadmap.phases?.map((phase, pIdx) => {
                 const phaseStatus = getPhaseStatus(pIdx);
                 const isLocked = phaseStatus === 'LOCKED';
@@ -648,100 +630,78 @@ export const InteractiveRoadmap = ({
                 return (
                   <div
                     key={pIdx}
-                    className={`p-5 rounded-3xl border transition-all ${
+                    className={`p-4 rounded-md border ${
                       isLocked
-                        ? 'bg-slate-50/70 border-slate-200/80 opacity-60'
-                        : phaseStatus === 'COMPLETED'
-                        ? 'bg-emerald-50/30 border-emerald-200'
-                        : 'bg-slate-50/40 border-slate-200/90'
+                        ? 'bg-[#f8fafc] border-[#e5e7eb] opacity-60'
+                        : 'bg-white border-[#e5e7eb]'
                     }`}
                   >
                     {/* Phase Header */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-2.5">
-                        <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs ${
-                          phaseStatus === 'COMPLETED'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : isLocked
-                            ? 'bg-slate-200 text-slate-500'
-                            : 'bg-teal-600 text-white'
-                        }`}>
-                          {phaseStatus === 'COMPLETED' ? <Check className="w-4 h-4 stroke-[3]" /> : pIdx + 1}
-                        </div>
-                        <div>
-                          <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
-                            {phase.phaseTitle || phase.phase}
-                          </h3>
-                          <span className="text-[10px] text-slate-400 font-semibold">
-                            {phase.duration} • {phase.dailyTasks?.length || 0} Daily Activities
-                          </span>
-                        </div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h3 className="text-xs font-semibold text-[#111827] uppercase">
+                          Phase {pIdx + 1}: {phase.phaseTitle || phase.phase}
+                        </h3>
+                        <p className="text-xs text-[#4b5563]">
+                          {phase.duration} • {phase.dailyTasks?.length || 0} tasks
+                        </p>
                       </div>
 
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        phaseStatus === 'COMPLETED'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : isLocked
-                          ? 'bg-slate-200 text-slate-600'
-                          : 'bg-teal-100 text-teal-800'
-                      }`}>
-                        {phaseStatus.replace('_', ' ')}
-                      </span>
+                      {phaseStatus === 'COMPLETED' ? (
+                        <StatusText status="success">Completed</StatusText>
+                      ) : phaseStatus === 'IN_PROGRESS' ? (
+                        <StatusText status="accent">In progress</StatusText>
+                      ) : (
+                        <StatusText status="neutral">{isLocked ? 'Locked' : 'Ready'}</StatusText>
+                      )}
                     </div>
 
-                    {/* Connected Topic Nodes within this Phase */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative">
+                    {/* Nodes grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       {(tasksByPhase[pIdx] || []).map((taskItem) => {
                         const taskId = taskItem.id;
                         const task = taskItem.task;
                         const isDone = Boolean(completedTasks[taskId]);
                         const isSelected = selectedNodeId === taskId;
-                        const taskContent = getTaskContent({ task });
 
                         return (
                           <div
                             key={taskId}
                             onClick={() => setSelectedNodeId(taskId)}
-                            className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group relative ${
+                            className={`p-3 rounded-md border transition-colors duration-150 cursor-pointer flex flex-col justify-between ${
                               isSelected
-                                ? 'bg-teal-50/90 border-teal-500 ring-2 ring-teal-500/20 shadow-xs'
+                                ? 'bg-[#f0fdfa] border-[#0f766e]'
                                 : isDone
-                                ? 'bg-white border-emerald-300 hover:border-emerald-400'
-                                : isLocked
-                                ? 'bg-white/60 border-slate-200 text-slate-400 cursor-not-allowed'
-                                : 'bg-white border-slate-200 hover:border-teal-400 hover:shadow-2xs'
+                                ? 'bg-white border-[#e5e7eb]'
+                                : 'bg-white border-[#e5e7eb] hover:border-[#cbd5e1]'
                             }`}
                           >
                             <div>
-                              <div className="flex items-center justify-between mb-1.5">
-                                <span className={`text-[10px] font-black font-mono px-1.5 py-0.2 rounded ${
-                                  isSelected ? 'bg-teal-200 text-teal-900' : 'bg-slate-100 text-slate-600'
-                                }`}>
-                                  DAY {task.dayNumber || 1}
+                              <div className="flex items-center justify-between text-xs text-[#4b5563] mb-1">
+                                <span className="font-medium text-[#111827]">
+                                  Day {task.dayNumber || 1}
                                 </span>
-
                                 {isDone ? (
-                                  <span className="w-5 h-5 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                                  <span className="text-[#15803d] font-medium flex items-center gap-1">
                                     <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                    <span>Done</span>
                                   </span>
                                 ) : (
-                                  <span className="text-[10px] font-bold text-slate-400">
-                                    {task.estimatedMinutes || 60}m
-                                  </span>
+                                  <span>{task.estimatedMinutes || 60}m</span>
                                 )}
                               </div>
 
-                              <h4 className={`text-xs font-bold leading-snug line-clamp-2 ${
-                                isDone ? 'text-slate-400 line-through' : 'text-slate-900 group-hover:text-teal-700'
+                              <h4 className={`text-xs font-semibold leading-snug line-clamp-2 ${
+                                isDone ? 'text-[#4b5563] line-through' : 'text-[#111827]'
                               }`}>
                                 {task.title}
                               </h4>
                             </div>
 
-                            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
-                              <span>{taskContent.subtopics.length} subtopics</span>
-                              <span className="font-semibold text-teal-700 group-hover:underline">
-                                {isSelected ? 'Inspecting →' : 'Details'}
+                            <div className="mt-2 pt-2 border-t border-[#e5e7eb] flex items-center justify-between text-xs text-[#4b5563]">
+                              <span>{formatEnum(task.activityType || 'Study')}</span>
+                              <span className="text-[#0f766e] font-medium">
+                                {isSelected ? 'Inspecting' : 'Details'}
                               </span>
                             </div>
                           </div>
@@ -752,86 +712,78 @@ export const InteractiveRoadmap = ({
                 );
               })}
             </div>
-          </div>
+          </Card>
 
-          {/* DETAIL PANEL FOR SELECTED TOPIC NODE (5 cols on desktop) */}
-          <div className="lg:col-span-5 bg-white rounded-3xl border border-[#E2E8F0] p-6 shadow-xs sticky top-6 space-y-5 animate-fade-slide">
+          {/* Node Detail Panel (5 cols) */}
+          <Card className="lg:col-span-5 p-5 sm:p-6 sticky top-6 space-y-4">
             {selectedTaskItem && selectedTaskContent ? (
               <>
-                {/* Detail Panel Header */}
-                <div className="pb-4 border-b border-slate-100">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-50 text-teal-800 border border-teal-200/60">
-                      DAY {selectedTaskItem.task.dayNumber} • {selectedTaskItem.phaseTitle}
+                <div className="pb-3 border-b border-[#e5e7eb] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[#4b5563]">
+                      Day {selectedTaskItem.task.dayNumber} • {selectedTaskItem.phaseTitle}
                     </span>
 
-                    <button
-                      type="button"
+                    <Button
+                      variant={completedTasks[selectedTaskItem.id] ? 'secondary' : 'primary'}
+                      size="sm"
                       onClick={() => handleToggleTask(selectedTaskItem.id)}
-                      className={`inline-flex items-center space-x-1 px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
-                        completedTasks[selectedTaskItem.id]
-                          ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
-                          : 'bg-slate-100 text-slate-700 hover:bg-teal-50 hover:text-teal-700'
-                      }`}
+                      className="gap-1 min-h-[32px]"
                     >
                       <Check className="w-3.5 h-3.5 stroke-[3]" />
                       <span>{completedTasks[selectedTaskItem.id] ? 'Completed' : 'Mark Done'}</span>
-                    </button>
+                    </Button>
                   </div>
 
-                  <h3 className="text-base sm:text-lg font-black text-slate-900 leading-snug">
+                  <h3 className="text-base font-semibold text-[#111827] leading-snug">
                     {selectedTaskItem.task.title}
                   </h3>
-                  <div className="flex items-center space-x-3 text-xs text-slate-500 mt-2">
-                    <span className="flex items-center space-x-1 font-semibold text-slate-700">
-                      <Clock className="w-3.5 h-3.5 text-teal-600" />
-                      <span>{selectedTaskItem.task.estimatedMinutes || 90} Minutes</span>
-                    </span>
+
+                  <p className="text-xs text-[#4b5563] flex items-center gap-2">
+                    <span>{selectedTaskItem.task.estimatedMinutes || 90} minutes</span>
                     <span>•</span>
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700">
-                      {formatEnum(selectedTaskItem.task.activityType || 'STUDY')}
-                    </span>
-                  </div>
+                    <span>{formatEnum(selectedTaskItem.task.activityType || 'Study')}</span>
+                  </p>
                 </div>
 
                 {/* Concept Notes */}
                 {selectedTaskContent.conceptExplanation && (
-                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                      Core Concept Note
+                  <div className="p-3 rounded-md bg-[#f8fafc] border border-[#e5e7eb] text-xs text-[#4b5563] space-y-1">
+                    <span className="font-semibold text-[#111827] block">
+                      Core Concept
                     </span>
                     <p className="leading-relaxed">{selectedTaskContent.conceptExplanation}</p>
                   </div>
                 )}
 
                 {/* Learning Objectives */}
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">
+                <div className="space-y-2">
+                  <span className="text-xs font-semibold text-[#111827] block">
                     Learning Objectives
                   </span>
-                  <ul className="space-y-1.5 text-xs text-slate-700">
+                  <ul className="space-y-1 text-xs text-[#4b5563]">
                     {selectedTaskContent.learningObjectives.map((obj, oIdx) => (
-                      <li key={oIdx} className="flex items-start space-x-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-teal-500 mt-1.5 shrink-0" />
+                      <li key={oIdx} className="flex items-start gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#0f766e] mt-1.5 shrink-0" />
                         <span>{obj}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
 
-                {/* Structured Subtopics with Individual Checkboxes */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                      Daily Subtopics & Milestones
+                {/* Structured Subtopics */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-[#111827]">
+                      Subtopics
                     </span>
-                    <span className="text-[10px] font-mono text-teal-700 font-bold">
+                    <span className="text-[#4b5563]">
                       {selectedTaskContent.subtopics.filter((_, idx) => completedSubtopics[`${selectedTaskItem.id}-sub-${idx}`]).length}/
-                      {selectedTaskContent.subtopics.length} Done
+                      {selectedTaskContent.subtopics.length} done
                     </span>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {selectedTaskContent.subtopics.map((sub, sIdx) => {
                       const subKey = `${selectedTaskItem.id}-sub-${sIdx}`;
                       const isSubDone = Boolean(completedSubtopics[subKey]);
@@ -841,20 +793,14 @@ export const InteractiveRoadmap = ({
                           key={sIdx}
                           type="button"
                           onClick={() => handleToggleSubtopic(selectedTaskItem.id, sIdx, selectedTaskContent.subtopics.length)}
-                          className={`w-full p-2.5 rounded-xl border text-xs text-left transition cursor-pointer flex items-center space-x-2.5 ${
-                            isSubDone
-                              ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900'
-                              : 'bg-slate-50/50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                          }`}
+                          className="w-full p-2.5 rounded-md border border-[#e5e7eb] text-xs text-left transition-colors duration-150 cursor-pointer flex items-center gap-2 hover:bg-[#f8fafc]"
                         >
-                          <div className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 ${
-                            isSubDone
-                              ? 'bg-emerald-600 border-emerald-600 text-white'
-                              : 'border-slate-300 bg-white'
+                          <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 ${
+                            isSubDone ? 'bg-[#0f766e] border-[#0f766e] text-white' : 'border-[#e5e7eb] bg-white'
                           }`}>
                             {isSubDone && <Check className="w-3 h-3 stroke-[3]" />}
                           </div>
-                          <span className={isSubDone ? 'line-through text-slate-400' : 'font-medium'}>
+                          <span className={isSubDone ? 'line-through text-[#4b5563]' : 'text-[#111827]'}>
                             {sub}
                           </span>
                         </button>
@@ -863,14 +809,14 @@ export const InteractiveRoadmap = ({
                   </div>
                 </div>
 
-                {/* Practical Exercises */}
+                {/* Practice Tasks */}
                 {selectedTaskContent.practiceTasks && (
-                  <div className="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-1.5">
-                    <div className="flex items-center space-x-1.5 text-xs font-bold text-indigo-900">
-                      <Code className="w-4 h-4 text-indigo-600" />
-                      <span>Hands-On Coding Practice</span>
+                  <div className="p-3 rounded-md bg-[#f8fafc] border border-[#e5e7eb] text-xs space-y-1">
+                    <div className="flex items-center gap-1.5 font-semibold text-[#111827]">
+                      <Code className="w-4 h-4 text-[#0f766e]" />
+                      <span>Practice Exercises</span>
                     </div>
-                    <ul className="text-xs text-indigo-950 space-y-1 pl-5 list-disc">
+                    <ul className="list-disc pl-4 text-[#4b5563] space-y-0.5">
                       {selectedTaskContent.practiceTasks.map((prac, pIdx) => (
                         <li key={pIdx}>{prac}</li>
                       ))}
@@ -878,229 +824,173 @@ export const InteractiveRoadmap = ({
                   </div>
                 )}
 
-                {/* Quick Quiz Self-Assessment */}
+                {/* Quiz Question */}
                 {selectedTaskContent.quizQuestion && (
-                  <div className="p-3.5 rounded-2xl bg-teal-50/60 border border-teal-100 space-y-1.5">
-                    <div className="flex items-center space-x-1.5 text-xs font-bold text-teal-900">
-                      <HelpCircle className="w-4 h-4 text-teal-600" />
-                      <span>Knowledge Check Quiz</span>
+                  <div className="p-3 rounded-md bg-[#f8fafc] border border-[#e5e7eb] text-xs space-y-1">
+                    <div className="flex items-center gap-1.5 font-semibold text-[#111827]">
+                      <HelpCircle className="w-4 h-4 text-[#0f766e]" />
+                      <span>Knowledge Check</span>
                     </div>
-                    <p className="text-xs text-teal-950 pl-5 italic">
-                      "{selectedTaskContent.quizQuestion}"
-                    </p>
+                    <p className="text-[#4b5563] italic">"{selectedTaskContent.quizQuestion}"</p>
                   </div>
                 )}
               </>
             ) : (
-              <div className="py-12 text-center text-slate-400 space-y-2">
-                <Compass className="w-8 h-8 text-slate-300 mx-auto" />
-                <p className="text-xs font-bold text-slate-700">Select a Topic Node</p>
-                <p className="text-[11px] text-slate-400">
-                  Click any topic node on the left visual map to inspect structured subtopics and exercises.
-                </p>
+              <div className="py-10 text-center text-xs text-[#4b5563]">
+                Select a topic node on the left to inspect subtopics and exercises.
               </div>
             )}
-          </div>
+          </Card>
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════════════════
-          PHASE 2 & 4: STRUCTURED DAILY LEARNING PLAN ACCORDION
-      ═════════════════════════════════════════════════════════════════════════════ */}
+      {/* ── VIEW MODE: DAILY PLAN ACCORDION ── */}
       {activeView === 'plan' && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {roadmap.phases?.map((phase, pIdx) => {
             const isExpanded = Boolean(expandedPhases[pIdx]);
             const status = getPhaseStatus(pIdx);
             const isLocked = status === 'LOCKED';
 
             return (
-              <div
+              <Card
                 key={pIdx}
-                className={`bg-white rounded-3xl border transition-all shadow-xs overflow-hidden ${
-                  isLocked ? 'border-slate-200 opacity-60' : 'border-slate-200/90'
-                }`}
+                className={`overflow-hidden ${isLocked ? 'opacity-60' : ''}`}
               >
-                {/* Phase Header */}
+                {/* Phase Accordion Trigger */}
                 <div
                   onClick={() => setExpandedPhases(prev => ({ ...prev, [pIdx]: !prev[pIdx] }))}
-                  className="p-5 sm:p-6 flex items-center justify-between cursor-pointer hover:bg-slate-50/70 transition"
+                  className="p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-[#f8fafc] transition-colors duration-150"
                 >
-                  <div className="flex items-center space-x-3.5">
-                    <div className={`w-9 h-9 rounded-2xl flex items-center justify-center font-black text-xs shrink-0 ${
-                      status === 'COMPLETED'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : isLocked
-                        ? 'bg-slate-100 text-slate-400'
-                        : 'bg-teal-600 text-white'
-                    }`}>
-                      {status === 'COMPLETED' ? <Check className="w-4 h-4 stroke-[3]" /> : pIdx + 1}
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-md bg-[#f8fafc] border border-[#e5e7eb] flex items-center justify-center font-semibold text-xs text-[#111827]">
+                      {pIdx + 1}
                     </div>
 
                     <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                          PHASE {phase.phaseNumber || pIdx + 1}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-[#111827] uppercase">
+                          Phase {phase.phaseNumber || pIdx + 1}: {phase.phaseTitle || phase.phase}
                         </span>
-                        <span className="text-[10px] text-slate-400 font-semibold">• {phase.duration}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          status === 'COMPLETED'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : isLocked
-                            ? 'bg-slate-100 text-slate-500'
-                            : 'bg-teal-100 text-teal-800'
-                        }`}>
-                          {status.replace('_', ' ')}
-                        </span>
+                        <span className="text-xs text-[#4b5563]">• {phase.duration}</span>
+                        {status === 'COMPLETED' ? (
+                          <StatusText status="success">Completed</StatusText>
+                        ) : status === 'IN_PROGRESS' ? (
+                          <StatusText status="accent">In progress</StatusText>
+                        ) : (
+                          <StatusText status="neutral">{isLocked ? 'Locked' : 'Ready'}</StatusText>
+                        )}
                       </div>
-                      <h3 className="text-base font-bold text-slate-900 mt-0.5">
-                        {phase.phaseTitle || phase.phase}
-                      </h3>
                     </div>
                   </div>
 
-                  <div className="p-1 rounded-xl bg-slate-100 text-slate-600">
+                  <div className="text-[#4b5563]">
                     {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </div>
                 </div>
 
                 {/* Phase Content */}
                 {isExpanded && (
-                  <div className="px-5 sm:px-7 pb-7 pt-2 border-t border-slate-100 space-y-6 animate-fade-slide">
-                    {/* Daily Tasks List with Expandable Subtopics */}
-                    <div className="space-y-3.5">
-                      {(tasksByPhase[pIdx] || []).map((taskItem) => {
-                        const taskId = taskItem.id;
-                        const task = taskItem.task;
-                        const isDone = Boolean(completedTasks[taskId]);
-                        const isSubtopicsExpanded = Boolean(expandedTaskSubtopics[taskId]);
-                        const taskContent = getTaskContent({ task });
+                  <div className="px-4 sm:px-5 pb-5 pt-2 border-t border-[#e5e7eb] space-y-3">
+                    {(tasksByPhase[pIdx] || []).map((taskItem) => {
+                      const taskId = taskItem.id;
+                      const task = taskItem.task;
+                      const isDone = Boolean(completedTasks[taskId]);
+                      const isSubtopicsExpanded = Boolean(expandedTaskSubtopics[taskId]);
+                      const taskContent = getTaskContent({ task });
 
-                        return (
-                          <div
-                            key={taskId}
-                            ref={el => (taskRefs.current[taskId] = el)}
-                            className={`p-4 sm:p-5 rounded-2xl border transition-all ${
-                              isDone
-                                ? 'bg-emerald-50/40 border-emerald-200/90'
-                                : 'bg-slate-50/60 border-slate-200/80 hover:bg-white hover:border-teal-300'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex items-start space-x-3.5">
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleTask(taskId)}
-                                  className={`mt-0.5 w-5 h-5 rounded-lg border flex items-center justify-center transition cursor-pointer shrink-0 ${
-                                    isDone
-                                      ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs'
-                                      : 'border-slate-300 bg-white hover:border-teal-500'
-                                  }`}
-                                >
-                                  {isDone && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                                </button>
-
-                                <div>
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span className="text-[11px] font-black font-mono text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md">
-                                      DAY {task.dayNumber || tIdx + 1}
-                                    </span>
-                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
-                                      {formatEnum(task.activityType || 'STUDY')}
-                                    </span>
-                                    <span className="text-[10px] text-slate-400 flex items-center space-x-1">
-                                      <Clock className="w-3 h-3" />
-                                      <span>{task.estimatedMinutes || 90}m</span>
-                                    </span>
-                                  </div>
-
-                                  <h4 className={`text-sm font-bold mt-1.5 ${isDone ? 'line-through text-slate-400' : 'text-slate-900'}`}>
-                                    {task.title}
-                                  </h4>
-                                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                                    {task.description}
-                                  </p>
-                                </div>
-                              </div>
-
+                      return (
+                        <div
+                          key={taskId}
+                          ref={el => (taskRefs.current[taskId] = el)}
+                          className="p-3.5 rounded-md border border-[#e5e7eb] bg-white space-y-2"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3">
                               <button
                                 type="button"
-                                onClick={() => setExpandedTaskSubtopics(prev => ({ ...prev, [taskId]: !prev[taskId] }))}
-                                className="text-xs font-semibold text-teal-700 hover:text-teal-900 p-1.5 rounded-xl hover:bg-teal-50 transition cursor-pointer shrink-0"
+                                onClick={() => handleToggleTask(taskId)}
+                                className={`mt-0.5 w-5 h-5 rounded-sm border flex items-center justify-center transition-colors duration-150 cursor-pointer shrink-0 focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 ${
+                                  isDone
+                                    ? 'bg-[#0f766e] border-[#0f766e] text-white'
+                                    : 'border-[#e5e7eb] bg-white hover:border-[#0f766e]'
+                                }`}
+                                aria-label={isDone ? 'Mark incomplete' : 'Mark complete'}
                               >
-                                {isSubtopicsExpanded ? 'Hide Subtopics' : `Subtopics (${taskContent.subtopics.length})`}
+                                {isDone && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                               </button>
+
+                              <div>
+                                <p className="text-xs text-[#4b5563] flex items-center gap-2">
+                                  <span>Day {task.dayNumber}</span>
+                                  <span>•</span>
+                                  <span>{formatEnum(task.activityType || 'Study')}</span>
+                                  {task.estimatedMinutes != null && (
+                                    <>
+                                      <span>•</span>
+                                      <span>{task.estimatedMinutes}m</span>
+                                    </>
+                                  )}
+                                </p>
+
+                                <h4 className={`text-sm font-semibold mt-0.5 ${isDone ? 'line-through text-[#4b5563]' : 'text-[#111827]'}`}>
+                                  {task.title}
+                                </h4>
+                                {task.description && (
+                                  <p className="text-xs text-[#4b5563] mt-0.5 leading-relaxed">
+                                    {task.description}
+                                  </p>
+                                )}
+                              </div>
                             </div>
 
-                            {/* Expandable Subtopics Accordion */}
-                            {isSubtopicsExpanded && (
-                              <div className="mt-4 pt-3.5 border-t border-slate-200/70 space-y-3 animate-fade-slide">
-                                {/* Subtopics Checklist */}
-                                <div>
-                                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">
-                                    Subtopic Checklist
-                                  </span>
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    {taskContent.subtopics.map((sub, sIdx) => {
-                                      const subKey = `${taskId}-sub-${sIdx}`;
-                                      const isSubDone = Boolean(completedSubtopics[subKey]);
-
-                                      return (
-                                        <button
-                                          key={sIdx}
-                                          type="button"
-                                          onClick={() => handleToggleSubtopic(taskId, sIdx, taskContent.subtopics.length)}
-                                          className={`p-2.5 rounded-xl border text-xs text-left transition cursor-pointer flex items-center space-x-2 ${
-                                            isSubDone
-                                              ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                                          }`}
-                                        >
-                                          <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${
-                                            isSubDone
-                                              ? 'bg-emerald-600 border-emerald-600 text-white'
-                                              : 'border-slate-300 bg-white'
-                                          }`}>
-                                            {isSubDone && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                                          </div>
-                                          <span className={isSubDone ? 'line-through text-slate-400' : ''}>
-                                            {sub}
-                                          </span>
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-
-                                {/* Practice & Self Assessment */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                                  {taskContent.practiceTasks && (
-                                    <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-100 text-xs">
-                                      <span className="font-bold text-indigo-900 block mb-1">Practical Exercises:</span>
-                                      <ul className="list-disc pl-4 text-indigo-950 space-y-0.5">
-                                        {taskContent.practiceTasks.map((prac, pIdx) => (
-                                          <li key={pIdx}>{prac}</li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-
-                                  {taskContent.quizQuestion && (
-                                    <div className="p-3 rounded-xl bg-teal-50/60 border border-teal-100 text-xs">
-                                      <span className="font-bold text-teal-900 block mb-1">Quiz Self-Check:</span>
-                                      <p className="text-teal-950 italic">{taskContent.quizQuestion}</p>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => setExpandedTaskSubtopics(prev => ({ ...prev, [taskId]: !prev[taskId] }))}
+                              className="text-xs text-[#0f766e] hover:underline cursor-pointer shrink-0 py-1 px-1.5 focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 rounded-sm"
+                            >
+                              {isSubtopicsExpanded ? 'Hide' : `Subtopics (${taskContent.subtopics.length})`}
+                            </button>
                           </div>
-                        );
-                      })()}
-                    </div>
+
+                          {/* Subtopics accordion */}
+                          {isSubtopicsExpanded && (
+                            <div className="mt-3 pt-2.5 border-t border-[#e5e7eb] space-y-2">
+                              <span className="text-xs font-semibold text-[#111827] block">
+                                Subtopic Checklist
+                              </span>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                {taskContent.subtopics.map((sub, sIdx) => {
+                                  const subKey = `${taskId}-sub-${sIdx}`;
+                                  const isSubDone = Boolean(completedSubtopics[subKey]);
+
+                                  return (
+                                    <button
+                                      key={sIdx}
+                                      type="button"
+                                      onClick={() => handleToggleSubtopic(taskId, sIdx, taskContent.subtopics.length)}
+                                      className="p-2 rounded-md border border-[#e5e7eb] text-xs text-left transition-colors duration-150 cursor-pointer flex items-center gap-2 hover:bg-[#f8fafc]"
+                                    >
+                                      <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 ${
+                                        isSubDone ? 'bg-[#0f766e] border-[#0f766e] text-white' : 'border-[#e5e7eb] bg-white'
+                                      }`}>
+                                        {isSubDone && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                                      </div>
+                                      <span className={isSubDone ? 'line-through text-[#4b5563]' : 'text-[#111827]'}>
+                                        {sub}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
-              </div>
+              </Card>
             );
           })}
         </div>
@@ -1108,42 +998,48 @@ export const InteractiveRoadmap = ({
 
       {/* CURATED LEARNING RESOURCES */}
       {roadmap.learningResources && roadmap.learningResources.length > 0 && (
-        <div className="bg-white rounded-3xl border border-[#E2E8F0] p-6 sm:p-8 shadow-xs">
-          <div className="pb-4 border-b border-slate-100">
-            <div className="flex items-center space-x-2">
-              <BookOpen className="w-5 h-5 text-teal-600" />
-              <h2 className="text-base sm:text-lg font-bold text-slate-900">Curated Learning Resources</h2>
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Documentation and code sandboxes curated specifically for this curriculum.
+        <Card className="p-5 sm:p-6 space-y-4">
+          <div className="pb-3 border-b border-[#e5e7eb]">
+            <h2 className="text-base font-semibold text-[#111827]">
+              Learning Resources
+            </h2>
+            <p className="text-xs text-[#4b5563] mt-0.5">
+              Documentation and references saved for this roadmap
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {roadmap.learningResources.map((res, rIdx) => {
               const hasUrl = Boolean(res.url && res.url.trim());
               const cardContent = (
-                <>
-                  <div>
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200/60 uppercase">
+                <div className="p-4 rounded-md border border-[#e5e7eb] bg-white hover:border-[#cbd5e1] transition-colors duration-150 flex flex-col justify-between space-y-2">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs text-[#4b5563]">
+                      <span className="font-medium uppercase">
                         {res.type || 'DOCUMENTATION'}
                       </span>
                       {hasUrl && (
-                        <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-600 transition" />
+                        <ExternalLink className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                       )}
                     </div>
-                    <h3 className="text-xs md:text-sm font-bold text-slate-900 mt-2">{res.title}</h3>
+
+                    <h3 className="text-sm font-semibold text-[#111827]">
+                      {res.title}
+                    </h3>
+
                     {res.relevance && (
-                      <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">{res.relevance}</p>
+                      <p className="text-xs text-[#4b5563] line-clamp-2 leading-relaxed">
+                        {res.relevance}
+                      </p>
                     )}
                   </div>
+
                   {hasUrl && (
-                    <div className="mt-3 text-[10px] text-teal-600 font-bold flex items-center space-x-1 truncate">
-                      <span>Open resource ↗</span>
-                    </div>
+                    <span className="text-xs font-medium text-[#0f766e] pt-2 border-t border-[#e5e7eb]">
+                      Open resource ↗
+                    </span>
                   )}
-                </>
+                </div>
               );
 
               return hasUrl ? (
@@ -1152,67 +1048,41 @@ export const InteractiveRoadmap = ({
                   href={res.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-4 rounded-2xl border border-slate-200 hover:border-teal-400 bg-slate-50/50 hover:bg-white transition-all flex flex-col justify-between group shadow-2xs"
+                  className="block focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 rounded-md"
                 >
                   {cardContent}
                 </a>
               ) : (
-                <div
-                  key={rIdx}
-                  className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between shadow-2xs"
-                >
+                <div key={rIdx}>
                   {cardContent}
                 </div>
               );
             })}
           </div>
-        </div>
+        </Card>
       )}
-      {/* Regeneration Confirmation Modal */}
-      {showRegenModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
-            <div className="flex items-center space-x-3 text-amber-600 mb-4">
-              <div className="p-2.5 rounded-2xl bg-amber-50 border border-amber-200">
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-black text-slate-900">Confirm Roadmap Regeneration</h3>
-            </div>
-            <p className="text-sm text-slate-600 leading-relaxed">
-              Regenerating replaces this roadmap and resets your {Object.keys(completedTasks).filter(k => completedTasks[k]).length} completed tasks. This cannot be undone.
-            </p>
-            <div className="mt-6 flex items-center justify-end space-x-3">
-              <button
-                type="button"
-                onClick={() => setShowRegenModal(false)}
-                disabled={regenerating}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  setRegenerating(true);
-                  try {
-                    await onRegenerate();
-                    setShowRegenModal(false);
-                  } catch (err) {
-                    console.error('Regeneration error:', err);
-                  } finally {
-                    setRegenerating(false);
-                  }
-                }}
-                disabled={regenerating}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white transition shadow-xs cursor-pointer inline-flex items-center space-x-1.5"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>{regenerating ? 'Regenerating...' : 'Regenerate'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
+      {/* Regeneration Confirmation Dialog (Reusable UI Primitive) */}
+      <ConfirmDialog
+        isOpen={showRegenModal}
+        title="Confirm Roadmap Regeneration"
+        description={`Regenerating replaces this roadmap and resets your ${Object.keys(completedTasks).filter(k => completedTasks[k]).length} completed tasks. This cannot be undone.`}
+        confirmLabel={regenerating ? 'Regenerating...' : 'Regenerate'}
+        cancelLabel="Cancel"
+        isDanger={true}
+        onConfirm={async () => {
+          setRegenerating(true);
+          try {
+            await onRegenerate();
+            setShowRegenModal(false);
+          } catch (err) {
+            console.error('Regeneration error:', err);
+          } finally {
+            setRegenerating(false);
+          }
+        }}
+        onCancel={() => setShowRegenModal(false)}
+      />
     </div>
   );
 };
