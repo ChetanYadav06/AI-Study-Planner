@@ -268,11 +268,11 @@ export const ProfileView = () => {
   if (loading) {
     return (
       <div className="space-y-4 max-w-4xl mx-auto">
-        <div className="h-40 rounded-[10px] bg-page border border-line animate-pulse" />
+        <div className="h-40 rounded-lg bg-page border border-line animate-pulse" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="h-24 rounded-[8px] bg-page border border-line animate-pulse" />
-          <div className="h-24 rounded-[8px] bg-page border border-line animate-pulse" />
-          <div className="h-24 rounded-[8px] bg-page border border-line animate-pulse" />
+          <div className="h-24 rounded-md bg-page border border-line animate-pulse" />
+          <div className="h-24 rounded-md bg-page border border-line animate-pulse" />
+          <div className="h-24 rounded-md bg-page border border-line animate-pulse" />
         </div>
       </div>
     );
@@ -284,7 +284,7 @@ export const ProfileView = () => {
     <div className="space-y-6 max-w-4xl mx-auto pb-12">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-ink text-surface text-xs font-medium px-4 py-2.5 rounded-[8px] shadow-sm flex items-center space-x-2 border border-line">
+        <div className="fixed bottom-6 right-6 z-50 bg-ink text-surface text-xs font-medium px-4 py-2.5 rounded-md shadow-sm flex items-center space-x-2 border border-line">
           <span>{toastMessage}</span>
         </div>
       )}
@@ -396,7 +396,7 @@ export const ProfileView = () => {
               placeholder="Search topics..."
               value={skillSearch}
               onChange={(e) => setSkillSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-[6px] bg-surface border border-line text-ink focus:border-accent outline-none transition"
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-md bg-surface border border-line text-ink focus:border-accent outline-none transition"
             />
           </div>
 
@@ -406,7 +406,7 @@ export const ProfileView = () => {
                 key={lvl}
                 type="button"
                 onClick={() => setSkillFilter(lvl)}
-                className={`px-2.5 py-1 rounded-[4px] text-xs font-medium transition cursor-pointer ${
+                className={`px-2.5 py-1 rounded-sm text-xs font-medium transition cursor-pointer ${
                   skillFilter === lvl
                     ? 'bg-ink text-surface'
                     : 'bg-page text-muted hover:text-ink border border-line'
@@ -426,7 +426,7 @@ export const ProfileView = () => {
               return (
                 <div
                   key={skill.id}
-                  className="p-3 rounded-[8px] bg-surface border border-line flex flex-col justify-between"
+                  className="p-3 rounded-md bg-surface border border-line flex flex-col justify-between"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <span className="text-xs font-medium text-ink truncate">{skill.topicName}</span>
@@ -457,7 +457,7 @@ export const ProfileView = () => {
             })}
           </div>
         ) : (
-          <div className="p-6 rounded-[8px] bg-page border border-line text-center text-muted">
+          <div className="p-6 rounded-md bg-page border border-line text-center text-muted">
             <p className="text-xs">No topics recorded yet.</p>
             <div className="flex flex-wrap justify-center gap-1.5 mt-3 max-w-md mx-auto">
               {TOPIC_SUGGESTIONS.slice(0, 6).map(sug => (
@@ -468,7 +468,7 @@ export const ProfileView = () => {
                     setNewTopicName(sug);
                     setIsSkillModalOpen(true);
                   }}
-                  className="px-2 py-1 bg-surface border border-line text-ink hover:border-accent rounded-[4px] text-xs font-medium transition cursor-pointer"
+                  className="px-2 py-1 bg-surface border border-line text-ink hover:border-accent rounded-sm text-xs font-medium transition cursor-pointer"
                 >
                   + {sug}
                 </button>
@@ -501,7 +501,7 @@ export const ProfileView = () => {
                   type="button"
                   key={opt.id}
                   onClick={() => toggleMethod(opt.id)}
-                  className={`p-3 rounded-[8px] border text-left transition cursor-pointer flex flex-col justify-between ${
+                  className={`p-3 rounded-md border text-left transition cursor-pointer flex flex-col justify-between ${
                     isSelected
                       ? 'border-accent bg-accent-soft text-accent'
                       : 'border-line bg-surface hover:border-slate-300 text-ink'
@@ -534,7 +534,7 @@ export const ProfileView = () => {
                   type="button"
                   key={style.id}
                   onClick={() => setExplanationStyle(style.id)}
-                  className={`p-3 rounded-[8px] border text-left transition cursor-pointer ${
+                  className={`p-3 rounded-md border text-left transition cursor-pointer ${
                     isSelected
                       ? 'border-accent bg-accent-soft text-accent'
                       : 'border-line bg-surface hover:border-slate-300 text-ink'
@@ -564,7 +564,7 @@ export const ProfileView = () => {
                   type="button"
                   key={style.id}
                   onClick={() => setPracticeStyle(style.id)}
-                  className={`p-3 rounded-[8px] border text-left transition cursor-pointer ${
+                  className={`p-3 rounded-md border text-left transition cursor-pointer ${
                     isSelected
                       ? 'border-accent bg-accent-soft text-accent'
                       : 'border-line bg-surface hover:border-slate-300 text-ink'
@@ -583,7 +583,7 @@ export const ProfileView = () => {
 
         {/* Study Schedule Controls */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-line">
-          <div className="p-3 rounded-[8px] bg-page border border-line">
+          <div className="p-3 rounded-md bg-page border border-line">
             <label className="block text-xs font-medium text-ink mb-1">
               Daily study hours: <span className="font-mono text-accent">{dailyHours}h</span>
             </label>
@@ -603,7 +603,7 @@ export const ProfileView = () => {
             </div>
           </div>
 
-          <div className="p-3 rounded-[8px] bg-page border border-line">
+          <div className="p-3 rounded-md bg-page border border-line">
             <label className="block text-xs font-medium text-ink mb-1">
               Days / week: <span className="font-mono text-accent">{daysPerWeek}d</span>
             </label>
@@ -623,14 +623,14 @@ export const ProfileView = () => {
             </div>
           </div>
 
-          <div className="p-3 rounded-[8px] bg-page border border-line flex flex-col justify-between">
+          <div className="p-3 rounded-md bg-page border border-line flex flex-col justify-between">
             <label className="block text-xs font-medium text-ink mb-1">
               Focus time window
             </label>
             <select
               value={preferredTime}
               onChange={(e) => setPreferredTime(e.target.value)}
-              className="w-full p-2 text-xs rounded-[6px] bg-surface border border-line text-ink focus:border-accent outline-none font-medium"
+              className="w-full p-2 text-xs rounded-md bg-surface border border-line text-ink focus:border-accent outline-none font-medium"
             >
               {PREFERRED_WINDOWS.map(t => (
                 <option key={t.id} value={t.id}>{t.label}</option>
@@ -656,7 +656,7 @@ export const ProfileView = () => {
           value={aiNotes}
           onChange={(e) => setAiNotes(e.target.value)}
           placeholder="e.g. I have basic Java familiarity but struggle with dynamic programming. I have 2 hours daily and want to prepare for placement interviews."
-          className="w-full p-3 rounded-[6px] bg-surface border border-line text-xs text-ink placeholder:text-muted focus:border-accent outline-none resize-y"
+          className="w-full p-3 rounded-md bg-surface border border-line text-xs text-ink placeholder:text-muted focus:border-accent outline-none resize-y"
         />
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
@@ -684,7 +684,7 @@ export const ProfileView = () => {
           onClick={() => setIsEditModalOpen(false)}
         >
           <div
-            className="bg-surface rounded-[10px] max-w-md w-full p-6 border border-line"
+            className="bg-surface rounded-lg max-w-md w-full p-6 border border-line"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-line">
@@ -693,7 +693,7 @@ export const ProfileView = () => {
                 type="button"
                 onClick={() => setIsEditModalOpen(false)}
                 aria-label="Close"
-                className="text-muted hover:text-ink p-1 rounded-[4px]"
+                className="text-muted hover:text-ink p-1 rounded-sm"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -708,7 +708,7 @@ export const ProfileView = () => {
                   placeholder="e.g. Senior Java Full-Stack Engineer"
                   value={editCareerGoal}
                   onChange={(e) => setEditCareerGoal(e.target.value)}
-                  className="w-full p-2 text-xs rounded-[6px] bg-surface border border-line text-ink focus:border-accent outline-none"
+                  className="w-full p-2 text-xs rounded-md bg-surface border border-line text-ink focus:border-accent outline-none"
                 />
               </div>
 
@@ -719,7 +719,7 @@ export const ProfileView = () => {
                   placeholder="e.g. Undergraduate (B.Tech Computer Science)"
                   value={editEducationLevel}
                   onChange={(e) => setEditEducationLevel(e.target.value)}
-                  className="w-full p-2 text-xs rounded-[6px] bg-surface border border-line text-ink focus:border-accent outline-none"
+                  className="w-full p-2 text-xs rounded-md bg-surface border border-line text-ink focus:border-accent outline-none"
                 />
               </div>
 
@@ -730,7 +730,7 @@ export const ProfileView = () => {
                   placeholder="e.g. Computer Science, Mechanical Engineering, Self-Taught"
                   value={editAcademicBackground}
                   onChange={(e) => setEditAcademicBackground(e.target.value)}
-                  className="w-full p-2 text-xs rounded-[6px] bg-surface border border-line text-ink focus:border-accent outline-none"
+                  className="w-full p-2 text-xs rounded-md bg-surface border border-line text-ink focus:border-accent outline-none"
                 />
               </div>
 
@@ -739,7 +739,7 @@ export const ProfileView = () => {
                 <select
                   value={editExperienceLevel}
                   onChange={(e) => setEditExperienceLevel(e.target.value)}
-                  className="w-full p-2 text-xs rounded-[6px] bg-surface border border-line text-ink focus:border-accent outline-none font-medium"
+                  className="w-full p-2 text-xs rounded-md bg-surface border border-line text-ink focus:border-accent outline-none font-medium"
                 >
                   <option value="BEGINNER">Beginner (Foundations & Core Syntax)</option>
                   <option value="INTERMEDIATE">Intermediate (Problem Solving & Design Patterns)</option>
@@ -779,7 +779,7 @@ export const ProfileView = () => {
           onClick={() => setIsSkillModalOpen(false)}
         >
           <div
-            className="bg-surface rounded-[10px] max-w-sm w-full p-6 border border-line"
+            className="bg-surface rounded-lg max-w-sm w-full p-6 border border-line"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-line">
@@ -788,7 +788,7 @@ export const ProfileView = () => {
                 type="button"
                 onClick={() => setIsSkillModalOpen(false)}
                 aria-label="Close"
-                className="text-muted hover:text-ink p-1 rounded-[4px]"
+                className="text-muted hover:text-ink p-1 rounded-sm"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -803,7 +803,7 @@ export const ProfileView = () => {
                   placeholder="e.g. ArrayList, SQL Joins, Binary Trees"
                   value={newTopicName}
                   onChange={(e) => setNewTopicName(e.target.value)}
-                  className="w-full p-2 text-xs rounded-[6px] bg-surface border border-line text-ink focus:border-accent outline-none"
+                  className="w-full p-2 text-xs rounded-md bg-surface border border-line text-ink focus:border-accent outline-none"
                 />
               </div>
 
@@ -815,7 +815,7 @@ export const ProfileView = () => {
                       type="button"
                       key={lvl.value}
                       onClick={() => setNewTopicLevel(lvl.value)}
-                      className={`p-2 rounded-[6px] border text-xs font-medium transition cursor-pointer text-left ${
+                      className={`p-2 rounded-md border text-xs font-medium transition cursor-pointer text-left ${
                         newTopicLevel === lvl.value
                           ? 'border-accent bg-accent-soft text-accent'
                           : 'border-line bg-surface text-muted hover:text-ink'

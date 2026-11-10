@@ -11,20 +11,20 @@ export const StatusText = ({
   className = '',
 }) => {
   const dotColor = {
-    success: 'bg-[#15803d]',
-    warning: 'bg-[#b45309]',
-    danger: 'bg-[#b91c1c]',
-    accent: 'bg-[#0f766e]',
-    neutral: 'bg-[#4b5563]',
-  }[status] || 'bg-[#4b5563]';
+    success: 'bg-success',
+    warning: 'bg-warning',
+    danger: 'bg-danger',
+    accent: 'bg-accent',
+    neutral: 'bg-muted',
+  }[status] || 'bg-muted';
 
   const textColor = {
-    success: 'text-[#15803d]',
-    warning: 'text-[#b45309]',
-    danger: 'text-[#b91c1c]',
-    accent: 'text-[#0f766e]',
-    neutral: 'text-[#4b5563]',
-  }[status] || 'text-[#4b5563]';
+    success: 'text-success',
+    warning: 'text-warning',
+    danger: 'text-danger',
+    accent: 'text-accent',
+    neutral: 'text-muted',
+  }[status] || 'text-muted';
 
   return (
     <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${textColor} ${className}`}>

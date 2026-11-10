@@ -84,19 +84,19 @@ export const ProgressView = () => {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <div className="p-3 rounded-[8px] bg-page border border-line text-center">
+          <div className="p-3 rounded-md bg-page border border-line text-center">
             <span className="text-xs text-muted block">Mastered</span>
             <div className="text-lg font-semibold text-ink mt-0.5">{masteredSkills.length}</div>
           </div>
-          <div className="p-3 rounded-[8px] bg-page border border-line text-center">
+          <div className="p-3 rounded-md bg-page border border-line text-center">
             <span className="text-xs text-muted block">Intermediate</span>
             <div className="text-lg font-semibold text-ink mt-0.5">{intermediateSkills.length}</div>
           </div>
-          <div className="p-3 rounded-[8px] bg-page border border-line text-center">
+          <div className="p-3 rounded-md bg-page border border-line text-center">
             <span className="text-xs text-muted block">Beginner</span>
             <div className="text-lg font-semibold text-ink mt-0.5">{beginnerSkills.length}</div>
           </div>
-          <div className="p-3 rounded-[8px] bg-page border border-line text-center">
+          <div className="p-3 rounded-md bg-page border border-line text-center">
             <span className="text-xs text-muted block">Not Learned</span>
             <div className="text-lg font-semibold text-ink mt-0.5">{notLearnedSkills.length}</div>
           </div>
@@ -113,7 +113,7 @@ export const ProgressView = () => {
         {goals.length > 0 ? (
           <div className="space-y-2.5">
             {goals.map((g) => (
-              <div key={g.id} className="p-3 rounded-[8px] bg-page border border-line space-y-2">
+              <div key={g.id} className="p-3 rounded-md bg-page border border-line space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-ink">{g.title}</span>
                   <span className="text-xs font-mono font-medium text-accent">{g.progressPercentage || 0}%</span>

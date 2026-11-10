@@ -101,16 +101,16 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-lg border border-[#e5e7eb] max-w-md w-full shadow-md overflow-hidden"
+        className="bg-white rounded-lg border border-line max-w-md w-full shadow-md overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 border-b border-[#e5e7eb] flex items-center justify-between">
+        <div className="p-5 border-b border-line flex items-center justify-between">
           <div>
-            <h2 id="auth-modal-title" className="text-base font-semibold text-[#111827]">
+            <h2 id="auth-modal-title" className="text-base font-semibold text-ink">
               {mode === 'login' ? 'Sign in' : 'Create account'}
             </h2>
-            <p className="text-xs text-[#4b5563] mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               {mode === 'login'
                 ? 'Sign in to access your roadmaps and study sessions.'
                 : 'Create an account to generate study roadmaps.'}
@@ -119,7 +119,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-md text-[#4b5563] hover:text-[#111827] hover:bg-[#f8fafc] transition-colors duration-150 cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
+            className="p-1.5 rounded-md text-muted hover:text-ink hover:bg-page transition-colors duration-150 cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
             aria-label="Close dialog"
           >
             <X className="w-5 h-5" />
@@ -127,14 +127,14 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex border-b border-[#e5e7eb] px-5 bg-[#f8fafc]">
+        <div className="flex border-b border-line px-5 bg-page">
           <button
             type="button"
             onClick={() => { setMode('login'); setError(null); }}
-            className={`py-2.5 px-3 text-xs font-medium border-b-2 transition-colors duration-150 cursor-pointer min-h-[36px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 ${
+            className={`py-2.5 px-3 text-xs font-medium border-b-2 transition-colors duration-150 cursor-pointer min-h-[36px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
               mode === 'login'
-                ? 'border-[#0f766e] text-[#0f766e]'
-                : 'border-transparent text-[#4b5563] hover:text-[#111827]'
+                ? 'border-accent text-accent'
+                : 'border-transparent text-muted hover:text-ink'
             }`}
           >
             Sign in
@@ -142,10 +142,10 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
           <button
             type="button"
             onClick={() => { setMode('register'); setError(null); }}
-            className={`py-2.5 px-3 text-xs font-medium border-b-2 transition-colors duration-150 cursor-pointer min-h-[36px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 ${
+            className={`py-2.5 px-3 text-xs font-medium border-b-2 transition-colors duration-150 cursor-pointer min-h-[36px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
               mode === 'register'
-                ? 'border-[#0f766e] text-[#0f766e]'
-                : 'border-transparent text-[#4b5563] hover:text-[#111827]'
+                ? 'border-accent text-accent'
+                : 'border-transparent text-muted hover:text-ink'
             }`}
           >
             Create account
@@ -155,14 +155,14 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {error && (
-            <div className="p-3 rounded-md bg-red-50 border border-red-200 text-[#b91c1c] text-xs flex items-start gap-2">
+            <div className="p-3 rounded-md bg-red-50 border border-red-200 text-danger text-xs flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="p-3 rounded-md bg-[#f0fdfa] border border-[#0f766e]/20 text-[#0f766e] text-xs flex items-center gap-2">
+            <div className="p-3 rounded-md bg-accent-soft border border-accent/20 text-accent text-xs flex items-center gap-2">
               <CheckCircle className="w-4 h-4 shrink-0" />
               <span>{success}</span>
             </div>
@@ -171,18 +171,18 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
           {/* Name Field (Register mode only) */}
           {mode === 'register' && (
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-[#111827]">
+              <label className="block text-xs font-medium text-ink">
                 Full name
               </label>
               <div className="relative">
-                <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#4b5563]" />
+                <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                 <input
                   type="text"
                   required
                   placeholder="e.g. Alex Sharma"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-[#e5e7eb] text-[#111827] placeholder-[#4b5563] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
+                  className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-line text-ink placeholder-muted focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
                 />
               </div>
             </div>
@@ -190,41 +190,41 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
 
           {/* Email Field */}
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-[#111827]">
+            <label className="block text-xs font-medium text-ink">
               Email address
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#4b5563]" />
+              <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 type="email"
                 required
                 placeholder="student@university.edu"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-[#e5e7eb] text-[#111827] placeholder-[#4b5563] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
+                className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-line text-ink placeholder-muted focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
               />
             </div>
           </div>
 
           {/* Password Field */}
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-[#111827]">
+            <label className="block text-xs font-medium text-ink">
               Password
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#4b5563]" />
+              <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
                 placeholder="At least 6 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-9 pr-10 py-2 text-sm rounded-md border border-[#e5e7eb] text-[#111827] placeholder-[#4b5563] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
+                className="w-full pl-9 pr-10 py-2 text-sm rounded-md border border-line text-ink placeholder-muted focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4b5563] hover:text-[#111827] p-1 cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink p-1 cursor-pointer"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -235,18 +235,18 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
           {/* Confirm Password (Register mode only) */}
           {mode === 'register' && (
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-[#111827]">
+              <label className="block text-xs font-medium text-ink">
                 Confirm password
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#4b5563]" />
+                <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
                   placeholder="Repeat your password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-[#e5e7eb] text-[#111827] placeholder-[#4b5563] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
+                  className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-line text-ink placeholder-muted focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
                 />
               </div>
             </div>
@@ -275,7 +275,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
             <button
               type="button"
               onClick={fillDemoCredentials}
-              className="text-xs text-[#0f766e] hover:underline cursor-pointer"
+              className="text-xs text-accent hover:underline cursor-pointer"
             >
               Fill sample credentials
             </button>

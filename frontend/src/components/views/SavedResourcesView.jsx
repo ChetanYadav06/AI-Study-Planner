@@ -59,7 +59,7 @@ export const SavedResourcesView = () => {
       />
 
       {/* Simple text-tab filter row */}
-      <div className="flex items-center gap-1 border-b border-[#e5e7eb] overflow-x-auto">
+      <div className="flex items-center gap-1 border-b border-line overflow-x-auto">
         {filterTabs.map((type) => {
           const isActive = filterType === type;
           return (
@@ -67,10 +67,10 @@ export const SavedResourcesView = () => {
               key={type}
               type="button"
               onClick={() => setFilterType(type)}
-              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150 cursor-pointer min-h-[40px] whitespace-nowrap focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 ${
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150 cursor-pointer min-h-[40px] whitespace-nowrap focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
                 isActive
-                  ? 'border-[#0f766e] text-[#0f766e]'
-                  : 'border-transparent text-[#4b5563] hover:text-[#111827] hover:border-[#e5e7eb]'
+                  ? 'border-accent text-accent'
+                  : 'border-transparent text-muted hover:text-ink hover:border-line'
               }`}
             >
               {type === 'ALL' ? 'All' : type.charAt(0) + type.slice(1).toLowerCase()}
@@ -99,32 +99,32 @@ export const SavedResourcesView = () => {
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium text-[#4b5563]">
+                    <span className="text-xs font-medium text-muted">
                       {typeLabel}
                     </span>
                     {hasUrl && (
-                      <ExternalLink className="w-4 h-4 text-[#4b5563] shrink-0" aria-hidden="true" />
+                      <ExternalLink className="w-4 h-4 text-muted shrink-0" aria-hidden="true" />
                     )}
                   </div>
 
-                  <h2 className="text-sm font-semibold text-[#111827] leading-snug">
+                  <h2 className="text-sm font-semibold text-ink leading-snug">
                     {res.title}
                   </h2>
 
                   {res.relevance && (
-                    <p className="text-sm text-[#4b5563] leading-relaxed">
+                    <p className="text-sm text-muted leading-relaxed">
                       {res.relevance}
                     </p>
                   )}
                 </div>
 
                 {hasUrl && (
-                  <div className="mt-4 pt-3 border-t border-[#e5e7eb] flex items-center justify-between">
+                  <div className="mt-4 pt-3 border-t border-line flex items-center justify-between">
                     <a
                       href={res.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs font-medium text-[#0f766e] hover:text-[#115e59] inline-flex items-center gap-1 focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 rounded-sm"
+                      className="text-xs font-medium text-accent hover:text-accent-hover inline-flex items-center gap-1 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 rounded-sm"
                     >
                       <span>Open resource</span>
                       <span aria-hidden="true">↗</span>

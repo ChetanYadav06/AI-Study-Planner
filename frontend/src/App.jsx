@@ -55,7 +55,7 @@ const AppContent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col md:flex-row text-[#111827]">
+    <div className="min-h-screen bg-page flex flex-col md:flex-row text-ink">
       {/* Sidebar: Desktop Flush Left / Mobile Drawer */}
       <Sidebar
         activeTab={activeTab}

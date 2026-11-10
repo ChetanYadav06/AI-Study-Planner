@@ -82,25 +82,25 @@ export const Sidebar = ({
 
   const sidebarContent = (
     <aside
-      className={`bg-white border-r border-[#e5e7eb] flex flex-col justify-between select-none h-full overflow-y-auto ${
+      className={`bg-white border-r border-line flex flex-col justify-between select-none h-full overflow-y-auto ${
         isCollapsed ? 'w-[64px] p-2.5' : 'w-[250px] p-4'
       }`}
     >
       {/* ── TOP SECTION: Brand, Collapse Toggle, Search, Nav ── */}
       <div className="space-y-4 flex-1 flex flex-col min-h-0">
         {/* Brand Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-[#e5e7eb]">
+        <div className="flex items-center justify-between pb-3 border-b border-line">
           <div
             onClick={() => handleNavClick('dashboard')}
             className="flex items-center gap-2.5 cursor-pointer truncate"
           >
-            <div className="w-8 h-8 rounded-md bg-[#f0fdfa] border border-[#0f766e]/20 flex items-center justify-center text-[#0f766e] shrink-0">
+            <div className="w-8 h-8 rounded-md bg-accent-soft border border-accent/20 flex items-center justify-center text-accent shrink-0">
               <BookOpen className="w-4 h-4" />
             </div>
 
             {!isCollapsed && (
               <div className="truncate">
-                <span className="text-sm font-semibold text-[#111827] block leading-tight">
+                <span className="text-sm font-semibold text-ink block leading-tight">
                   AI Study Planner
                 </span>
               </div>
@@ -111,7 +111,7 @@ export const Sidebar = ({
           <button
             type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden md:flex p-1.5 rounded-md text-[#4b5563] hover:text-[#111827] hover:bg-[#f8fafc] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
+            className="hidden md:flex p-1.5 rounded-md text-muted hover:text-ink hover:bg-page transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-label="Toggle sidebar collapse"
           >
@@ -122,19 +122,19 @@ export const Sidebar = ({
         {/* Search Field */}
         {!isCollapsed ? (
           <div className="relative">
-            <Search className="w-4 h-4 text-[#4b5563] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               placeholder="Search navigation..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-7 py-2 rounded-md bg-[#f8fafc] border border-[#e5e7eb] text-sm text-[#111827] placeholder-[#4b5563] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 transition-colors duration-150"
+              className="w-full pl-9 pr-7 py-2 rounded-md bg-page border border-line text-sm text-ink placeholder-muted focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 transition-colors duration-150"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#4b5563] hover:text-[#111827] p-0.5 cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-ink p-0.5 cursor-pointer"
                 aria-label="Clear search"
               >
                 <X className="w-3.5 h-3.5" />
@@ -145,7 +145,7 @@ export const Sidebar = ({
           <button
             type="button"
             onClick={() => setIsCollapsed(false)}
-            className="w-full py-2 rounded-md bg-[#f8fafc] border border-[#e5e7eb] flex items-center justify-center text-[#4b5563] hover:text-[#111827] transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
+            className="w-full py-2 rounded-md bg-page border border-line flex items-center justify-center text-muted hover:text-ink transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
             title="Search navigation"
             aria-label="Expand sidebar to search"
           >
@@ -168,13 +168,13 @@ export const Sidebar = ({
                   title={item.label}
                   className={`w-full flex items-center ${
                     isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'
-                  } rounded-md text-sm transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 ${
+                  } rounded-md text-sm transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
                     isActive
-                      ? 'bg-[#f0fdfa] text-[#0f766e] font-medium'
-                      : 'text-[#4b5563] hover:text-[#111827] hover:bg-[#f8fafc]'
+                      ? 'bg-accent-soft text-accent font-medium'
+                      : 'text-muted hover:text-ink hover:bg-page'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#0f766e]' : 'text-[#4b5563]'}`} />
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-accent' : 'text-muted'}`} />
 
                   {!isCollapsed && (
                     <span className="ml-3 truncate">
@@ -189,14 +189,14 @@ export const Sidebar = ({
       </div>
 
       {/* ── BOTTOM SECTION: Customization, Settings, Logout ── */}
-      <div className="pt-3 border-t border-[#e5e7eb] space-y-2 shrink-0">
+      <div className="pt-3 border-t border-line space-y-2 shrink-0">
         {/* Customize Sidebar */}
         {!isCollapsed ? (
           <div>
             <button
               type="button"
               onClick={() => setCustomizeOpen(!customizeOpen)}
-              className="w-full flex items-center justify-between px-2 py-1.5 rounded-md text-xs text-[#4b5563] hover:text-[#111827] hover:bg-[#f8fafc] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
+              className="w-full flex items-center justify-between px-2 py-1.5 rounded-md text-xs text-muted hover:text-ink hover:bg-page transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
             >
               <span className="flex items-center gap-1.5">
                 <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -206,8 +206,8 @@ export const Sidebar = ({
             </button>
 
             {customizeOpen && (
-              <div className="p-3 my-2 rounded-md bg-[#f8fafc] border border-[#e5e7eb] text-xs space-y-2">
-                <p className="font-medium text-[#111827]">
+              <div className="p-3 my-2 rounded-md bg-page border border-line text-xs space-y-2">
+                <p className="font-medium text-ink">
                   Navigation modules
                 </p>
                 {navItems.filter(i => !i.core).map(item => {
@@ -215,14 +215,14 @@ export const Sidebar = ({
                   return (
                     <label
                       key={item.id}
-                      className="flex items-center justify-between py-1 text-[#4b5563] hover:text-[#111827] cursor-pointer"
+                      className="flex items-center justify-between py-1 text-muted hover:text-ink cursor-pointer"
                     >
                       <span>{item.label}</span>
                       <input
                         type="checkbox"
                         checked={isVisible}
                         onChange={() => toggleItemVisibility(item.id)}
-                        className="w-3.5 h-3.5 accent-[#0f766e] rounded cursor-pointer"
+                        className="w-3.5 h-3.5 accent-accent rounded cursor-pointer"
                       />
                     </label>
                   );
@@ -235,7 +235,7 @@ export const Sidebar = ({
             <button
               type="button"
               onClick={() => setIsCollapsed(false)}
-              className="p-2 text-[#4b5563] hover:text-[#111827] hover:bg-[#f8fafc] rounded-md transition-colors duration-150 cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
+              className="p-2 text-muted hover:text-ink hover:bg-page rounded-md transition-colors duration-150 cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
               title="Customize sidebar"
               aria-label="Expand sidebar to customize"
             >
@@ -251,7 +251,7 @@ export const Sidebar = ({
             onClick={() => setSettingsOpen(true)}
             className={`w-full flex items-center ${
               isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'
-            } rounded-md text-sm text-[#4b5563] hover:text-[#111827] hover:bg-[#f8fafc] transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2`}
+            } rounded-md text-sm text-muted hover:text-ink hover:bg-page transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2`}
             title="Settings"
             aria-label="Settings"
           >
@@ -265,7 +265,7 @@ export const Sidebar = ({
               onClick={logout}
               className={`w-full flex items-center ${
                 isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'
-              } rounded-md text-sm text-[#4b5563] hover:text-[#b91c1c] hover:bg-red-50 transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2`}
+              } rounded-md text-sm text-muted hover:text-danger hover:bg-red-50 transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2`}
               title="Sign Out"
               aria-label="Sign Out"
             >

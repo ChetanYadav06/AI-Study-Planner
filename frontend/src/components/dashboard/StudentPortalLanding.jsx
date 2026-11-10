@@ -5,10 +5,10 @@ export const StudentPortalLanding = ({ onOpenAuth }) => {
   return (
     <div className="max-w-2xl mx-auto py-16 px-4 text-center space-y-6">
       <div className="space-y-3">
-        <h1 className="text-3xl sm:text-4xl font-semibold text-[#111827] tracking-tight">
+        <h1 className="text-3xl sm:text-4xl font-semibold text-ink tracking-tight">
           AI Study Planner
         </h1>
-        <p className="text-sm sm:text-base text-[#4b5563] max-w-lg mx-auto leading-relaxed">
+        <p className="text-sm sm:text-base text-muted max-w-lg mx-auto leading-relaxed">
           Plan study goals, generate day-by-day roadmaps, and track your daily study sessions.
         </p>
       </div>

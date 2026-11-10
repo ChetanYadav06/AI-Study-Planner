@@ -11,13 +11,13 @@ export const PageHeader = ({
   className = '',
 }) => {
   return (
-    <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-[#e5e7eb] ${className}`}>
+    <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-line ${className}`}>
       <div className="space-y-1">
-        <h1 className="text-xl sm:text-2xl font-semibold text-[#111827] tracking-tight">
+        <h1 className="text-xl sm:text-2xl font-semibold text-ink tracking-tight">
           {title}
         </h1>
         {subtitle && (
-          <p className="text-sm text-[#4b5563]">
+          <p className="text-sm text-muted">
             {subtitle}
           </p>
         )}

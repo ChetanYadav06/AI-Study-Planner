@@ -295,7 +295,7 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
       />
 
       {sessionSavedMsg && (
-        <div className="p-2.5 rounded-[6px] bg-accent-soft border border-line text-accent text-xs font-medium flex items-center gap-2">
+        <div className="p-2.5 rounded-md bg-accent-soft border border-line text-accent text-xs font-medium flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{sessionSavedMsg}</span>
         </div>
@@ -304,11 +304,11 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Pomodoro Focus Timer */}
         <Card className="lg:col-span-6 p-6 flex flex-col items-center justify-between space-y-6 text-center">
-          <div className="flex items-center gap-1 bg-page p-1 rounded-[6px] border border-line">
+          <div className="flex items-center gap-1 bg-page p-1 rounded-md border border-line">
             <button
               type="button"
               onClick={() => handleSetMode('focus')}
-              className={`px-3 py-1 rounded-[4px] text-xs font-medium transition cursor-pointer ${
+              className={`px-3 py-1 rounded-sm text-xs font-medium transition cursor-pointer ${
                 timerState.mode === 'focus' ? 'bg-surface text-ink border border-line' : 'text-muted hover:text-ink'
               }`}
             >
@@ -317,7 +317,7 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
             <button
               type="button"
               onClick={() => handleSetMode('shortBreak')}
-              className={`px-3 py-1 rounded-[4px] text-xs font-medium transition cursor-pointer ${
+              className={`px-3 py-1 rounded-sm text-xs font-medium transition cursor-pointer ${
                 timerState.mode === 'shortBreak' ? 'bg-surface text-ink border border-line' : 'text-muted hover:text-ink'
               }`}
             >
@@ -326,7 +326,7 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
             <button
               type="button"
               onClick={() => handleSetMode('longBreak')}
-              className={`px-3 py-1 rounded-[4px] text-xs font-medium transition cursor-pointer ${
+              className={`px-3 py-1 rounded-sm text-xs font-medium transition cursor-pointer ${
                 timerState.mode === 'longBreak' ? 'bg-surface text-ink border border-line' : 'text-muted hover:text-ink'
               }`}
             >
@@ -452,7 +452,7 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
               value={notes}
               onChange={handleNotesChange}
               placeholder="Jot down quick code snippets, questions, or key takeaways..."
-              className="w-full p-2.5 rounded-[6px] border border-line bg-surface text-xs text-ink placeholder:text-muted focus:border-accent outline-none transition resize-none"
+              className="w-full p-2.5 rounded-md border border-line bg-surface text-xs text-ink placeholder:text-muted focus:border-accent outline-none transition resize-none"
             />
           </Card>
         </div>

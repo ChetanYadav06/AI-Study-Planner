@@ -19,10 +19,10 @@ export const ProgressBar = ({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-label={ariaLabel}
-      className={`w-full h-1.5 bg-[#e5e7eb] rounded-full overflow-hidden ${className}`}
+      className={`w-full h-1.5 bg-line rounded-full overflow-hidden ${className}`}
     >
       <div
-        className="h-full bg-[#0f766e] transition-[width] duration-300 ease-out"
+        className="h-full bg-accent transition-[width] duration-300 ease-out"
         style={{ width: `${percentage}%` }}
       />
     </div>

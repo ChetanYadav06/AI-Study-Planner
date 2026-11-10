@@ -356,8 +356,8 @@ export const RoadmapWizard = ({
 
   if (loading) {
     return (
-      <div className="bg-surface rounded-[10px] p-8 border border-line text-center max-w-xl mx-auto my-12">
-        <div className="w-10 h-10 rounded-[6px] bg-accent-soft border border-line flex items-center justify-center mx-auto mb-4 text-accent">
+      <div className="bg-surface rounded-lg p-8 border border-line text-center max-w-xl mx-auto my-12">
+        <div className="w-10 h-10 rounded-md bg-accent-soft border border-line flex items-center justify-center mx-auto mb-4 text-accent">
           <Loader2 className="w-5 h-5 animate-spin" />
         </div>
 
@@ -372,9 +372,9 @@ export const RoadmapWizard = ({
             </p>
           </div>
 
-          <div className="w-full bg-page rounded-[4px] h-1.5 overflow-hidden max-w-xs mx-auto">
+          <div className="w-full bg-page rounded-sm h-1.5 overflow-hidden max-w-xs mx-auto">
             <div
-              className="bg-accent h-full rounded-[4px] transition-all duration-500"
+              className="bg-accent h-full rounded-sm transition-all duration-500"
               style={{ width: `${((synthesisStageIdx + 1) / SYNTHESIS_STAGES.length) * 100}%` }}
             />
           </div>
@@ -388,7 +388,7 @@ export const RoadmapWizard = ({
   }
 
   return (
-    <div className="bg-surface rounded-[10px] border border-line overflow-hidden max-w-3xl mx-auto">
+    <div className="bg-surface rounded-lg border border-line overflow-hidden max-w-3xl mx-auto">
       {/* ── WIZARD PROGRESS HEADER ── */}
       <div className="p-6 border-b border-line">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -419,7 +419,7 @@ export const RoadmapWizard = ({
             return (
               <div key={s.num} className="space-y-1">
                 <div
-                  className={`h-1.5 rounded-[4px] transition-all duration-300 ${
+                  className={`h-1.5 rounded-sm transition-all duration-300 ${
                     isDone ? 'bg-success' : isCurrent ? 'bg-accent' : 'bg-line'
                   }`}
                 />
@@ -437,7 +437,7 @@ export const RoadmapWizard = ({
       {/* ── WIZARD BODY ── */}
       <div className="p-6 min-h-[380px] flex flex-col justify-between">
         {stepError && (
-          <div className="mb-4 p-3 rounded-[8px] bg-danger/10 border border-danger/30 text-danger text-xs font-medium flex items-center space-x-2">
+          <div className="mb-4 p-3 rounded-md bg-danger/10 border border-danger/30 text-danger text-xs font-medium flex items-center space-x-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{stepError}</span>
           </div>
@@ -455,14 +455,14 @@ export const RoadmapWizard = ({
 
             {/* Link from existing registered goals */}
             {goals.length > 0 && (
-              <div className="p-3.5 rounded-[8px] bg-page border border-line">
+              <div className="p-3.5 rounded-md bg-page border border-line">
                 <label className="block text-xs font-medium text-ink mb-1.5">
                   Link with your registered learning goal:
                 </label>
                 <select
                   value={selectedGoalId}
                   onChange={(e) => handleSelectGoal(e.target.value)}
-                  className="w-full p-2 text-xs rounded-[6px] bg-surface border border-line text-ink focus:border-accent outline-none font-medium"
+                  className="w-full p-2 text-xs rounded-md bg-surface border border-line text-ink focus:border-accent outline-none font-medium"
                 >
                   <option value="">-- Or choose from your active goals --</option>
                   {goals.map(g => (
@@ -488,7 +488,7 @@ export const RoadmapWizard = ({
                       type="button"
                       key={sug.topic}
                       onClick={() => handleSelectPreset(sug)}
-                      className={`p-3.5 rounded-[8px] border text-left transition cursor-pointer flex flex-col justify-between ${
+                      className={`p-3.5 rounded-md border text-left transition cursor-pointer flex flex-col justify-between ${
                         isSelected
                           ? 'border-accent bg-accent-soft text-accent'
                           : 'border-line bg-surface hover:border-slate-300 text-ink'
@@ -499,7 +499,7 @@ export const RoadmapWizard = ({
                           <span className="text-xs font-medium text-accent">
                             {sug.category}
                           </span>
-                          <div className={`w-7 h-7 rounded-[4px] bg-page border border-line flex items-center justify-center ${
+                          <div className={`w-7 h-7 rounded-sm bg-page border border-line flex items-center justify-center ${
                             isSelected ? 'text-accent' : 'text-muted'
                           }`}>
                             <Icon className="w-3.5 h-3.5" />
@@ -532,7 +532,7 @@ export const RoadmapWizard = ({
                   setSelectedGoalId('');
                 }}
                 placeholder="e.g. Master Golang Microservices & Kubernetes or React Native"
-                className="w-full p-2.5 text-xs rounded-[6px] bg-surface border border-line text-ink focus:border-accent outline-none transition"
+                className="w-full p-2.5 text-xs rounded-md bg-surface border border-line text-ink focus:border-accent outline-none transition"
               />
             </div>
           </div>
@@ -552,7 +552,7 @@ export const RoadmapWizard = ({
             </div>
 
             {diagnosticNote && (
-              <div className="p-3 rounded-[8px] bg-accent-soft border border-line text-accent text-xs font-medium flex items-center space-x-2">
+              <div className="p-3 rounded-md bg-accent-soft border border-line text-accent text-xs font-medium flex items-center space-x-2">
                 <span>{diagnosticNote}</span>
               </div>
             )}
@@ -564,7 +564,7 @@ export const RoadmapWizard = ({
                 value={newCustomTopic}
                 onChange={(e) => setNewCustomTopic(e.target.value)}
                 placeholder="Add a topic you know or want to focus on (e.g. Async IO, Docker, PyTorch)"
-                className="flex-1 p-2 text-xs rounded-[6px] bg-surface border border-line text-ink focus:border-accent outline-none font-medium"
+                className="flex-1 p-2 text-xs rounded-md bg-surface border border-line text-ink focus:border-accent outline-none font-medium"
               />
               <Button
                 type="submit"
@@ -577,7 +577,7 @@ export const RoadmapWizard = ({
             </form>
 
             {topicsList.length === 0 ? (
-              <div className="p-6 text-center rounded-[8px] bg-page border border-line text-muted">
+              <div className="p-6 text-center rounded-md bg-page border border-line text-muted">
                 <p className="text-xs">
                   No predefined topics for this subject. Feel free to add topics above or click <strong>Continue</strong> to proceed.
                 </p>
@@ -587,7 +587,7 @@ export const RoadmapWizard = ({
                 {topicsList.map(tName => {
                   const currentRating = topicRatings[tName] || 'NOT_LEARNED';
                   return (
-                    <div key={tName} className="p-3 rounded-[8px] bg-page border border-line flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div key={tName} className="p-3 rounded-md bg-page border border-line flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                       <div className="flex items-center space-x-2">
                         <span className="text-xs font-medium text-ink">{tName}</span>
                         {userTouchedTopics.has(tName) && (
@@ -606,7 +606,7 @@ export const RoadmapWizard = ({
                                 type="button"
                                 key={opt.level}
                                 onClick={() => handleRateTopic(tName, opt.level)}
-                                className={`px-2.5 py-1 rounded-[4px] text-xs font-medium border transition cursor-pointer ${
+                                className={`px-2.5 py-1 rounded-sm text-xs font-medium border transition cursor-pointer ${
                                   isSelected
                                     ? 'border-accent bg-accent-soft text-accent'
                                     : 'bg-surface border-line text-muted hover:text-ink'
@@ -620,7 +620,7 @@ export const RoadmapWizard = ({
                         <button
                           type="button"
                           onClick={() => handleRemoveTopic(tName)}
-                          className="p-1 text-muted hover:text-danger rounded-[4px] hover:bg-surface transition cursor-pointer"
+                          className="p-1 text-muted hover:text-danger rounded-sm hover:bg-surface transition cursor-pointer"
                           title="Remove topic"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -645,7 +645,7 @@ export const RoadmapWizard = ({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 rounded-[8px] bg-page border border-line space-y-1.5">
+              <div className="p-4 rounded-md bg-page border border-line space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-ink flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-accent" />
@@ -660,7 +660,7 @@ export const RoadmapWizard = ({
                   step="1"
                   value={targetDays}
                   onChange={(e) => setTargetDays(Number(e.target.value))}
-                  className="w-full accent-accent h-1.5 rounded-[4px] cursor-pointer"
+                  className="w-full accent-accent h-1.5 rounded-sm cursor-pointer"
                 />
                 <div className="flex justify-between text-xs text-muted">
                   <span>1 Week (7d)</span>
@@ -669,7 +669,7 @@ export const RoadmapWizard = ({
                 </div>
               </div>
 
-              <div className="p-4 rounded-[8px] bg-page border border-line space-y-1.5">
+              <div className="p-4 rounded-md bg-page border border-line space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-ink flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-accent" />
@@ -684,7 +684,7 @@ export const RoadmapWizard = ({
                   step="0.5"
                   value={hoursPerDay}
                   onChange={(e) => setHoursPerDay(Number(e.target.value))}
-                  className="w-full accent-accent h-1.5 rounded-[4px] cursor-pointer"
+                  className="w-full accent-accent h-1.5 rounded-sm cursor-pointer"
                 />
                 <div className="flex justify-between text-xs text-muted">
                   <span>0.5h (Light)</span>
@@ -703,7 +703,7 @@ export const RoadmapWizard = ({
                 value={specificTopics}
                 onChange={(e) => setSpecificTopics(e.target.value)}
                 placeholder="e.g. PyTorch, Hugging Face, FAISS vector search, Prompt chaining"
-                className="w-full p-2.5 text-xs rounded-[6px] bg-surface border border-line text-ink focus:border-accent outline-none transition"
+                className="w-full p-2.5 text-xs rounded-md bg-surface border border-line text-ink focus:border-accent outline-none transition"
               />
             </div>
 
@@ -716,7 +716,7 @@ export const RoadmapWizard = ({
                 value={targetOutcomes}
                 onChange={(e) => setTargetOutcomes(e.target.value)}
                 placeholder="e.g. Deploy custom RAG agent application to portfolio and pass technical interview"
-                className="w-full p-2.5 text-xs rounded-[6px] bg-surface border border-line text-ink focus:border-accent outline-none transition resize-none"
+                className="w-full p-2.5 text-xs rounded-md bg-surface border border-line text-ink focus:border-accent outline-none transition resize-none"
               />
             </div>
           </div>
@@ -733,7 +733,7 @@ export const RoadmapWizard = ({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-3.5 rounded-[8px] bg-page border border-line">
+              <div className="p-3.5 rounded-md bg-page border border-line">
                 <label className="block text-xs font-medium text-ink mb-2">Explanation Pedagogy:</label>
                 <div className="space-y-1.5">
                   {[
@@ -745,7 +745,7 @@ export const RoadmapWizard = ({
                       type="button"
                       key={opt.id}
                       onClick={() => setExplanationStyle(opt.id)}
-                      className={`w-full p-2 rounded-[6px] text-left text-xs font-medium border transition cursor-pointer ${
+                      className={`w-full p-2 rounded-md text-left text-xs font-medium border transition cursor-pointer ${
                         explanationStyle === opt.id
                           ? 'bg-accent-soft border-accent text-accent'
                           : 'bg-surface border-line text-ink hover:border-slate-300'
@@ -757,7 +757,7 @@ export const RoadmapWizard = ({
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-[8px] bg-page border border-line">
+              <div className="p-3.5 rounded-md bg-page border border-line">
                 <label className="block text-xs font-medium text-ink mb-2">Preferred Practice Format:</label>
                 <div className="space-y-1.5">
                   {[
@@ -769,7 +769,7 @@ export const RoadmapWizard = ({
                       type="button"
                       key={opt.id}
                       onClick={() => setPracticeStyle(opt.id)}
-                      className={`w-full p-2 rounded-[6px] text-left text-xs font-medium border transition cursor-pointer ${
+                      className={`w-full p-2 rounded-md text-left text-xs font-medium border transition cursor-pointer ${
                         practiceStyle === opt.id
                           ? 'bg-accent-soft border-accent text-accent'
                           : 'bg-surface border-line text-ink hover:border-slate-300'
@@ -795,7 +795,7 @@ export const RoadmapWizard = ({
             </div>
 
             {error && (
-              <div className="p-3 rounded-[8px] bg-danger/10 border border-danger/30 text-danger text-xs font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="p-3 rounded-md bg-danger/10 border border-danger/30 text-danger text-xs font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div className="flex items-center space-x-2">
                   <AlertCircle className="w-4 h-4 shrink-0 text-danger" />
                   <span>{error || 'Could not generate a roadmap. Please try again.'}</span>
@@ -812,31 +812,31 @@ export const RoadmapWizard = ({
               </div>
             )}
 
-            <div className="p-4 rounded-[8px] bg-page border border-line space-y-4 text-xs">
+            <div className="p-4 rounded-md bg-page border border-line space-y-4 text-xs">
               <div className="flex justify-between items-start pb-3 border-b border-line">
                 <div>
                   <span className="text-xs text-muted font-medium">Goal Subject</span>
                   <div className="text-sm font-semibold text-ink mt-0.5">{topic}</div>
                 </div>
-                <span className="px-2 py-0.5 rounded-[4px] text-xs font-medium bg-accent-soft text-accent border border-line">
+                <span className="px-2 py-0.5 rounded-sm text-xs font-medium bg-accent-soft text-accent border border-line">
                   {skillLevel}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                <div className="p-2.5 bg-surface rounded-[6px] border border-line">
+                <div className="p-2.5 bg-surface rounded-md border border-line">
                   <span className="text-xs text-muted font-medium block">Duration</span>
                   <span className="text-xs font-semibold text-ink mt-0.5 block">{targetDays} Days</span>
                 </div>
-                <div className="p-2.5 bg-surface rounded-[6px] border border-line">
+                <div className="p-2.5 bg-surface rounded-md border border-line">
                   <span className="text-xs text-muted font-medium block">Daily Pace</span>
                   <span className="text-xs font-semibold text-accent mt-0.5 block">{hoursPerDay}h / day</span>
                 </div>
-                <div className="p-2.5 bg-surface rounded-[6px] border border-line">
+                <div className="p-2.5 bg-surface rounded-md border border-line">
                   <span className="text-xs text-muted font-medium block">Total Hours</span>
                   <span className="text-xs font-semibold text-ink mt-0.5 block">{Math.round(targetDays * hoursPerDay)} hrs</span>
                 </div>
-                <div className="p-2.5 bg-surface rounded-[6px] border border-line">
+                <div className="p-2.5 bg-surface rounded-md border border-line">
                   <span className="text-xs text-muted font-medium block">Rated Topics</span>
                   <span className="text-xs font-semibold text-ink mt-0.5 block">{userTouchedTopics.size}</span>
                 </div>

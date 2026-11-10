@@ -35,14 +35,14 @@ export const ConfirmDialog = ({
       onClick={onCancel}
     >
       <div
-        className="w-full max-w-md bg-white border border-[#e5e7eb] rounded-lg p-6 shadow-md"
+        className="w-full max-w-md bg-white border border-line rounded-lg p-6 shadow-md"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="confirm-dialog-title" className="text-base font-semibold text-[#111827]">
+        <h2 id="confirm-dialog-title" className="text-base font-semibold text-ink">
           {title}
         </h2>
         {description && (
-          <p className="text-sm text-[#4b5563] mt-2 leading-relaxed">
+          <p className="text-sm text-muted mt-2 leading-relaxed">
             {description}
           </p>
         )}

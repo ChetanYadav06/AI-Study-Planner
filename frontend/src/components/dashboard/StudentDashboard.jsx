@@ -404,12 +404,12 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-16">
       {/* 1. GREETING & HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#e5e7eb]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-line">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-[#111827] tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-semibold text-ink tracking-tight">
             {getGreeting()}, {user?.name || 'Scholar'}
           </h1>
-          <p className="text-sm text-[#4b5563] mt-0.5">
+          <p className="text-sm text-muted mt-0.5">
             {todayFormatted}
           </p>
         </div>
@@ -441,12 +441,12 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
 
       {/* Action Notification Alert */}
       {actionMessage && (
-        <div className="p-3 rounded-md bg-[#f0fdfa] border border-[#0f766e]/20 text-[#0f766e] text-sm flex items-center justify-between">
+        <div className="p-3 rounded-md bg-accent-soft border border-accent/20 text-accent text-sm flex items-center justify-between">
           <span>{actionMessage}</span>
           <button
             type="button"
             onClick={() => setActionMessage(null)}
-            className="text-[#0f766e] hover:underline cursor-pointer text-xs font-medium"
+            className="text-accent hover:underline cursor-pointer text-xs font-medium"
           >
             Dismiss
           </button>
@@ -455,7 +455,7 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
 
       {/* Error Notice */}
       {error && (
-        <div className="p-3.5 rounded-md bg-red-50 border border-red-200 text-[#b91c1c] text-sm flex items-center justify-between">
+        <div className="p-3.5 rounded-md bg-red-50 border border-red-200 text-danger text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
@@ -471,22 +471,22 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
       )}
 
       {/* 2. STATS STRIP: ONE BORDERED STRIP WITH 4 VALUES */}
-      <div className="grid grid-cols-2 md:grid-cols-4 border border-[#e5e7eb] rounded-lg bg-white divide-y md:divide-y-0 md:divide-x divide-[#e5e7eb]">
+      <div className="grid grid-cols-2 md:grid-cols-4 border border-line rounded-lg bg-white divide-y md:divide-y-0 md:divide-x divide-line">
         <div className="p-4 sm:p-5">
-          <p className="text-xs text-[#4b5563]">Total goals</p>
-          <p className="text-2xl font-semibold text-[#111827] mt-1">{computedStats.totalGoals}</p>
+          <p className="text-xs text-muted">Total goals</p>
+          <p className="text-2xl font-semibold text-ink mt-1">{computedStats.totalGoals}</p>
         </div>
         <div className="p-4 sm:p-5">
-          <p className="text-xs text-[#4b5563]">Active goals</p>
-          <p className="text-2xl font-semibold text-[#0f766e] mt-1">{computedStats.activeGoals}</p>
+          <p className="text-xs text-muted">Active goals</p>
+          <p className="text-2xl font-semibold text-accent mt-1">{computedStats.activeGoals}</p>
         </div>
         <div className="p-4 sm:p-5">
-          <p className="text-xs text-[#4b5563]">Completed goals</p>
-          <p className="text-2xl font-semibold text-[#15803d] mt-1">{computedStats.completedGoals}</p>
+          <p className="text-xs text-muted">Completed goals</p>
+          <p className="text-2xl font-semibold text-success mt-1">{computedStats.completedGoals}</p>
         </div>
         <div className="p-4 sm:p-5">
-          <p className="text-xs text-[#4b5563]">Daily target</p>
-          <p className="text-base sm:text-lg font-semibold text-[#111827] mt-1">
+          <p className="text-xs text-muted">Daily target</p>
+          <p className="text-base sm:text-lg font-semibold text-ink mt-1">
             Today: {(todayLoggedMinutes / 60).toFixed(1)} of {computedStats.dailyTargetHours} h
           </p>
         </div>
@@ -495,15 +495,15 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
       {/* 3. TODAY'S STUDY TASKS & UP NEXT */}
       {(todayTasks.length > 0 || upNextTasks.length > 0) && (
         <Card className="p-5 sm:p-6 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-[#e5e7eb]">
+          <div className="flex items-center justify-between pb-3 border-b border-line">
             <div>
-              <h2 className="text-base font-semibold text-[#111827]">
+              <h2 className="text-base font-semibold text-ink">
                 Today's Tasks {studyQueue.todayDayNumber != null && `(Day ${studyQueue.todayDayNumber})`}
               </h2>
-              <p className="text-xs text-[#4b5563] mt-0.5">Tasks scheduled from your active roadmap</p>
+              <p className="text-xs text-muted mt-0.5">Tasks scheduled from your active roadmap</p>
             </div>
             {todayTasks.length > 0 && (
-              <span className="text-xs text-[#4b5563]">
+              <span className="text-xs text-muted">
                 {todayTasks.length} {todayTasks.length === 1 ? 'task' : 'tasks'}
               </span>
             )}
@@ -514,16 +514,16 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
               {todayTasks.map((item) => (
                 <div
                   key={item.taskId}
-                  className="p-3 rounded-md border border-[#e5e7eb] bg-white flex items-center justify-between gap-3 text-sm"
+                  className="p-3 rounded-md border border-line bg-white flex items-center justify-between gap-3 text-sm"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <button
                       type="button"
                       onClick={() => handleToggleTodayTask(item)}
-                      className={`w-5 h-5 rounded-sm border flex items-center justify-center transition-colors duration-150 cursor-pointer shrink-0 focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 ${
+                      className={`w-5 h-5 rounded-sm border flex items-center justify-center transition-colors duration-150 cursor-pointer shrink-0 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
                         item.isDone
-                          ? 'bg-[#0f766e] border-[#0f766e] text-white'
-                          : 'border-[#e5e7eb] bg-white hover:border-[#0f766e]'
+                          ? 'bg-accent border-accent text-white'
+                          : 'border-line bg-white hover:border-accent'
                       }`}
                       title={item.isDone ? 'Mark incomplete' : 'Mark done'}
                       aria-label={item.isDone ? 'Mark task incomplete' : 'Mark task complete'}
@@ -532,10 +532,10 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                     </button>
 
                     <div className="min-w-0 truncate">
-                      <p className={`font-medium truncate ${item.isDone ? 'line-through text-[#4b5563]' : 'text-[#111827]'}`}>
+                      <p className={`font-medium truncate ${item.isDone ? 'line-through text-muted' : 'text-ink'}`}>
                         {item.task.title}
                       </p>
-                      <p className="text-xs text-[#4b5563] mt-0.5 flex items-center gap-2">
+                      <p className="text-xs text-muted mt-0.5 flex items-center gap-2">
                         <span>Day {item.task.dayNumber}</span>
                         <span>•</span>
                         <span>{formatEnum(item.task.activityType || 'Study')}</span>
@@ -554,7 +554,7 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                   <button
                     type="button"
                     onClick={() => onNavigateTab && onNavigateTab('active-study')}
-                    className="text-xs font-medium text-[#0f766e] hover:text-[#115e59] hover:underline cursor-pointer shrink-0 min-h-[40px] px-2 flex items-center focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 rounded-sm"
+                    className="text-xs font-medium text-accent hover:text-accent-hover hover:underline cursor-pointer shrink-0 min-h-[40px] px-2 flex items-center focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 rounded-sm"
                   >
                     Start
                   </button>
@@ -562,16 +562,16 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
               ))}
             </div>
           ) : (
-            <p className="py-2 text-xs text-[#4b5563]">
+            <p className="py-2 text-xs text-muted">
               All tasks for today are completed.
             </p>
           )}
 
           {/* Up Next List */}
           {upNextTasks.length > 0 && (
-            <div className="pt-3 border-t border-[#e5e7eb] space-y-2">
-              <div className="flex items-center justify-between text-xs text-[#4b5563]">
-                <span className="font-medium text-[#111827]">
+            <div className="pt-3 border-t border-line space-y-2">
+              <div className="flex items-center justify-between text-xs text-muted">
+                <span className="font-medium text-ink">
                   Up Next {studyQueue.upNextDays?.length > 0 && `(Days ${studyQueue.upNextDays.join(' & ')})`}
                 </span>
                 <span>{upNextTasks.length} upcoming</span>
@@ -581,10 +581,10 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                 {upNextTasks.map((item) => (
                   <div
                     key={item.taskId}
-                    className="p-2.5 rounded-md border border-[#e5e7eb] bg-[#f8fafc] flex items-center justify-between gap-3 text-xs text-[#4b5563]"
+                    className="p-2.5 rounded-md border border-line bg-page flex items-center justify-between gap-3 text-xs text-muted"
                   >
                     <div className="truncate">
-                      <span className="font-medium text-[#111827] mr-2">
+                      <span className="font-medium text-ink mr-2">
                         Day {item.task.dayNumber}: {item.task.title}
                       </span>
                       <span>{formatEnum(item.task.activityType || 'Study')}</span>
@@ -602,12 +602,12 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
 
       {/* 4. GOALS: COMPACT CONSOLIDATED LIST */}
       <Card className="p-5 sm:p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#e5e7eb]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-line">
           <div>
-            <h2 className="text-base font-semibold text-[#111827]">
+            <h2 className="text-base font-semibold text-ink">
               Goals
             </h2>
-            <p className="text-xs text-[#4b5563] mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               Your active learning targets and roadmaps
             </p>
           </div>
@@ -624,10 +624,10 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                 key={tab.id}
                 type="button"
                 onClick={() => setStatusFilter(tab.id)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors duration-150 cursor-pointer min-h-[36px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors duration-150 cursor-pointer min-h-[36px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
                   statusFilter === tab.id
-                    ? 'bg-[#0f766e] text-white'
-                    : 'text-[#4b5563] hover:text-[#111827] hover:bg-[#f8fafc]'
+                    ? 'bg-accent text-white'
+                    : 'text-muted hover:text-ink hover:bg-page'
                 }`}
               >
                 {tab.label}
@@ -638,7 +638,7 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
 
         {/* Goals List Content */}
         {loading ? (
-          <div className="py-12 text-center text-sm text-[#4b5563]">
+          <div className="py-12 text-center text-sm text-muted">
             Loading learning goals...
           </div>
         ) : filteredGoals.length === 0 ? (
@@ -667,18 +667,18 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
               return (
                 <div
                   key={goal.id}
-                  className="p-4 rounded-md border border-[#e5e7eb] bg-white hover:border-[#cbd5e1] transition-colors duration-150 space-y-3"
+                  className="p-4 rounded-md border border-line bg-white hover:border-[#cbd5e1] transition-colors duration-150 space-y-3"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-[#111827] truncate">
+                        <h3 className="text-sm font-semibold text-ink truncate">
                           {goal.title}
                         </h3>
                         {formatGoalStatus(goal.status)}
                       </div>
 
-                      <p className="text-xs text-[#4b5563] flex items-center gap-2">
+                      <p className="text-xs text-muted flex items-center gap-2">
                         <span>{formatEnum(goal.skillLevel)}</span>
                         <span>•</span>
                         <span>{goal.priority || 'MEDIUM'} priority</span>
@@ -702,7 +702,7 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDeleteGoal(goal.id)}
-                        className="text-[#4b5563] hover:text-[#b91c1c] p-2 min-h-[36px] min-w-[36px]"
+                        className="text-muted hover:text-danger p-2 min-h-[36px] min-w-[36px]"
                         title="Delete Goal"
                         aria-label="Delete Goal"
                       >
@@ -712,15 +712,15 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                   </div>
 
                   {goal.description && (
-                    <p className="text-xs text-[#4b5563] line-clamp-2">
+                    <p className="text-xs text-muted line-clamp-2">
                       {goal.description}
                     </p>
                   )}
 
                   {/* Progress & Manual Actions (only for goals without linked roadmap) */}
-                  <div className="pt-2 border-t border-[#e5e7eb] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="pt-2 border-t border-line flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                     <div className="flex-1 max-w-md flex items-center gap-3">
-                      <span className="text-[#4b5563] shrink-0 font-medium">
+                      <span className="text-muted shrink-0 font-medium">
                         {goal.progressPercentage || 0}%
                       </span>
                       <ProgressBar
@@ -731,7 +731,7 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
 
                     <div className="flex items-center gap-2 shrink-0">
                       {hasLinkedRoadmap ? (
-                        <span className="text-xs text-[#4b5563]">
+                        <span className="text-xs text-muted">
                           Roadmap linked
                         </span>
                       ) : (
@@ -739,7 +739,7 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                           <button
                             type="button"
                             onClick={() => handleUpdateProgress(goal, -10)}
-                            className="px-2 py-1 text-xs font-medium rounded-md border border-[#e5e7eb] text-[#111827] hover:bg-[#f8fafc] transition-colors duration-150 cursor-pointer min-h-[32px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
+                            className="px-2 py-1 text-xs font-medium rounded-md border border-line text-ink hover:bg-page transition-colors duration-150 cursor-pointer min-h-[32px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
                             title="Decrease 10%"
                           >
                             -10%
@@ -747,7 +747,7 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                           <button
                             type="button"
                             onClick={() => handleUpdateProgress(goal, 10)}
-                            className="px-2 py-1 text-xs font-medium rounded-md border border-[#e5e7eb] text-[#111827] hover:bg-[#f8fafc] transition-colors duration-150 cursor-pointer min-h-[32px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
+                            className="px-2 py-1 text-xs font-medium rounded-md border border-line text-ink hover:bg-page transition-colors duration-150 cursor-pointer min-h-[32px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
                             title="Increase 10%"
                           >
                             +10%
@@ -756,7 +756,7 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                             <button
                               type="button"
                               onClick={() => handleSetExactProgress(goal, 100)}
-                              className="px-2.5 py-1 text-xs font-medium rounded-md bg-[#0f766e] text-white hover:bg-[#115e59] transition-colors duration-150 cursor-pointer min-h-[32px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
+                              className="px-2.5 py-1 text-xs font-medium rounded-md bg-accent text-white hover:bg-accent-hover transition-colors duration-150 cursor-pointer min-h-[32px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
                               title="Mark complete"
                             >
                               Complete
@@ -776,20 +776,20 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
       {/* AI Roadmap Modal */}
       {selectedGoalForRoadmap && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg w-full max-w-4xl border border-[#e5e7eb] my-8 overflow-hidden shadow-md">
-            <div className="flex items-center justify-between p-5 border-b border-[#e5e7eb]">
+          <div className="bg-white rounded-lg w-full max-w-4xl border border-line my-8 overflow-hidden shadow-md">
+            <div className="flex items-center justify-between p-5 border-b border-line">
               <div>
-                <h3 className="text-base font-semibold text-[#111827]">
+                <h3 className="text-base font-semibold text-ink">
                   {generatedRoadmap ? 'AI Study Roadmap' : 'Generate Roadmap'}
                 </h3>
-                <p className="text-xs text-[#4b5563] mt-0.5">
+                <p className="text-xs text-muted mt-0.5">
                   {selectedGoalForRoadmap.title}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleCloseRoadmap}
-                className="p-1.5 rounded-md text-[#4b5563] hover:text-[#111827] hover:bg-[#f8fafc] transition-colors duration-150 cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
+                className="p-1.5 rounded-md text-muted hover:text-ink hover:bg-page transition-colors duration-150 cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
                 aria-label="Close dialog"
               >
                 <X className="w-5 h-5" />
@@ -798,12 +798,12 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
 
             <div className="p-5 sm:p-6 space-y-5">
               {existingSavedRoadmap && !generatedRoadmap && (
-                <div className="p-4 rounded-md border border-[#e5e7eb] bg-[#f8fafc] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="p-4 rounded-md border border-line bg-page flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <span className="text-xs font-semibold text-[#111827] block">
+                    <span className="text-xs font-semibold text-ink block">
                       Saved Roadmap Found ({existingSavedRoadmap.progressPercentage || 0}% Completed)
                     </span>
-                    <span className="text-xs text-[#4b5563] mt-0.5 block">
+                    <span className="text-xs text-muted mt-0.5 block">
                       Resume without regenerating from Gemini.
                     </span>
                   </div>
@@ -825,8 +825,8 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
 
               {!generatedRoadmap && !roadmapLoading && (
                 <div className="space-y-4">
-                  <div className="p-4 rounded-md bg-[#f8fafc] border border-[#e5e7eb] text-xs text-[#4b5563] space-y-1">
-                    <p className="font-semibold text-[#111827]">{selectedGoalForRoadmap.title}</p>
+                  <div className="p-4 rounded-md bg-page border border-line text-xs text-muted space-y-1">
+                    <p className="font-semibold text-ink">{selectedGoalForRoadmap.title}</p>
                     {selectedGoalForRoadmap.description && (
                       <p>{selectedGoalForRoadmap.description}</p>
                     )}
@@ -836,13 +836,13 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                   </div>
 
                   {roadmapError && (
-                    <div className="p-3 rounded-md bg-red-50 border border-red-200 text-[#b91c1c] text-xs flex items-start gap-2">
+                    <div className="p-3 rounded-md bg-red-50 border border-red-200 text-danger text-xs flex items-start gap-2">
                       <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                       <span>{roadmapError}</span>
                     </div>
                   )}
 
-                  <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#e5e7eb]">
+                  <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-line">
                     <Button variant="secondary" size="sm" onClick={handleCloseRoadmap}>
                       Cancel
                     </Button>
@@ -855,11 +855,11 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
 
               {roadmapLoading && (
                 <div className="py-12 text-center">
-                  <Loader2 className="w-7 h-7 text-[#0f766e] animate-spin mx-auto mb-2" />
-                  <p className="text-sm font-semibold text-[#111827]">
+                  <Loader2 className="w-7 h-7 text-accent animate-spin mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-ink">
                     Generating Roadmap
                   </p>
-                  <p className="text-xs text-[#4b5563] mt-1">
+                  <p className="text-xs text-muted mt-1">
                     Structuring daily activities and milestones...
                   </p>
                 </div>

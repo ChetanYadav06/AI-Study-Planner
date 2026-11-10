@@ -12,7 +12,7 @@ export const Card = ({
 }) => {
   return (
     <Component
-      className={`bg-white border border-[#e5e7eb] rounded-lg ${className}`}
+      className={`bg-white border border-line rounded-lg ${className}`}
       {...props}
     >
       {children}

@@ -447,7 +447,7 @@ export const InteractiveRoadmap = ({
               size="sm"
               onClick={() => setShowRegenModal(true)}
               disabled={regenerating}
-              className="gap-1.5 text-[#b91c1c] hover:text-[#b91c1c]"
+              className="gap-1.5 text-danger hover:text-danger"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Regenerate</span>
@@ -460,7 +460,7 @@ export const InteractiveRoadmap = ({
             onClick={handleCopyMarkdown}
             className="gap-1.5"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-[#0f766e]" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-accent" /> : <Copy className="w-3.5 h-3.5" />}
             <span>{copied ? 'Copied' : 'Export MD'}</span>
           </Button>
         </div>
@@ -468,10 +468,10 @@ export const InteractiveRoadmap = ({
 
       {/* ROADMAP HEADER */}
       <Card className="p-5 sm:p-6 space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#e5e7eb]">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-line">
           <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-[#4b5563]">
-              <span className="font-medium text-[#111827]">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+              <span className="font-medium text-ink">
                 {formatEnum(roadmap.skillLevel)}
               </span>
               <span>•</span>
@@ -484,26 +484,26 @@ export const InteractiveRoadmap = ({
               )}
             </div>
 
-            <h1 className="text-xl sm:text-2xl font-semibold text-[#111827] tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-semibold text-ink tracking-tight">
               {roadmap.topic}
             </h1>
             {roadmap.overview && (
-              <p className="text-sm text-[#4b5563] max-w-3xl leading-relaxed">
+              <p className="text-sm text-muted max-w-3xl leading-relaxed">
                 {roadmap.overview}
               </p>
             )}
           </div>
 
           <div className="flex items-center gap-4 shrink-0 text-sm">
-            <div className="p-3 rounded-md bg-[#f8fafc] border border-[#e5e7eb] text-center min-w-[90px]">
-              <span className="text-xs text-[#4b5563] block">Total hours</span>
-              <span className="text-lg font-semibold text-[#111827]">
+            <div className="p-3 rounded-md bg-page border border-line text-center min-w-[90px]">
+              <span className="text-xs text-muted block">Total hours</span>
+              <span className="text-lg font-semibold text-ink">
                 {roadmap.totalStudyHours || (roadmap.targetDays * (goal?.hoursPerDay || roadmap.hoursPerDay))}h
               </span>
             </div>
-            <div className="p-3 rounded-md bg-[#f8fafc] border border-[#e5e7eb] text-center min-w-[90px]">
-              <span className="text-xs text-[#4b5563] block">Daily pace</span>
-              <span className="text-lg font-semibold text-[#0f766e]">
+            <div className="p-3 rounded-md bg-page border border-line text-center min-w-[90px]">
+              <span className="text-xs text-muted block">Daily pace</span>
+              <span className="text-lg font-semibold text-accent">
                 {(goal?.hoursPerDay || roadmap.hoursPerDay)}h/d
               </span>
             </div>
@@ -512,10 +512,10 @@ export const InteractiveRoadmap = ({
 
         {/* Progress Tracker Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 font-medium text-[#111827]">
-            <TrendingUp className="w-4 h-4 text-[#0f766e]" />
+          <div className="flex items-center gap-2 font-medium text-ink">
+            <TrendingUp className="w-4 h-4 text-accent" />
             <span>Completion:</span>
-            <span className="font-semibold text-[#0f766e]">
+            <span className="font-semibold text-accent">
               {progressPercent}% ({totalCompletedCount}/{totalItemsCount} activities)
             </span>
           </div>
@@ -529,7 +529,7 @@ export const InteractiveRoadmap = ({
         </div>
 
         {roadmap.feasibilityNote && (
-          <div className="p-3 rounded-md bg-[#f8fafc] border border-[#e5e7eb] text-xs text-[#4b5563] flex items-start gap-2">
+          <div className="p-3 rounded-md bg-page border border-line text-xs text-muted flex items-start gap-2">
             <Clock className="w-4 h-4 shrink-0 mt-0.5" />
             <span>Pacing advice: {roadmap.feasibilityNote}</span>
           </div>
@@ -540,14 +540,14 @@ export const InteractiveRoadmap = ({
       {nextRecommendedAction && (
         <Card className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <span className="text-xs font-semibold text-[#0f766e] block uppercase">
+            <span className="text-xs font-semibold text-accent block uppercase">
               Next recommended task
             </span>
-            <h3 className="text-sm sm:text-base font-semibold text-[#111827]">
+            <h3 className="text-sm sm:text-base font-semibold text-ink">
               Day {nextRecommendedAction.task.dayNumber}: {nextRecommendedAction.task.title}
             </h3>
             {nextRecommendedAction.task.description && (
-              <p className="text-xs text-[#4b5563] line-clamp-1">
+              <p className="text-xs text-muted line-clamp-1">
                 {nextRecommendedAction.task.description}
               </p>
             )}
@@ -578,15 +578,15 @@ export const InteractiveRoadmap = ({
       )}
 
       {/* VIEW SWITCHER TABS */}
-      <div className="flex items-center justify-between border-b border-[#e5e7eb]">
+      <div className="flex items-center justify-between border-b border-line">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setActiveView('map')}
-            className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 ${
+            className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
               activeView === 'map'
-                ? 'border-[#0f766e] text-[#0f766e]'
-                : 'border-transparent text-[#4b5563] hover:text-[#111827]'
+                ? 'border-accent text-accent'
+                : 'border-transparent text-muted hover:text-ink'
             }`}
           >
             <Compass className="w-4 h-4" />
@@ -596,10 +596,10 @@ export const InteractiveRoadmap = ({
           <button
             type="button"
             onClick={() => setActiveView('plan')}
-            className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 ${
+            className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
               activeView === 'plan'
-                ? 'border-[#0f766e] text-[#0f766e]'
-                : 'border-transparent text-[#4b5563] hover:text-[#111827]'
+                ? 'border-accent text-accent'
+                : 'border-transparent text-muted hover:text-ink'
             }`}
           >
             <Calendar className="w-4 h-4" />
@@ -607,7 +607,7 @@ export const InteractiveRoadmap = ({
           </button>
         </div>
 
-        <span className="text-xs text-[#4b5563] hidden sm:inline">
+        <span className="text-xs text-muted hidden sm:inline">
           {roadmap.phases?.length || 0} phases • {allTasks.length} days
         </span>
       </div>
@@ -617,9 +617,9 @@ export const InteractiveRoadmap = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Pathway / Nodes (7 cols) */}
           <Card className="lg:col-span-7 p-5 sm:p-6 space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-[#e5e7eb]">
-              <h2 className="text-sm font-semibold text-[#111827]">Study Pathway</h2>
-              <span className="text-xs text-[#4b5563]">Select any topic to view details</span>
+            <div className="flex items-center justify-between pb-3 border-b border-line">
+              <h2 className="text-sm font-semibold text-ink">Study Pathway</h2>
+              <span className="text-xs text-muted">Select any topic to view details</span>
             </div>
 
             <div className="space-y-4">
@@ -632,17 +632,17 @@ export const InteractiveRoadmap = ({
                     key={pIdx}
                     className={`p-4 rounded-md border ${
                       isLocked
-                        ? 'bg-[#f8fafc] border-[#e5e7eb] opacity-60'
-                        : 'bg-white border-[#e5e7eb]'
+                        ? 'bg-page border-line opacity-60'
+                        : 'bg-white border-line'
                     }`}
                   >
                     {/* Phase Header */}
                     <div className="flex items-center justify-between mb-3">
                       <div>
-                        <h3 className="text-xs font-semibold text-[#111827] uppercase">
+                        <h3 className="text-xs font-semibold text-ink uppercase">
                           Phase {pIdx + 1}: {phase.phaseTitle || phase.phase}
                         </h3>
-                        <p className="text-xs text-[#4b5563]">
+                        <p className="text-xs text-muted">
                           {phase.duration} • {phase.dailyTasks?.length || 0} tasks
                         </p>
                       </div>
@@ -670,19 +670,19 @@ export const InteractiveRoadmap = ({
                             onClick={() => setSelectedNodeId(taskId)}
                             className={`p-3 rounded-md border transition-colors duration-150 cursor-pointer flex flex-col justify-between ${
                               isSelected
-                                ? 'bg-[#f0fdfa] border-[#0f766e]'
+                                ? 'bg-accent-soft border-accent'
                                 : isDone
-                                ? 'bg-white border-[#e5e7eb]'
-                                : 'bg-white border-[#e5e7eb] hover:border-[#cbd5e1]'
+                                ? 'bg-white border-line'
+                                : 'bg-white border-line hover:border-[#cbd5e1]'
                             }`}
                           >
                             <div>
-                              <div className="flex items-center justify-between text-xs text-[#4b5563] mb-1">
-                                <span className="font-medium text-[#111827]">
+                              <div className="flex items-center justify-between text-xs text-muted mb-1">
+                                <span className="font-medium text-ink">
                                   Day {task.dayNumber || 1}
                                 </span>
                                 {isDone ? (
-                                  <span className="text-[#15803d] font-medium flex items-center gap-1">
+                                  <span className="text-success font-medium flex items-center gap-1">
                                     <Check className="w-3.5 h-3.5 stroke-[3]" />
                                     <span>Done</span>
                                   </span>
@@ -692,15 +692,15 @@ export const InteractiveRoadmap = ({
                               </div>
 
                               <h4 className={`text-xs font-semibold leading-snug line-clamp-2 ${
-                                isDone ? 'text-[#4b5563] line-through' : 'text-[#111827]'
+                                isDone ? 'text-muted line-through' : 'text-ink'
                               }`}>
                                 {task.title}
                               </h4>
                             </div>
 
-                            <div className="mt-2 pt-2 border-t border-[#e5e7eb] flex items-center justify-between text-xs text-[#4b5563]">
+                            <div className="mt-2 pt-2 border-t border-line flex items-center justify-between text-xs text-muted">
                               <span>{formatEnum(task.activityType || 'Study')}</span>
-                              <span className="text-[#0f766e] font-medium">
+                              <span className="text-accent font-medium">
                                 {isSelected ? 'Inspecting' : 'Details'}
                               </span>
                             </div>
@@ -718,9 +718,9 @@ export const InteractiveRoadmap = ({
           <Card className="lg:col-span-5 p-5 sm:p-6 sticky top-6 space-y-4">
             {selectedTaskItem && selectedTaskContent ? (
               <>
-                <div className="pb-3 border-b border-[#e5e7eb] space-y-2">
+                <div className="pb-3 border-b border-line space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-[#4b5563]">
+                    <span className="text-xs text-muted">
                       Day {selectedTaskItem.task.dayNumber} • {selectedTaskItem.phaseTitle}
                     </span>
 
@@ -735,11 +735,11 @@ export const InteractiveRoadmap = ({
                     </Button>
                   </div>
 
-                  <h3 className="text-base font-semibold text-[#111827] leading-snug">
+                  <h3 className="text-base font-semibold text-ink leading-snug">
                     {selectedTaskItem.task.title}
                   </h3>
 
-                  <p className="text-xs text-[#4b5563] flex items-center gap-2">
+                  <p className="text-xs text-muted flex items-center gap-2">
                     <span>{selectedTaskItem.task.estimatedMinutes || 90} minutes</span>
                     <span>•</span>
                     <span>{formatEnum(selectedTaskItem.task.activityType || 'Study')}</span>
@@ -748,8 +748,8 @@ export const InteractiveRoadmap = ({
 
                 {/* Concept Notes */}
                 {selectedTaskContent.conceptExplanation && (
-                  <div className="p-3 rounded-md bg-[#f8fafc] border border-[#e5e7eb] text-xs text-[#4b5563] space-y-1">
-                    <span className="font-semibold text-[#111827] block">
+                  <div className="p-3 rounded-md bg-page border border-line text-xs text-muted space-y-1">
+                    <span className="font-semibold text-ink block">
                       Core Concept
                     </span>
                     <p className="leading-relaxed">{selectedTaskContent.conceptExplanation}</p>
@@ -758,13 +758,13 @@ export const InteractiveRoadmap = ({
 
                 {/* Learning Objectives */}
                 <div className="space-y-2">
-                  <span className="text-xs font-semibold text-[#111827] block">
+                  <span className="text-xs font-semibold text-ink block">
                     Learning Objectives
                   </span>
-                  <ul className="space-y-1 text-xs text-[#4b5563]">
+                  <ul className="space-y-1 text-xs text-muted">
                     {selectedTaskContent.learningObjectives.map((obj, oIdx) => (
                       <li key={oIdx} className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#0f766e] mt-1.5 shrink-0" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" />
                         <span>{obj}</span>
                       </li>
                     ))}
@@ -774,10 +774,10 @@ export const InteractiveRoadmap = ({
                 {/* Structured Subtopics */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-[#111827]">
+                    <span className="font-semibold text-ink">
                       Subtopics
                     </span>
-                    <span className="text-[#4b5563]">
+                    <span className="text-muted">
                       {selectedTaskContent.subtopics.filter((_, idx) => completedSubtopics[`${selectedTaskItem.id}-sub-${idx}`]).length}/
                       {selectedTaskContent.subtopics.length} done
                     </span>
@@ -793,14 +793,14 @@ export const InteractiveRoadmap = ({
                           key={sIdx}
                           type="button"
                           onClick={() => handleToggleSubtopic(selectedTaskItem.id, sIdx, selectedTaskContent.subtopics.length)}
-                          className="w-full p-2.5 rounded-md border border-[#e5e7eb] text-xs text-left transition-colors duration-150 cursor-pointer flex items-center gap-2 hover:bg-[#f8fafc]"
+                          className="w-full p-2.5 rounded-md border border-line text-xs text-left transition-colors duration-150 cursor-pointer flex items-center gap-2 hover:bg-page"
                         >
                           <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 ${
-                            isSubDone ? 'bg-[#0f766e] border-[#0f766e] text-white' : 'border-[#e5e7eb] bg-white'
+                            isSubDone ? 'bg-accent border-accent text-white' : 'border-line bg-white'
                           }`}>
                             {isSubDone && <Check className="w-3 h-3 stroke-[3]" />}
                           </div>
-                          <span className={isSubDone ? 'line-through text-[#4b5563]' : 'text-[#111827]'}>
+                          <span className={isSubDone ? 'line-through text-muted' : 'text-ink'}>
                             {sub}
                           </span>
                         </button>
@@ -811,12 +811,12 @@ export const InteractiveRoadmap = ({
 
                 {/* Practice Tasks */}
                 {selectedTaskContent.practiceTasks && (
-                  <div className="p-3 rounded-md bg-[#f8fafc] border border-[#e5e7eb] text-xs space-y-1">
-                    <div className="flex items-center gap-1.5 font-semibold text-[#111827]">
-                      <Code className="w-4 h-4 text-[#0f766e]" />
+                  <div className="p-3 rounded-md bg-page border border-line text-xs space-y-1">
+                    <div className="flex items-center gap-1.5 font-semibold text-ink">
+                      <Code className="w-4 h-4 text-accent" />
                       <span>Practice Exercises</span>
                     </div>
-                    <ul className="list-disc pl-4 text-[#4b5563] space-y-0.5">
+                    <ul className="list-disc pl-4 text-muted space-y-0.5">
                       {selectedTaskContent.practiceTasks.map((prac, pIdx) => (
                         <li key={pIdx}>{prac}</li>
                       ))}
@@ -826,17 +826,17 @@ export const InteractiveRoadmap = ({
 
                 {/* Quiz Question */}
                 {selectedTaskContent.quizQuestion && (
-                  <div className="p-3 rounded-md bg-[#f8fafc] border border-[#e5e7eb] text-xs space-y-1">
-                    <div className="flex items-center gap-1.5 font-semibold text-[#111827]">
-                      <HelpCircle className="w-4 h-4 text-[#0f766e]" />
+                  <div className="p-3 rounded-md bg-page border border-line text-xs space-y-1">
+                    <div className="flex items-center gap-1.5 font-semibold text-ink">
+                      <HelpCircle className="w-4 h-4 text-accent" />
                       <span>Knowledge Check</span>
                     </div>
-                    <p className="text-[#4b5563] italic">"{selectedTaskContent.quizQuestion}"</p>
+                    <p className="text-muted italic">"{selectedTaskContent.quizQuestion}"</p>
                   </div>
                 )}
               </>
             ) : (
-              <div className="py-10 text-center text-xs text-[#4b5563]">
+              <div className="py-10 text-center text-xs text-muted">
                 Select a topic node on the left to inspect subtopics and exercises.
               </div>
             )}
@@ -860,19 +860,19 @@ export const InteractiveRoadmap = ({
                 {/* Phase Accordion Trigger */}
                 <div
                   onClick={() => setExpandedPhases(prev => ({ ...prev, [pIdx]: !prev[pIdx] }))}
-                  className="p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-[#f8fafc] transition-colors duration-150"
+                  className="p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-page transition-colors duration-150"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-md bg-[#f8fafc] border border-[#e5e7eb] flex items-center justify-center font-semibold text-xs text-[#111827]">
+                    <div className="w-6 h-6 rounded-md bg-page border border-line flex items-center justify-center font-semibold text-xs text-ink">
                       {pIdx + 1}
                     </div>
 
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-[#111827] uppercase">
+                        <span className="text-xs font-semibold text-ink uppercase">
                           Phase {phase.phaseNumber || pIdx + 1}: {phase.phaseTitle || phase.phase}
                         </span>
-                        <span className="text-xs text-[#4b5563]">• {phase.duration}</span>
+                        <span className="text-xs text-muted">• {phase.duration}</span>
                         {status === 'COMPLETED' ? (
                           <StatusText status="success">Completed</StatusText>
                         ) : status === 'IN_PROGRESS' ? (
@@ -884,14 +884,14 @@ export const InteractiveRoadmap = ({
                     </div>
                   </div>
 
-                  <div className="text-[#4b5563]">
+                  <div className="text-muted">
                     {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </div>
                 </div>
 
                 {/* Phase Content */}
                 {isExpanded && (
-                  <div className="px-4 sm:px-5 pb-5 pt-2 border-t border-[#e5e7eb] space-y-3">
+                  <div className="px-4 sm:px-5 pb-5 pt-2 border-t border-line space-y-3">
                     {(tasksByPhase[pIdx] || []).map((taskItem) => {
                       const taskId = taskItem.id;
                       const task = taskItem.task;
@@ -903,17 +903,17 @@ export const InteractiveRoadmap = ({
                         <div
                           key={taskId}
                           ref={el => (taskRefs.current[taskId] = el)}
-                          className="p-3.5 rounded-md border border-[#e5e7eb] bg-white space-y-2"
+                          className="p-3.5 rounded-md border border-line bg-white space-y-2"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-start gap-3">
                               <button
                                 type="button"
                                 onClick={() => handleToggleTask(taskId)}
-                                className={`mt-0.5 w-5 h-5 rounded-sm border flex items-center justify-center transition-colors duration-150 cursor-pointer shrink-0 focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 ${
+                                className={`mt-0.5 w-5 h-5 rounded-sm border flex items-center justify-center transition-colors duration-150 cursor-pointer shrink-0 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
                                   isDone
-                                    ? 'bg-[#0f766e] border-[#0f766e] text-white'
-                                    : 'border-[#e5e7eb] bg-white hover:border-[#0f766e]'
+                                    ? 'bg-accent border-accent text-white'
+                                    : 'border-line bg-white hover:border-accent'
                                 }`}
                                 aria-label={isDone ? 'Mark incomplete' : 'Mark complete'}
                               >
@@ -921,7 +921,7 @@ export const InteractiveRoadmap = ({
                               </button>
 
                               <div>
-                                <p className="text-xs text-[#4b5563] flex items-center gap-2">
+                                <p className="text-xs text-muted flex items-center gap-2">
                                   <span>Day {task.dayNumber}</span>
                                   <span>•</span>
                                   <span>{formatEnum(task.activityType || 'Study')}</span>
@@ -933,11 +933,11 @@ export const InteractiveRoadmap = ({
                                   )}
                                 </p>
 
-                                <h4 className={`text-sm font-semibold mt-0.5 ${isDone ? 'line-through text-[#4b5563]' : 'text-[#111827]'}`}>
+                                <h4 className={`text-sm font-semibold mt-0.5 ${isDone ? 'line-through text-muted' : 'text-ink'}`}>
                                   {task.title}
                                 </h4>
                                 {task.description && (
-                                  <p className="text-xs text-[#4b5563] mt-0.5 leading-relaxed">
+                                  <p className="text-xs text-muted mt-0.5 leading-relaxed">
                                     {task.description}
                                   </p>
                                 )}
@@ -947,7 +947,7 @@ export const InteractiveRoadmap = ({
                             <button
                               type="button"
                               onClick={() => setExpandedTaskSubtopics(prev => ({ ...prev, [taskId]: !prev[taskId] }))}
-                              className="text-xs text-[#0f766e] hover:underline cursor-pointer shrink-0 py-1 px-1.5 focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 rounded-sm"
+                              className="text-xs text-accent hover:underline cursor-pointer shrink-0 py-1 px-1.5 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 rounded-sm"
                             >
                               {isSubtopicsExpanded ? 'Hide' : `Subtopics (${taskContent.subtopics.length})`}
                             </button>
@@ -955,8 +955,8 @@ export const InteractiveRoadmap = ({
 
                           {/* Subtopics accordion */}
                           {isSubtopicsExpanded && (
-                            <div className="mt-3 pt-2.5 border-t border-[#e5e7eb] space-y-2">
-                              <span className="text-xs font-semibold text-[#111827] block">
+                            <div className="mt-3 pt-2.5 border-t border-line space-y-2">
+                              <span className="text-xs font-semibold text-ink block">
                                 Subtopic Checklist
                               </span>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
@@ -969,14 +969,14 @@ export const InteractiveRoadmap = ({
                                       key={sIdx}
                                       type="button"
                                       onClick={() => handleToggleSubtopic(taskId, sIdx, taskContent.subtopics.length)}
-                                      className="p-2 rounded-md border border-[#e5e7eb] text-xs text-left transition-colors duration-150 cursor-pointer flex items-center gap-2 hover:bg-[#f8fafc]"
+                                      className="p-2 rounded-md border border-line text-xs text-left transition-colors duration-150 cursor-pointer flex items-center gap-2 hover:bg-page"
                                     >
                                       <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 ${
-                                        isSubDone ? 'bg-[#0f766e] border-[#0f766e] text-white' : 'border-[#e5e7eb] bg-white'
+                                        isSubDone ? 'bg-accent border-accent text-white' : 'border-line bg-white'
                                       }`}>
                                         {isSubDone && <Check className="w-2.5 h-2.5 stroke-[3]" />}
                                       </div>
-                                      <span className={isSubDone ? 'line-through text-[#4b5563]' : 'text-[#111827]'}>
+                                      <span className={isSubDone ? 'line-through text-muted' : 'text-ink'}>
                                         {sub}
                                       </span>
                                     </button>
@@ -999,11 +999,11 @@ export const InteractiveRoadmap = ({
       {/* CURATED LEARNING RESOURCES */}
       {roadmap.learningResources && roadmap.learningResources.length > 0 && (
         <Card className="p-5 sm:p-6 space-y-4">
-          <div className="pb-3 border-b border-[#e5e7eb]">
-            <h2 className="text-base font-semibold text-[#111827]">
+          <div className="pb-3 border-b border-line">
+            <h2 className="text-base font-semibold text-ink">
               Learning Resources
             </h2>
-            <p className="text-xs text-[#4b5563] mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               Documentation and references saved for this roadmap
             </p>
           </div>
@@ -1012,9 +1012,9 @@ export const InteractiveRoadmap = ({
             {roadmap.learningResources.map((res, rIdx) => {
               const hasUrl = Boolean(res.url && res.url.trim());
               const cardContent = (
-                <div className="p-4 rounded-md border border-[#e5e7eb] bg-white hover:border-[#cbd5e1] transition-colors duration-150 flex flex-col justify-between space-y-2">
+                <div className="p-4 rounded-md border border-line bg-white hover:border-[#cbd5e1] transition-colors duration-150 flex flex-col justify-between space-y-2">
                   <div className="space-y-1">
-                    <div className="flex items-center justify-between text-xs text-[#4b5563]">
+                    <div className="flex items-center justify-between text-xs text-muted">
                       <span className="font-medium uppercase">
                         {res.type || 'DOCUMENTATION'}
                       </span>
@@ -1023,19 +1023,19 @@ export const InteractiveRoadmap = ({
                       )}
                     </div>
 
-                    <h3 className="text-sm font-semibold text-[#111827]">
+                    <h3 className="text-sm font-semibold text-ink">
                       {res.title}
                     </h3>
 
                     {res.relevance && (
-                      <p className="text-xs text-[#4b5563] line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-muted line-clamp-2 leading-relaxed">
                         {res.relevance}
                       </p>
                     )}
                   </div>
 
                   {hasUrl && (
-                    <span className="text-xs font-medium text-[#0f766e] pt-2 border-t border-[#e5e7eb]">
+                    <span className="text-xs font-medium text-accent pt-2 border-t border-line">
                       Open resource ↗
                     </span>
                   )}
@@ -1048,7 +1048,7 @@ export const InteractiveRoadmap = ({
                   href={res.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2 rounded-md"
+                  className="block focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 rounded-md"
                 >
                   {cardContent}
                 </a>

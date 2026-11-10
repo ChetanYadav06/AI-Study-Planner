@@ -7,7 +7,7 @@ export const Navbar = ({ onOpenAuth, onNavigateProfile, onToggleMobileMenu }) =>
   const { user, isAuthenticated } = useAuth();
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-[#e5e7eb] h-[var(--header-h,3.25rem)]">
+    <header className="sticky top-0 z-40 bg-white border-b border-line h-[var(--header-h,3.25rem)]">
       <div className="w-full px-4 sm:px-6 h-full">
         <div className="flex justify-between items-center h-full">
           {/* Left: Mobile Menu Trigger (visible on small screens only) */}
@@ -15,7 +15,7 @@ export const Navbar = ({ onOpenAuth, onNavigateProfile, onToggleMobileMenu }) =>
             <button
               type="button"
               onClick={onToggleMobileMenu}
-              className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-[#4b5563] hover:text-[#111827] hover:bg-[#f8fafc] transition-colors duration-150 cursor-pointer min-h-[40px] min-w-[40px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
+              className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-muted hover:text-ink hover:bg-page transition-colors duration-150 cursor-pointer min-h-[40px] min-w-[40px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
               title="Open Navigation Menu"
               aria-label="Toggle navigation menu"
             >
@@ -29,17 +29,17 @@ export const Navbar = ({ onOpenAuth, onNavigateProfile, onToggleMobileMenu }) =>
               <button
                 type="button"
                 onClick={onNavigateProfile}
-                className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md border border-[#e5e7eb] bg-white hover:bg-[#f8fafc] transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-[#0f766e] focus-visible:outline-offset-2"
+                className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md border border-line bg-white hover:bg-page transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
                 title="View Learning Profile"
               >
-                <div className="w-7 h-7 rounded-full bg-[#0f766e] text-white font-medium text-xs flex items-center justify-center">
+                <div className="w-7 h-7 rounded-full bg-accent text-white font-medium text-xs flex items-center justify-center">
                   {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                 </div>
                 <div className="text-left hidden sm:block">
-                  <p className="text-xs font-medium text-[#111827] leading-tight">{user.name}</p>
-                  <p className="text-xs text-[#4b5563] leading-tight truncate max-w-[140px]">{user.email}</p>
+                  <p className="text-xs font-medium text-ink leading-tight">{user.name}</p>
+                  <p className="text-xs text-muted leading-tight truncate max-w-[140px]">{user.email}</p>
                 </div>
-                <ChevronDown className="w-3.5 h-3.5 text-[#4b5563] hidden sm:block" />
+                <ChevronDown className="w-3.5 h-3.5 text-muted hidden sm:block" />
               </button>
             ) : (
               <div className="flex items-center gap-2">

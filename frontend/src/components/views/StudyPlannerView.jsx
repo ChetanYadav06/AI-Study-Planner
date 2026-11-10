@@ -231,7 +231,7 @@ export const StudyPlannerView = ({ onOpenCreateGoal, onNavigateRoadmap }) => {
                 key={idx}
                 type="button"
                 onClick={() => setSelectedDay(idx)}
-                className={`p-2.5 rounded-[6px] text-center transition cursor-pointer flex flex-col items-center justify-center ${
+                className={`p-2.5 rounded-md text-center transition cursor-pointer flex flex-col items-center justify-center ${
                   isSelected
                     ? 'bg-accent text-surface font-medium'
                     : isRest
@@ -262,7 +262,7 @@ export const StudyPlannerView = ({ onOpenCreateGoal, onNavigateRoadmap }) => {
             <span className="text-xs text-muted block">Selected day</span>
             <div className="flex items-center justify-center md:justify-start gap-2 mt-1">
               <span className="text-base font-semibold text-ink">{daysOfWeek[selectedDay]}</span>
-              <span className="text-xs px-2 py-0.5 rounded-[4px] bg-page border border-line text-muted">
+              <span className="text-xs px-2 py-0.5 rounded-sm bg-page border border-line text-muted">
                 {selectedDayInfo.isStudyDay ? 'Study' : 'Rest'}
               </span>
             </div>
@@ -328,7 +328,7 @@ export const StudyPlannerView = ({ onOpenCreateGoal, onNavigateRoadmap }) => {
         {selectedDayInfo.isStudyDay ? (
           selectedDayInfo.roadmapDay && selectedDayInfo.roadmapDay.tasks.length > 0 ? (
             <div className="space-y-2">
-              <div className="p-2.5 bg-page rounded-[6px] border border-line flex items-center justify-between text-xs">
+              <div className="p-2.5 bg-page rounded-md border border-line flex items-center justify-between text-xs">
                 <span className="font-medium text-ink">
                   Roadmap Day {selectedDayInfo.roadmapDay.dayNumber} focus
                 </span>
@@ -340,10 +340,10 @@ export const StudyPlannerView = ({ onOpenCreateGoal, onNavigateRoadmap }) => {
               {selectedDayInfo.roadmapDay.tasks.map((taskItem, idx) => (
                 <div
                   key={taskItem.taskId}
-                  className="p-3 rounded-[8px] border border-line bg-surface hover:border-slate-300 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  className="p-3 rounded-md border border-line bg-surface hover:border-slate-300 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-7 h-7 rounded-[4px] bg-page border border-line text-ink flex items-center justify-center font-mono text-xs shrink-0 mt-0.5">
+                    <div className="w-7 h-7 rounded-sm bg-page border border-line text-ink flex items-center justify-center font-mono text-xs shrink-0 mt-0.5">
                       {idx + 1}
                     </div>
                     <div>
@@ -373,7 +373,7 @@ export const StudyPlannerView = ({ onOpenCreateGoal, onNavigateRoadmap }) => {
                       <button
                         type="button"
                         onClick={() => onNavigateRoadmap && onNavigateRoadmap(primaryRoadmap)}
-                        className="p-1.5 rounded-[4px] border border-line hover:border-slate-300 text-muted hover:text-ink transition cursor-pointer"
+                        className="p-1.5 rounded-sm border border-line hover:border-slate-300 text-muted hover:text-ink transition cursor-pointer"
                         title="Open Roadmap"
                       >
                         <ChevronRight className="w-4 h-4" />
@@ -391,7 +391,7 @@ export const StudyPlannerView = ({ onOpenCreateGoal, onNavigateRoadmap }) => {
             </div>
           )
         ) : (
-          <div className="py-8 text-center text-muted space-y-1 bg-page rounded-[8px] border border-line">
+          <div className="py-8 text-center text-muted space-y-1 bg-page rounded-md border border-line">
             <Coffee className="w-6 h-6 mx-auto text-muted mb-1" />
             <p className="text-xs font-medium text-ink">Rest & recovery day</p>
             <p className="text-xs text-muted">

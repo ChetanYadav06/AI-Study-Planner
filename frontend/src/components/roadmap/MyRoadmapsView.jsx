@@ -231,14 +231,14 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
           />
 
           {savedRoadmaps.length > 0 && (
-            <p className="text-sm text-[#4b5563]">
+            <p className="text-sm text-muted">
               {roadmapStats.total} active, {roadmapStats.completedCount} completed
             </p>
           )}
 
           {/* Roadmaps List */}
           {loadingRoadmaps ? (
-            <div className="py-12 text-center text-sm text-[#4b5563]">
+            <div className="py-12 text-center text-sm text-muted">
               Loading roadmaps...
             </div>
           ) : savedRoadmaps.length > 0 ? (
@@ -257,7 +257,7 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div className="space-y-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-sm sm:text-base font-semibold text-[#111827] truncate">
+                          <h3 className="text-sm sm:text-base font-semibold text-ink truncate">
                             {roadmap.title}
                           </h3>
                           {isComplete ? (
@@ -267,7 +267,7 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
                           )}
                         </div>
 
-                        <p className="text-xs text-[#4b5563] flex items-center gap-2">
+                        <p className="text-xs text-muted flex items-center gap-2">
                           <span>{formatEnum(roadmap.skillLevel)}</span>
                           <span>•</span>
                           <span>{roadmap.targetDays} days</span>
@@ -281,7 +281,7 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
                           variant="ghost"
                           size="sm"
                           onClick={(e) => handleDeleteRoadmap(e, roadmap.id)}
-                          className="text-[#4b5563] hover:text-[#b91c1c] p-2 min-h-[36px] min-w-[36px]"
+                          className="text-muted hover:text-danger p-2 min-h-[36px] min-w-[36px]"
                           title="Delete roadmap"
                           aria-label="Delete roadmap"
                         >
@@ -290,9 +290,9 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-[#e5e7eb] flex items-center justify-between gap-4 text-xs">
+                    <div className="pt-2 border-t border-line flex items-center justify-between gap-4 text-xs">
                       <div className="flex-1 max-w-md flex items-center gap-3">
-                        <span className="text-[#4b5563] shrink-0 font-medium">
+                        <span className="text-muted shrink-0 font-medium">
                           {roadmap.progressPercentage || 0}%
                         </span>
                         <ProgressBar
@@ -301,7 +301,7 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
                         />
                       </div>
 
-                      <span className="text-xs font-medium text-[#0f766e]">
+                      <span className="text-xs font-medium text-accent">
                         Open roadmap →
                       </span>
                     </div>
