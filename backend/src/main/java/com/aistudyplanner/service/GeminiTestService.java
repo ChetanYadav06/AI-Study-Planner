@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -25,12 +24,11 @@ public class GeminiTestService {
 
     private static final long BASE_DELAY_MS = 1000L;
 
+    // Reduced chain to at most 3 models per Phase 2b specifications
     private static final List<String> FALLBACK_MODELS = List.of(
         "gemini-flash-lite-latest",
         "gemini-3.1-flash-lite",
-        "gemini-3.5-flash",
-        "gemini-3.6-flash",
-        "gemini-3.8-flash"
+        "gemini-3.5-flash"
     );
 
     private final RestClient restClient;
@@ -69,7 +67,7 @@ public class GeminiTestService {
                 ),
                 "generationConfig", Map.of(
                     "responseMimeType", "application/json",
-                    "temperature", 0.4
+                    "temperature", 0.3
                 )
             );
         } else {
@@ -80,11 +78,13 @@ public class GeminiTestService {
             );
         }
 
+        // Build model queue: at most 3 models
         List<String> queue = new ArrayList<>();
         if (preferredModel != null && !preferredModel.isBlank()) {
             queue.add(preferredModel);
         }
         for (String m : FALLBACK_MODELS) {
+            if (queue.size() >= 3) break;
             if (!queue.contains(m)) queue.add(m);
         }
 
@@ -127,26 +127,22 @@ public class GeminiTestService {
                     return text;
 
                 } catch (HttpClientErrorException.TooManyRequests e) {
-                    // HTTP 429 Too Many Requests: retry with backoff up to 2 attempts
                     lastException = e;
                     log.warn("Gemini model {} rate-limited (HTTP 429, attempt {}/2).", currentModel, attempt);
                     if (attempt < 2) {
                         applyBackoff(attempt);
                     }
                 } catch (HttpClientErrorException e) {
-                    // Other 4xx (404 model not found, 400 bad argument): skip to next model in queue
                     lastException = e;
                     log.warn("Gemini model {} returned client status {} — switching to next model.", currentModel, e.getStatusCode());
                     break;
                 } catch (HttpServerErrorException e) {
-                    // 5xx (500, 502, 503, 504): retry current model with backoff
                     lastException = e;
                     log.warn("Gemini model {} returned server error {} (attempt {}/2).", currentModel, e.getStatusCode(), attempt);
                     if (attempt < 2) {
                         applyBackoff(attempt);
                     }
                 } catch (ResourceAccessException e) {
-                    // Network / timeout exception: retry once
                     lastException = e;
                     log.warn("Gemini network timeout / access error with model {} (attempt {}/2).", currentModel, attempt);
                     if (attempt < 2) {

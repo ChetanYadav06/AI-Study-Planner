@@ -30,13 +30,13 @@ public class TopicKnowledgeService {
 
     private User getAuthenticatedUser(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student user account not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with email: " + email));
     }
 
     @Transactional(readOnly = true)
     public List<TopicKnowledgeResponse> getSkills(String email, String search) {
         List<StudentTopicKnowledge> list;
-        if (search != null && !search.trim().isEmpty()) {
+        if (search != null && !search.isBlank()) {
             list = repository.searchByStudentEmailAndTopic(email, search.trim());
         } else {
             list = repository.findByStudentEmail(email);
@@ -49,14 +49,17 @@ public class TopicKnowledgeService {
         User user = getAuthenticatedUser(email);
         String topicName = request.getTopicName().trim();
 
-        // Check if user already has this topic (case-insensitive)
+        // Topics created or updated directly (e.g. from Learning Profile) are always rated_by_user = true
+        boolean rated = request.getRatedByUser() != null ? request.getRatedByUser() : true;
+
         Optional<StudentTopicKnowledge> existing = repository.findByStudentIdAndTopicNameIgnoreCase(user.getId(), topicName);
         StudentTopicKnowledge entity;
         if (existing.isPresent()) {
             entity = existing.get();
             entity.setKnowledgeLevel(request.getKnowledgeLevel());
+            entity.setRatedByUser(rated);
         } else {
-            entity = new StudentTopicKnowledge(user, topicName, request.getKnowledgeLevel());
+            entity = new StudentTopicKnowledge(user, topicName, request.getKnowledgeLevel(), rated);
         }
 
         StudentTopicKnowledge saved = repository.save(entity);
@@ -73,13 +76,17 @@ public class TopicKnowledgeService {
                 continue;
             }
             String topicName = req.getTopicName().trim();
+            // If bulk endpoint receives no flag, treat it as false (e.g. unrated preset suggestions)
+            boolean rated = Boolean.TRUE.equals(req.getRatedByUser());
+
             Optional<StudentTopicKnowledge> existing = repository.findByStudentIdAndTopicNameIgnoreCase(user.getId(), topicName);
             StudentTopicKnowledge entity;
             if (existing.isPresent()) {
                 entity = existing.get();
                 entity.setKnowledgeLevel(req.getKnowledgeLevel());
+                entity.setRatedByUser(rated);
             } else {
-                entity = new StudentTopicKnowledge(user, topicName, req.getKnowledgeLevel());
+                entity = new StudentTopicKnowledge(user, topicName, req.getKnowledgeLevel(), rated);
             }
             StudentTopicKnowledge saved = repository.save(entity);
             responses.add(new TopicKnowledgeResponse(saved));
@@ -94,6 +101,7 @@ public class TopicKnowledgeService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill topic not found."));
 
         entity.setKnowledgeLevel(level);
+        entity.setRatedByUser(true); // User explicitly updated level
         StudentTopicKnowledge saved = repository.save(entity);
         return new TopicKnowledgeResponse(saved);
     }
@@ -105,4 +113,3 @@ public class TopicKnowledgeService {
         repository.delete(entity);
     }
 }
-

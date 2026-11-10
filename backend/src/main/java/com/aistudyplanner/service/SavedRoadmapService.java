@@ -1,12 +1,16 @@
 package com.aistudyplanner.service;
 
-import com.aistudyplanner.dto.SaveRoadmapRequest;
+import com.aistudyplanner.dto.ReplaceRoadmapRequest;
+import com.aistudyplanner.dto.RoadmapRequest;
+import com.aistudyplanner.dto.RoadmapResponse;
 import com.aistudyplanner.dto.SavedRoadmapResponse;
+import com.aistudyplanner.dto.SaveRoadmapRequest;
 import com.aistudyplanner.dto.UpdateRoadmapProgressRequest;
 import com.aistudyplanner.entity.Goal;
 import com.aistudyplanner.entity.GoalStatus;
 import com.aistudyplanner.entity.SavedRoadmap;
 import com.aistudyplanner.entity.User;
+import com.aistudyplanner.exception.RoadmapGenerationException;
 import com.aistudyplanner.repository.GoalRepository;
 import com.aistudyplanner.repository.SavedRoadmapRepository;
 import com.aistudyplanner.repository.UserRepository;
@@ -14,6 +18,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,15 +38,26 @@ public class SavedRoadmapService {
     private final UserRepository userRepository;
     private final GoalRepository goalRepository;
     private final ObjectMapper objectMapper;
+    private final RoadmapValidator roadmapValidator;
 
     public SavedRoadmapService(SavedRoadmapRepository roadmapRepository,
                                UserRepository userRepository,
                                GoalRepository goalRepository,
                                ObjectMapper objectMapper) {
+        this(roadmapRepository, userRepository, goalRepository, objectMapper, new RoadmapValidator());
+    }
+
+    @Autowired
+    public SavedRoadmapService(SavedRoadmapRepository roadmapRepository,
+                               UserRepository userRepository,
+                               GoalRepository goalRepository,
+                               ObjectMapper objectMapper,
+                               RoadmapValidator roadmapValidator) {
         this.roadmapRepository = roadmapRepository;
         this.userRepository = userRepository;
         this.goalRepository = goalRepository;
         this.objectMapper = objectMapper;
+        this.roadmapValidator = roadmapValidator != null ? roadmapValidator : new RoadmapValidator();
     }
 
     private User getAuthenticatedUser(String email) {
@@ -108,22 +124,68 @@ public class SavedRoadmapService {
     }
 
     @Transactional
-    public SavedRoadmapResponse replaceRoadmap(String email, Long id, com.aistudyplanner.dto.ReplaceRoadmapRequest request) {
+    public SavedRoadmapResponse replaceRoadmap(String email, Long id, ReplaceRoadmapRequest request) {
         SavedRoadmap roadmap = roadmapRepository.findByIdAndUserEmail(id, email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Roadmap not found."));
 
-        if (request.getRoadmapJson() != null && !request.getRoadmapJson().isBlank()) {
-            roadmap.setRoadmapJson(request.getRoadmapJson());
+        if (request.getRoadmapJson() == null || request.getRoadmapJson().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Roadmap JSON content is required.");
         }
+
+        // Parse candidate roadmap JSON
+        RoadmapResponse candidate;
+        try {
+            candidate = objectMapper.readValue(request.getRoadmapJson(), RoadmapResponse.class);
+        } catch (Exception e) {
+            throw new RoadmapGenerationException(HttpStatus.UNPROCESSABLE_ENTITY, "Invalid roadmap JSON format: " + e.getMessage());
+        }
+
+        // Derive target days and daily hours strictly from the stored goal or saved roadmap, NEVER from client body
+        int effectiveTargetDays = roadmap.getTargetDays();
+        double effectiveHoursPerDay = roadmap.getHoursPerDay();
+        String effectiveTopic = roadmap.getTopic();
+        String effectiveDescription = "";
+
+        if (roadmap.getGoalId() != null) {
+            Goal goal = goalRepository.findById(roadmap.getGoalId()).orElse(null);
+            if (goal != null) {
+                if (goal.getTargetDays() != null && goal.getTargetDays() > 0) {
+                    effectiveTargetDays = goal.getTargetDays();
+                }
+                if (goal.getHoursPerDay() != null && goal.getHoursPerDay() > 0) {
+                    effectiveHoursPerDay = goal.getHoursPerDay();
+                }
+                if (goal.getTitle() != null && !goal.getTitle().isBlank()) {
+                    effectiveTopic = goal.getTitle();
+                }
+                if (goal.getDescription() != null) {
+                    effectiveDescription = goal.getDescription();
+                }
+            }
+        }
+
+        // Run RoadmapValidator server-side structural validation
+        RoadmapRequest validationSpec = new RoadmapRequest();
+        validationSpec.setTopic(effectiveTopic);
+        validationSpec.setDescription(effectiveDescription);
+        validationSpec.setTargetDays(effectiveTargetDays);
+        validationSpec.setHoursPerDay(effectiveHoursPerDay);
+
+        List<String> validationErrors = roadmapValidator.validate(candidate, validationSpec);
+        if (!validationErrors.isEmpty()) {
+            throw new RoadmapGenerationException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "Replacement roadmap failed server-side validation: " + String.join("; ", validationErrors)
+            );
+        }
+
+        // Structural validation passed: proceed to swap in single transaction
+        roadmap.setRoadmapJson(request.getRoadmapJson());
         if (request.getTitle() != null && !request.getTitle().isBlank()) {
             roadmap.setTitle(request.getTitle().trim());
         }
-        if (request.getTargetDays() != null) {
-            roadmap.setTargetDays(request.getTargetDays());
-        }
-        if (request.getHoursPerDay() != null) {
-            roadmap.setHoursPerDay(request.getHoursPerDay());
-        }
+        roadmap.setTargetDays(effectiveTargetDays);
+        roadmap.setHoursPerDay(effectiveHoursPerDay);
 
         // Reset completed tasks and milestones upon regeneration swap
         roadmap.setCompletedTasksJson("[]");

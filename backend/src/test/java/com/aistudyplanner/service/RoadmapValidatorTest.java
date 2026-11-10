@@ -215,6 +215,61 @@ class RoadmapValidatorTest {
         }
     }
 
+    @Test
+    @DisplayName("Roadmap 9 fails the 60% single activity type rule (36/45 CODING_PRACTICE > 60%)")
+    void testRoadmap9FailsSixtyPercentActivityRule() {
+        RoadmapRequest req = createSampleRequest("Machine Learning & Generative AI", 45, 2.0);
+        RoadmapResponse res = new RoadmapResponse();
+        res.setId("roadmap_9_sim");
+        res.setTopic("Machine Learning & Generative AI");
+        res.setTargetDays(45);
+        res.setHoursPerDay(2.0);
+
+        int currentDay = 1;
+        int[] phaseDays = {7, 10, 10, 10, 8};
+        List<WeeklyPhase> phases = new ArrayList<>();
+
+        // In Roadmap 9: 36 tasks are CODING_PRACTICE, 5 are STUDY, 4 are REVIEW (3 distinct types, but CODING_PRACTICE = 80%)
+        int codingPracticeAssigned = 0;
+        for (int p = 0; p < phaseDays.length; p++) {
+            WeeklyPhase phase = new WeeklyPhase();
+            phase.setPhaseNumber(p + 1);
+            phase.setPhaseTitle("Phase " + (p + 1) + ": ML Module");
+            phase.setDurationDays(phaseDays[p]);
+            phase.setTopics(List.of("Machine Learning", "Generative AI"));
+
+            List<DailyTask> tasks = new ArrayList<>();
+            for (int d = 0; d < phaseDays[p]; d++) {
+                DailyTask t = new DailyTask();
+                t.setDayNumber(currentDay);
+                t.setTitle("Day " + currentDay + " Machine Learning Exercise");
+                t.setDescription("Implement neural network algorithms in Python.");
+                t.setEstimatedMinutes(120);
+
+                if (codingPracticeAssigned < 36) {
+                    t.setActivityType("CODING_PRACTICE");
+                    codingPracticeAssigned++;
+                } else if (codingPracticeAssigned < 41) {
+                    t.setActivityType("STUDY");
+                    codingPracticeAssigned++;
+                } else {
+                    t.setActivityType("REVIEW");
+                    codingPracticeAssigned++;
+                }
+                tasks.add(t);
+                currentDay++;
+            }
+            phase.setDailyTasks(tasks);
+            phases.add(phase);
+        }
+        res.setPhases(phases);
+
+        List<String> errors = validator.validate(res, req);
+        assertFalse(errors.isEmpty(), "Roadmap 9 shape should fail 60% activity cap");
+        assertTrue(errors.stream().anyMatch(e -> e.contains("Activity type 'CODING_PRACTICE' makes up 80.0% of tasks")),
+                "Expected 60% rule failure error, found: " + errors);
+    }
+
     private String getRoadmap9Json() {
         StringBuilder sb = new StringBuilder();
         sb.append("{\"phases\":[");

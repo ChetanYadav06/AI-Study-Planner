@@ -13,9 +13,11 @@ public class RoadmapValidator {
 
     public static final double MIN_KEYWORD_MATCH_RATIO = 0.80; // At most 20% tasks may lack keywords
     public static final double DAILY_MINUTES_TOLERANCE_RATIO = 1.15; // 15% tolerance on daily minutes
+    public static final double MAX_SINGLE_ACTIVITY_RATIO = 0.60; // No activityType > 60% of tasks for 14+ days
 
-    private static final Set<String> ALLOWED_ACTIVITY_TYPES = Set.of(
-            "STUDY", "PRACTICE", "PROJECT", "REVIEW", "REVISION", "CODING_PRACTICE", "QUIZ", "ASSESSMENT"
+    // Allowed activity types: strictly aligned with prompt & UI badge handlers
+    public static final Set<String> ALLOWED_ACTIVITY_TYPES = Set.of(
+            "STUDY", "PRACTICE", "PROJECT", "REVIEW", "CODING_PRACTICE", "QUIZ", "ASSESSMENT"
     );
 
     private static final Set<String> STOP_WORDS = Set.of(
@@ -45,7 +47,7 @@ public class RoadmapValidator {
         int expectedNextDayNumber = 1;
         Set<String> seenTitles = new HashSet<>();
         Set<String> seenCanonicalIds = new HashSet<>();
-        Set<String> activityTypesUsed = new HashSet<>();
+        Map<String, Integer> activityTypeCounts = new HashMap<>();
 
         // Relevance keywords extracted from goal topic & description
         Set<String> keywords = extractKeywords(request.getTopic(), request.getDescription());
@@ -68,7 +70,6 @@ public class RoadmapValidator {
                 continue;
             }
 
-            // Shared canonical ID generator tracker for duplicate suffixes within phase
             Map<String, Integer> suffixCounts = new HashMap<>();
 
             for (int tIdx = 0; tIdx < tasks.size(); tIdx++) {
@@ -121,7 +122,7 @@ public class RoadmapValidator {
                         errors.add(String.format("Invalid activityType '%s' on day %d. Allowed: %s",
                                 actType, dayNumber, ALLOWED_ACTIVITY_TYPES));
                     } else {
-                        activityTypesUsed.add(normAct);
+                        activityTypeCounts.put(normAct, activityTypeCounts.getOrDefault(normAct, 0) + 1);
                     }
                 }
 
@@ -131,7 +132,7 @@ public class RoadmapValidator {
                             task.getTitle(), task.getEstimatedMinutes(), maxAllowedMinutes));
                 }
 
-                // Relevance check
+                // Relevance check: check task title, description, phase title, and phase topics
                 if (isTaskRelevant(task, phase, keywords)) {
                     relevantTaskCount++;
                 }
@@ -143,13 +144,25 @@ public class RoadmapValidator {
             errors.add(String.format("Total daily tasks (%d) does not match target days (%d).", totalTasks, targetDays));
         }
 
-        // 14+ days diversity requirement: at least 3 distinct activity types
-        if (targetDays >= 14 && activityTypesUsed.size() < 3) {
-            errors.add(String.format("Roadmaps of 14+ days must include at least 3 distinct activity types (found %d: %s).",
-                    activityTypesUsed.size(), activityTypesUsed));
+        // 14+ days requirements:
+        if (targetDays >= 14) {
+            // At least 3 distinct activity types
+            if (activityTypeCounts.size() < 3) {
+                errors.add(String.format("Roadmaps of 14+ days must include at least 3 distinct activity types (found %d: %s).",
+                        activityTypeCounts.size(), activityTypeCounts.keySet()));
+            }
+
+            // No single activity type exceeds 60% of tasks
+            for (Map.Entry<String, Integer> entry : activityTypeCounts.entrySet()) {
+                double ratio = (double) entry.getValue() / totalTasks;
+                if (ratio > MAX_SINGLE_ACTIVITY_RATIO) {
+                    errors.add(String.format("Activity type '%s' makes up %.1f%% of tasks (maximum allowed is %.0f%%).",
+                            entry.getKey(), ratio * 100.0, MAX_SINGLE_ACTIVITY_RATIO * 100.0));
+                }
+            }
         }
 
-        // Relevance threshold check: at least 80% tasks must match goal keywords
+        // Coarse global sanity check: at least 80% tasks must contain keywords across task/phase fields
         if (totalTasks > 0 && !keywords.isEmpty()) {
             double relevanceRatio = (double) relevantTaskCount / totalTasks;
             if (relevanceRatio < MIN_KEYWORD_MATCH_RATIO) {

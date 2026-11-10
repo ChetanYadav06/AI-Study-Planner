@@ -9,6 +9,7 @@ public class TopicKnowledgeResponse {
     private Long id;
     private String topicName;
     private TopicKnowledgeLevel knowledgeLevel;
+    private Boolean ratedByUser;
     private LocalDateTime lastAssessedAt;
 
     public TopicKnowledgeResponse() {
@@ -18,6 +19,7 @@ public class TopicKnowledgeResponse {
         this.id = knowledge.getId();
         this.topicName = knowledge.getTopicName();
         this.knowledgeLevel = knowledge.getKnowledgeLevel();
+        this.ratedByUser = knowledge.getRatedByUser();
         this.lastAssessedAt = knowledge.getLastAssessedAt();
     }
 
@@ -45,6 +47,14 @@ public class TopicKnowledgeResponse {
         this.knowledgeLevel = knowledgeLevel;
     }
 
+    public Boolean getRatedByUser() {
+        return ratedByUser;
+    }
+
+    public void setRatedByUser(Boolean ratedByUser) {
+        this.ratedByUser = ratedByUser;
+    }
+
     public LocalDateTime getLastAssessedAt() {
         return lastAssessedAt;
     }
@@ -53,4 +63,3 @@ public class TopicKnowledgeResponse {
         this.lastAssessedAt = lastAssessedAt;
     }
 }
-

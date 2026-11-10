@@ -20,3 +20,4 @@ public class RoadmapGenerationException extends RuntimeException {
         return status;
     }
 }
+

@@ -14,12 +14,19 @@ public class TopicKnowledgeRequest {
     @NotNull(message = "Knowledge level is required.")
     private TopicKnowledgeLevel knowledgeLevel;
 
+    private Boolean ratedByUser;
+
     public TopicKnowledgeRequest() {
     }
 
     public TopicKnowledgeRequest(String topicName, TopicKnowledgeLevel knowledgeLevel) {
+        this(topicName, knowledgeLevel, false);
+    }
+
+    public TopicKnowledgeRequest(String topicName, TopicKnowledgeLevel knowledgeLevel, Boolean ratedByUser) {
         this.topicName = topicName;
         this.knowledgeLevel = knowledgeLevel;
+        this.ratedByUser = ratedByUser;
     }
 
     public String getTopicName() {
@@ -37,5 +44,12 @@ public class TopicKnowledgeRequest {
     public void setKnowledgeLevel(TopicKnowledgeLevel knowledgeLevel) {
         this.knowledgeLevel = knowledgeLevel;
     }
-}
 
+    public Boolean getRatedByUser() {
+        return ratedByUser;
+    }
+
+    public void setRatedByUser(Boolean ratedByUser) {
+        this.ratedByUser = ratedByUser;
+    }
+}

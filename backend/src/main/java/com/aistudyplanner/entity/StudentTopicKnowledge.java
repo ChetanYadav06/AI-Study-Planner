@@ -24,6 +24,9 @@ public class StudentTopicKnowledge {
     @Column(name = "knowledge_level", nullable = false, length = 30)
     private TopicKnowledgeLevel knowledgeLevel;
 
+    @Column(name = "rated_by_user", nullable = false)
+    private Boolean ratedByUser = false;
+
     @Column(name = "last_assessed_at")
     private LocalDateTime lastAssessedAt;
 
@@ -34,15 +37,27 @@ public class StudentTopicKnowledge {
             User student,
             String topicName,
             TopicKnowledgeLevel knowledgeLevel) {
+        this(student, topicName, knowledgeLevel, false);
+    }
+
+    public StudentTopicKnowledge(
+            User student,
+            String topicName,
+            TopicKnowledgeLevel knowledgeLevel,
+            Boolean ratedByUser) {
         this.student = student;
         this.topicName = topicName;
         this.knowledgeLevel = knowledgeLevel;
+        this.ratedByUser = ratedByUser != null ? ratedByUser : false;
     }
 
     @PrePersist
     @PreUpdate
     protected void updateAssessmentTimestamp() {
         this.lastAssessedAt = LocalDateTime.now();
+        if (this.ratedByUser == null) {
+            this.ratedByUser = false;
+        }
     }
 
     public Long getId() {
@@ -71,6 +86,14 @@ public class StudentTopicKnowledge {
 
     public void setKnowledgeLevel(TopicKnowledgeLevel knowledgeLevel) {
         this.knowledgeLevel = knowledgeLevel;
+    }
+
+    public Boolean getRatedByUser() {
+        return ratedByUser;
+    }
+
+    public void setRatedByUser(Boolean ratedByUser) {
+        this.ratedByUser = ratedByUser != null ? ratedByUser : false;
     }
 
     public LocalDateTime getLastAssessedAt() {

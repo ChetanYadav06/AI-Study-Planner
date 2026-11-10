@@ -18,7 +18,9 @@ import {
   Code2,
   Database,
   Cpu,
-  GraduationCap
+  GraduationCap,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { getStudentProfile, getSkills, bulkUpsertSkills } from '../../services/api';
 import { formatEnum } from '../../utils/formatters';
@@ -68,24 +70,25 @@ const PRESET_TRACKS = [
     description: 'Pandas preprocessing, NumPy, supervised ML regression & classification, and model metrics.',
     defaultDays: 30,
     defaultHours: 2.0,
-    specificTopics: 'Pandas, NumPy, Scikit-Learn Models, Supervised Learning, Cross-Validation, Metrics',
-    targetOutcomes: 'Train, evaluate, and deploy predictive ML models on real-world datasets',
-    topics: ['Python Basics', 'Pandas & NumPy', 'Linear Regression', 'Decision Trees', 'Model Evaluation & Metrics']
+    specificTopics: 'Pandas, NumPy, Scikit-Learn Regression & Classification, Model Evaluation, Feature Engineering',
+    targetOutcomes: 'Preprocess real-world tabular data and build high-accuracy predictive ML models',
+    topics: ['Python Data Foundations', 'NumPy & Linear Math', 'Pandas Preprocessing', 'Supervised Learning', 'Model Evaluation & ROC']
   }
 ];
 
 const KNOWLEDGE_CHOICES = [
-  { label: 'I already know this', level: 'MASTERED', badge: 'bg-emerald-50 text-emerald-700 border-emerald-300' },
-  { label: 'I know the basics', level: 'BEGINNER', badge: 'bg-cyan-50 text-cyan-700 border-cyan-300' },
-  { label: 'I need to learn this', level: 'NOT_LEARNED', badge: 'bg-amber-50 text-amber-700 border-amber-300' },
-  { label: "I'm not sure", level: 'NOT_SURE', badge: 'bg-slate-50 text-slate-700 border-slate-300' }
+  { level: 'MASTERED', label: 'Mastered', badge: 'bg-emerald-50 text-emerald-700 border-emerald-300' },
+  { level: 'INTERMEDIATE', label: 'Familiar', badge: 'bg-indigo-50 text-indigo-700 border-indigo-300' },
+  { level: 'BEGINNER', label: 'Beginner', badge: 'bg-sky-50 text-sky-700 border-sky-300' },
+  { level: 'NOT_LEARNED', label: 'Not Learned', badge: 'bg-slate-100 text-slate-700 border-slate-300' }
 ];
 
 const SYNTHESIS_STAGES = [
-  'Understanding your learning goals & career targets...',
-  'Analyzing your calibrated knowledge to skip mastered basics...',
-  'Structuring day-by-day practice sessions & curated resources...',
-  'Finalizing your customized AI learning journey...'
+  'Calibrating prerequisite knowledge and daily pacing...',
+  'Structuring sequential phase architecture and milestones...',
+  'Extracting core subtopics, conceptual models, and hands-on exercises...',
+  'Curating authoritative learning resources and documentation...',
+  'Validating learning objectives and quality criteria...'
 ];
 
 export const RoadmapWizard = ({
@@ -97,25 +100,29 @@ export const RoadmapWizard = ({
   error = null
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
+
+  // Profile data
   const [profile, setProfile] = useState(null);
   const [existingSkills, setExistingSkills] = useState([]);
 
-  // Wizard State
-  const [selectedGoalId, setSelectedGoalId] = useState('');
-  const [topic, setTopic] = useState('');
-  const [description, setDescription] = useState('');
-  const [skillLevel, setSkillLevel] = useState('INTERMEDIATE');
+  // Step 1: Goal & Subject
+  const [selectedGoalId, setSelectedGoalId] = useState(initialGoal?.id ? String(initialGoal.id) : '');
+  const [topic, setTopic] = useState(initialGoal?.title || '');
+  const [description, setDescription] = useState(initialGoal?.description || '');
+  const [skillLevel, setSkillLevel] = useState(initialGoal?.skillLevel || 'INTERMEDIATE');
 
-  // Step 2: Topic knowledge ratings
+  // Step 2: Knowledge Diagnostic
   const [topicsList, setTopicsList] = useState([]);
   const [topicRatings, setTopicRatings] = useState({});
+  const [userTouchedTopics, setUserTouchedTopics] = useState(new Set());
+  const [newCustomTopic, setNewCustomTopic] = useState('');
   const [diagnosticNote, setDiagnosticNote] = useState(null);
 
-  // Step 3: Target constraints
-  const [targetDays, setTargetDays] = useState(30);
-  const [hoursPerDay, setHoursPerDay] = useState(2.0);
-  const [specificTopics, setSpecificTopics] = useState('');
-  const [targetOutcomes, setTargetOutcomes] = useState('');
+  // Step 3: Duration & Budget
+  const [targetDays, setTargetDays] = useState(initialGoal?.targetDays || 30);
+  const [hoursPerDay, setHoursPerDay] = useState(initialGoal?.hoursPerDay || 2.0);
+  const [specificTopics, setSpecificTopics] = useState(initialGoal?.specificTopics || '');
+  const [targetOutcomes, setTargetOutcomes] = useState(initialGoal?.targetOutcome || '');
 
   // Step 4: Roadmap Preferences
   const [explanationStyle, setExplanationStyle] = useState('STEP_BY_STEP');
@@ -123,8 +130,6 @@ export const RoadmapWizard = ({
   const [learningMethods, setLearningMethods] = useState('VIDEO,CODING_PRACTICE');
 
   const [stepError, setStepError] = useState(null);
-
-  // Progressive synthesis message timer during loading
   const [synthesisStageIdx, setSynthesisStageIdx] = useState(0);
 
   useEffect(() => {
@@ -187,15 +192,11 @@ export const RoadmapWizard = ({
 
     let initialTopics = [];
     if (matchedPreset) {
-      initialTopics = matchedPreset.topics;
+      initialTopics = [...matchedPreset.topics];
     } else {
-      initialTopics = [
-        'Core Foundations & Principles',
-        'Syntax & Structural Mechanics',
-        'Collections & Problem Patterns',
-        'Practical Problem-Solving Challenges',
-        'End-to-End Capstone Implementation'
-      ];
+      // Phase 2b amendment: delete the generic 5-topic fallback.
+      // Non-matching custom goals start empty and optional.
+      initialTopics = [];
     }
 
     setTopicsList(initialTopics);
@@ -206,6 +207,7 @@ export const RoadmapWizard = ({
       ratings[t] = match ? match.knowledgeLevel : 'NOT_LEARNED';
     });
     setTopicRatings(ratings);
+    setUserTouchedTopics(new Set());
   };
 
   const handleSelectPreset = (preset) => {
@@ -242,10 +244,46 @@ export const RoadmapWizard = ({
       [topicName]: level
     }));
 
+    setUserTouchedTopics(prev => {
+      const next = new Set(prev);
+      next.add(topicName);
+      return next;
+    });
+
     if (level === 'NOT_SURE') {
       setDiagnosticNote(`Marked "${topicName}" for a rapid diagnostic check in Phase 1.`);
       setTimeout(() => setDiagnosticNote(null), 4000);
     }
+  };
+
+  const handleAddCustomTopic = (e) => {
+    e.preventDefault();
+    const clean = newCustomTopic.trim();
+    if (!clean) return;
+    if (!topicsList.includes(clean)) {
+      setTopicsList(prev => [...prev, clean]);
+      setTopicRatings(prev => ({ ...prev, [clean]: 'BEGINNER' }));
+      setUserTouchedTopics(prev => {
+        const next = new Set(prev);
+        next.add(clean);
+        return next;
+      });
+    }
+    setNewCustomTopic('');
+  };
+
+  const handleRemoveTopic = (tName) => {
+    setTopicsList(prev => prev.filter(t => t !== tName));
+    setTopicRatings(prev => {
+      const copy = { ...prev };
+      delete copy[tName];
+      return copy;
+    });
+    setUserTouchedTopics(prev => {
+      const next = new Set(prev);
+      next.delete(tName);
+      return next;
+    });
   };
 
   const handleNext = async () => {
@@ -263,11 +301,13 @@ export const RoadmapWizard = ({
 
     if (currentStep === 2) {
       try {
+        // Only save topics with ratedByUser flag tracking user touch
         const skillsToSave = Object.entries(topicRatings)
           .filter(([_, lvl]) => lvl !== 'NOT_SURE')
           .map(([tName, lvl]) => ({
             topicName: tName,
-            knowledgeLevel: lvl
+            knowledgeLevel: lvl,
+            ratedByUser: userTouchedTopics.has(tName)
           }));
 
         if (skillsToSave.length > 0) {
@@ -293,7 +333,9 @@ export const RoadmapWizard = ({
   };
 
   const handleFinish = () => {
+    // Only summarize rated topics in prior knowledge summary
     const priorKnowledgeSummary = Object.entries(topicRatings)
+      .filter(([t, _]) => userTouchedTopics.has(t))
       .map(([t, l]) => `${t}: ${l.replace('_', ' ')}`)
       .join('; ');
 
@@ -318,25 +360,21 @@ export const RoadmapWizard = ({
   const STEPS = [
     { num: 1, title: 'Curriculum Goal' },
     { num: 2, title: 'Starting Knowledge' },
-    { num: 3, title: 'Study Budget' },
-    { num: 4, title: 'Pedagogy' },
-    { num: 5, title: 'Review & Synthesize' }
+    { num: 3, title: 'Duration & Budget' },
+    { num: 4, title: 'Study Format' },
+    { num: 5, title: 'Synthesis' }
   ];
 
-  // ── LOADING OVERLAY WITH PROGRESSIVE STATUS MESSAGES ──
   if (loading) {
     return (
-      <div className="bg-slate-950 text-white rounded-3xl p-10 md:p-16 border border-slate-800 shadow-2xl text-center max-w-xl mx-auto my-8 relative overflow-hidden animate-fade-slide">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-600/30 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-violet-600/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="bg-slate-900 rounded-3xl p-10 sm:p-14 text-white text-center shadow-2xl border border-slate-800 animate-fade-in max-w-2xl mx-auto my-12">
+        <div className="w-16 h-16 rounded-3xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center mx-auto mb-6 text-indigo-400 animate-pulse">
+          <Loader2 className="w-8 h-8 animate-spin" />
+        </div>
 
-        <div className="relative z-10 space-y-6">
-          <div className="w-20 h-20 rounded-3xl gradient-primary text-white flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/40 animate-pulse-glow">
-            <Sparkles className="w-10 h-10 animate-spin" />
-          </div>
-
+        <div className="space-y-4 max-w-lg mx-auto">
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-cyan-400">
+            <span className="text-[11px] font-black uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20 inline-block mb-2">
               Gemini AI Engine
             </span>
             <h3 className="text-xl md:text-2xl font-black mt-1">Synthesizing Your Curriculum</h3>
@@ -352,8 +390,8 @@ export const RoadmapWizard = ({
             />
           </div>
 
-          <p className="text-[11px] text-slate-500">
-            Calibrating duration, prerequisite trees, and verified resources for {topic}...
+          <p className="text-[11px] text-amber-300 font-medium">
+            This can take up to 2 minutes while Gemini generates and validates your complete curriculum.
           </p>
         </div>
       </div>
@@ -362,7 +400,7 @@ export const RoadmapWizard = ({
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden max-w-4xl mx-auto animate-fade-slide">
-      {/* ── WIZARD PROGRESS HEADER (Dark Studio & Deep Indigo) ── */}
+      {/* ── WIZARD PROGRESS HEADER ── */}
       <div className="bg-slate-950 text-white p-7 md:p-9 relative overflow-hidden border-b border-slate-800">
         <div className="absolute -top-10 -right-10 w-72 h-72 bg-indigo-600/30 rounded-full blur-3xl pointer-events-none" />
 
@@ -373,8 +411,8 @@ export const RoadmapWizard = ({
               <span>Interactive Curriculum Architect</span>
             </div>
             <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">Create Your Study Roadmap</h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Step {currentStep} of 5: <span className="text-white font-bold">{STEPS[currentStep - 1].title}</span>
+            <p className="text-xs text-slate-400 mt-1 max-w-lg leading-relaxed">
+              Step {currentStep} of 5: {STEPS[currentStep - 1].title}
             </p>
           </div>
 
@@ -451,32 +489,32 @@ export const RoadmapWizard = ({
               </div>
             )}
 
-            {/* Presets Grid */}
+            {/* Preset Curriculum Tracks Grid */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
-                Curriculum Tracks
+              <label className="block text-xs font-bold text-slate-700 mb-2">
+                Popular Curriculum Blueprints:
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                {PRESET_TRACKS.map((sug) => {
+                {PRESET_TRACKS.map(sug => {
+                  const isSelected = topic.toLowerCase() === sug.topic.toLowerCase();
                   const Icon = sug.icon;
-                  const isSelected = topic === sug.topic;
                   return (
                     <button
                       type="button"
                       key={sug.topic}
                       onClick={() => handleSelectPreset(sug)}
-                      className={`p-5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between group ${
+                      className={`p-4 rounded-2xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
                         isSelected
-                          ? 'bg-indigo-50/90 border-indigo-500 ring-2 ring-indigo-500/30 shadow-md'
-                          : 'bg-slate-50/70 border-slate-200 hover:bg-slate-100/90 hover:border-slate-300'
+                          ? 'border-indigo-600 bg-indigo-50/40 ring-2 ring-indigo-500/20 shadow-xs'
+                          : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300'
                       }`}
                     >
                       <div>
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 bg-indigo-100/60 px-2 py-0.5 rounded-md">
                             {sug.category}
                           </span>
-                          <div className={`p-2 rounded-xl bg-white border border-slate-200 group-hover:scale-105 transition ${
+                          <div className={`w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center ${
                             isSelected ? 'text-indigo-600 shadow-xs' : 'text-slate-500'
                           }`}>
                             <Icon className="w-4 h-4" />
@@ -524,7 +562,7 @@ export const RoadmapWizard = ({
                 <h3 className="text-lg md:text-xl font-extrabold text-slate-900">Step 2: Calibrate Your Baseline Knowledge</h3>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Rate your comfort with foundational topics in <strong>{topic}</strong>. Mastered items will skip introductory syntax.
+                Rate your comfort with topics in <strong>{topic}</strong>. Topics rated here guide pedagogical pacing.
               </p>
             </div>
 
@@ -535,36 +573,79 @@ export const RoadmapWizard = ({
               </div>
             )}
 
-            <div className="space-y-3">
-              {topicsList.map(tName => {
-                const currentRating = topicRatings[tName] || 'NOT_LEARNED';
-                return (
-                  <div key={tName} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <span className="text-xs font-bold text-slate-900">{tName}</span>
+            {/* Add custom topic input */}
+            <form onSubmit={handleAddCustomTopic} className="flex gap-2">
+              <input
+                type="text"
+                value={newCustomTopic}
+                onChange={(e) => setNewCustomTopic(e.target.value)}
+                placeholder="Add a topic you know or want to focus on (e.g. Async IO, Docker, PyTorch)"
+                className="flex-1 p-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium"
+              />
+              <button
+                type="submit"
+                className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs inline-flex items-center space-x-1.5 transition cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Topic</span>
+              </button>
+            </form>
 
-                    <div className="flex flex-wrap gap-1.5">
-                      {KNOWLEDGE_CHOICES.map(opt => {
-                        const isSelected = currentRating === opt.level;
-                        return (
-                          <button
-                            type="button"
-                            key={opt.level}
-                            onClick={() => handleRateTopic(tName, opt.level)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
-                              isSelected
-                                ? `${opt.badge} ring-2 ring-indigo-500/30 shadow-xs`
-                                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        );
-                      })}
+            {topicsList.length === 0 ? (
+              <div className="p-8 text-center rounded-2xl bg-slate-50 border border-dashed border-slate-300 text-slate-500">
+                <p className="text-xs font-medium">
+                  No predefined topics for this subject. Feel free to add topics above or click <strong>Continue</strong> to proceed.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {topicsList.map(tName => {
+                  const currentRating = topicRatings[tName] || 'NOT_LEARNED';
+                  return (
+                    <div key={tName} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs font-bold text-slate-900">{tName}</span>
+                        {userTouchedTopics.has(tName) && (
+                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                            Rated
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <div className="flex flex-wrap gap-1.5">
+                          {KNOWLEDGE_CHOICES.map(opt => {
+                            const isSelected = currentRating === opt.level;
+                            return (
+                              <button
+                                type="button"
+                                key={opt.level}
+                                onClick={() => handleRateTopic(tName, opt.level)}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                                  isSelected
+                                    ? `${opt.badge} ring-2 ring-indigo-500/30 shadow-xs`
+                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTopic(tName)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-200/60 transition cursor-pointer"
+                          title="Remove topic"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -586,16 +667,16 @@ export const RoadmapWizard = ({
                 <input
                   type="range"
                   min="7"
-                  max="120"
+                  max="90"
                   step="1"
                   value={targetDays}
                   onChange={(e) => setTargetDays(Number(e.target.value))}
                   className="w-full accent-indigo-600 cursor-pointer"
                 />
-                <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                  <span>1 week</span>
-                  <span>30 days</span>
-                  <span>120 days</span>
+                <div className="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
+                  <span>1 Week (7d)</span>
+                  <span>1 Month (30d)</span>
+                  <span>3 Months (90d)</span>
                 </div>
               </div>
 
@@ -606,127 +687,111 @@ export const RoadmapWizard = ({
                 <input
                   type="range"
                   min="0.5"
-                  max="8.0"
+                  max="6"
                   step="0.5"
                   value={hoursPerDay}
                   onChange={(e) => setHoursPerDay(Number(e.target.value))}
                   className="w-full accent-indigo-600 cursor-pointer"
                 />
-                <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                  <span>0.5h</span>
-                  <span>2h</span>
-                  <span>8h</span>
+                <div className="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
+                  <span>0.5h (Light)</span>
+                  <span>2h (Standard)</span>
+                  <span>6h (Intensive)</span>
                 </div>
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-200/80 flex items-center justify-between text-xs text-indigo-950">
-              <span className="font-bold flex items-center space-x-1.5">
-                <Clock className="w-4 h-4 text-indigo-600" />
-                <span>Calculated Curriculum Study Budget:</span>
-              </span>
-              <span className="font-black text-sm font-mono text-indigo-700">
-                {(targetDays * hoursPerDay).toFixed(1)} Total Hours
-              </span>
-            </div>
-
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Specific Focus Areas or Must-Cover Topics (Optional)
+                Specific Modules, Libraries, or Topics to Cover:
               </label>
               <input
                 type="text"
                 value={specificTopics}
                 onChange={(e) => setSpecificTopics(e.target.value)}
-                placeholder="e.g. Binary Search Trees, Graph BFS/DFS, LRU Cache implementation"
-                className="w-full p-3 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                placeholder="e.g. PyTorch, Hugging Face, FAISS vector search, Prompt chaining"
+                className="w-full p-3.5 text-xs rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-2xs transition"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Desired Outcome / Target Goal (Optional)
+                Primary Goal / Expected Outcome:
               </label>
-              <input
-                type="text"
+              <textarea
+                rows={2}
                 value={targetOutcomes}
                 onChange={(e) => setTargetOutcomes(e.target.value)}
-                placeholder="e.g. Solve Medium LeetCode problems independently and pass campus placement rounds"
-                className="w-full p-3 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                placeholder="e.g. Deploy custom RAG agent application to portfolio and pass technical interview"
+                className="w-full p-3.5 text-xs rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-2xs transition"
               />
             </div>
           </div>
         )}
 
-        {/* ── STEP 4: Select Learning Preferences ── */}
+        {/* ── STEP 4: Preferences & Learning Media ── */}
         {currentStep === 4 && (
           <div className="space-y-6 animate-fade-slide">
             <div>
-              <h3 className="text-lg md:text-xl font-extrabold text-slate-900">Step 4: Roadmap Pedagogy & Practice</h3>
+              <h3 className="text-lg md:text-xl font-extrabold text-slate-900">Step 4: AI Pedagogy & Practice Format</h3>
               <p className="text-xs text-slate-500 mt-1">
-                Adjust preferences specifically for this curriculum without altering your permanent profile.
+                Customizes how concepts are broken down and daily practice format.
               </p>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">
-                Explanation Style
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[
-                  { id: 'SIMPLE', title: 'Intuitive & Jargon-Free', desc: 'Real-world analogies and visual metaphors' },
-                  { id: 'STEP_BY_STEP', title: 'Step-by-Step Breakdown', desc: 'Chronological progression with milestone code' },
-                  { id: 'TECHNICAL', title: 'Deep Technical Analysis', desc: 'Under-the-hood runtime & memory models' },
-                  { id: 'EXAMPLES_FIRST', title: 'Code Examples First', desc: 'Practical runnable snippet first, theory second' }
-                ].map(s => (
-                  <button
-                    type="button"
-                    key={s.id}
-                    onClick={() => setExplanationStyle(s.id)}
-                    className={`p-4 rounded-2xl border text-left transition cursor-pointer ${
-                      explanationStyle === s.id
-                        ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500/20'
-                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <span className="text-xs font-extrabold text-slate-900">{s.title}</span>
-                    <p className="text-[11px] text-slate-500 mt-1">{s.desc}</p>
-                  </button>
-                ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                <label className="block text-xs font-bold text-slate-700 mb-2">Explanation Pedagogy:</label>
+                <div className="space-y-2">
+                  {[
+                    { id: 'STEP_BY_STEP', label: 'Step-by-Step Breakdown' },
+                    { id: 'FIRST_PRINCIPLES', label: 'First Principles & Theory' },
+                    { id: 'CODE_FIRST', label: 'Code-First / Example Driven' }
+                  ].map(opt => (
+                    <button
+                      type="button"
+                      key={opt.id}
+                      onClick={() => setExplanationStyle(opt.id)}
+                      className={`w-full p-2.5 rounded-xl text-left text-xs font-bold border transition cursor-pointer ${
+                        explanationStyle === opt.id
+                          ? 'bg-indigo-50 border-indigo-600 text-indigo-700 shadow-2xs'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">
-                Practice Format
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[
-                  { id: 'CODING_PROBLEMS', title: 'Algorithmic Challenges', desc: 'Coding exercises with unit test checks' },
-                  { id: 'MINI_PROJECTS', title: 'Mini-Projects', desc: 'Build working modules and modular feature repos' },
-                  { id: 'MCQS', title: 'Rapid Quizzes', desc: 'Rapid conceptual multiple-choice checks' },
-                  { id: 'REAL_WORLD', title: 'Production Scenarios', desc: 'Enterprise bugs and system design challenges' }
-                ].map(s => (
-                  <button
-                    type="button"
-                    key={s.id}
-                    onClick={() => setPracticeStyle(s.id)}
-                    className={`p-4 rounded-2xl border text-left transition cursor-pointer ${
-                      practiceStyle === s.id
-                        ? 'bg-violet-50 border-violet-500 ring-2 ring-violet-500/20'
-                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <span className="text-xs font-extrabold text-slate-900">{s.title}</span>
-                    <p className="text-[11px] text-slate-500 mt-1">{s.desc}</p>
-                  </button>
-                ))}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                <label className="block text-xs font-bold text-slate-700 mb-2">Preferred Practice Format:</label>
+                <div className="space-y-2">
+                  {[
+                    { id: 'CODING_PROBLEMS', label: 'Coding Problems & Sandboxes' },
+                    { id: 'MINI_PROJECTS', label: 'Real-World Mini Projects' },
+                    { id: 'QUIZ_ASSESSMENT', label: 'Quizzes & Architecture Drills' }
+                  ].map(opt => (
+                    <button
+                      type="button"
+                      key={opt.id}
+                      onClick={() => setPracticeStyle(opt.id)}
+                      className={`w-full p-2.5 rounded-xl text-left text-xs font-bold border transition cursor-pointer ${
+                        practiceStyle === opt.id
+                          ? 'bg-indigo-50 border-indigo-600 text-indigo-700 shadow-2xs'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* ── STEP 5: Review & Synthesize ── */}
+        {/* ── STEP 5: Final Review & Synthesis ── */}
         {currentStep === 5 && (
           <div className="space-y-6 animate-fade-slide">
             <div>
@@ -744,7 +809,7 @@ export const RoadmapWizard = ({
                 </div>
                 <button
                   type="button"
-                  onClick={handleGenerate}
+                  onClick={handleFinish}
                   className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs self-end sm:self-center transition cursor-pointer shadow-2xs"
                 >
                   Retry Generation
@@ -763,59 +828,36 @@ export const RoadmapWizard = ({
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <div className="p-3 bg-white rounded-xl border border-slate-200/80">
-                  <span className="text-slate-400 text-[10px] block">Duration</span>
-                  <span className="font-extrabold text-slate-900 text-sm">{targetDays} Days</span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="p-3 bg-white rounded-2xl border border-slate-200">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Sprint</span>
+                  <span className="text-sm font-extrabold text-slate-900 mt-0.5 block">{targetDays} Days</span>
                 </div>
-                <div className="p-3 bg-white rounded-xl border border-slate-200/80">
-                  <span className="text-slate-400 text-[10px] block">Pace</span>
-                  <span className="font-extrabold text-slate-900 text-sm">{hoursPerDay}h / day</span>
+                <div className="p-3 bg-white rounded-2xl border border-slate-200">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Pace</span>
+                  <span className="text-sm font-extrabold text-indigo-600 mt-0.5 block">{hoursPerDay}h / day</span>
                 </div>
-                <div className="p-3 bg-white rounded-xl border border-slate-200/80">
-                  <span className="text-slate-400 text-[10px] block">Total Budget</span>
-                  <span className="font-extrabold text-indigo-600 text-sm font-mono">{(targetDays * hoursPerDay).toFixed(1)}h</span>
+                <div className="p-3 bg-white rounded-2xl border border-slate-200">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Total Hours</span>
+                  <span className="text-sm font-extrabold text-slate-900 mt-0.5 block">{Math.round(targetDays * hoursPerDay)} hrs</span>
                 </div>
-              </div>
-
-              <div>
-                <span className="text-slate-400 text-[10px] block mb-2 font-bold uppercase">Calibrated Baseline Knowledge</span>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(topicRatings).map(([tName, lvl]) => (
-                    <span
-                      key={tName}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border ${
-                        lvl === 'MASTERED'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                          : lvl === 'BEGINNER'
-                          ? 'bg-cyan-50 text-cyan-700 border-cyan-300'
-                          : lvl === 'NOT_SURE'
-                          ? 'bg-purple-50 text-purple-700 border-purple-300'
-                          : 'bg-amber-50 text-amber-700 border-amber-300'
-                      }`}
-                    >
-                      {tName} • {formatEnum(lvl)}
-                    </span>
-                  ))}
+                <div className="p-3 bg-white rounded-2xl border border-slate-200">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Rated Topics</span>
+                  <span className="text-sm font-extrabold text-slate-900 mt-0.5 block">{userTouchedTopics.size}</span>
                 </div>
-              </div>
-
-              <div className="pt-3 border-t border-slate-200 flex flex-wrap gap-4 text-xs text-slate-600 font-medium">
-                <span><strong>Pedagogy:</strong> {formatEnum(explanationStyle)}</span>
-                <span><strong>Practice:</strong> {formatEnum(practiceStyle)}</span>
               </div>
             </div>
           </div>
         )}
 
-        {/* ── CONTROLS FOOTER ── */}
-        <div className="flex items-center justify-between pt-7 border-t border-slate-100 mt-8">
+        {/* ── FOOTER NAVIGATION CONTROLS ── */}
+        <div className="pt-8 border-t border-slate-200/80 flex items-center justify-between">
           <button
             type="button"
             onClick={handlePrev}
-            className="inline-flex items-center space-x-1.5 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-2xl transition cursor-pointer"
+            className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-2xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft className="w-4 h-4" />
             <span>{currentStep === 1 ? 'Cancel' : 'Back'}</span>
           </button>
 
@@ -823,19 +865,19 @@ export const RoadmapWizard = ({
             <button
               type="button"
               onClick={handleNext}
-              className="inline-flex items-center space-x-1.5 px-6 py-2.5 gradient-primary hover:opacity-95 text-white rounded-2xl text-xs font-bold shadow-md shadow-indigo-500/20 transition cursor-pointer"
+              className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-xs cursor-pointer"
             >
               <span>Continue</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-4 h-4" />
             </button>
           ) : (
             <button
               type="button"
               onClick={handleFinish}
-              className="inline-flex items-center space-x-2 px-8 py-3 gradient-primary hover:opacity-95 text-white rounded-2xl text-xs font-extrabold shadow-lg shadow-indigo-500/30 transition cursor-pointer hover:scale-102"
+              className="inline-flex items-center space-x-2 px-7 py-3 rounded-2xl gradient-primary text-white text-xs font-black transition shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 cursor-pointer"
             >
               <Sparkles className="w-4 h-4" />
-              <span>Generate My Roadmap</span>
+              <span>Generate Personalized Roadmap</span>
             </button>
           )}
         </div>

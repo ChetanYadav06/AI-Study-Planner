@@ -9,16 +9,17 @@ import com.aistudyplanner.exception.RoadmapGenerationException;
 import com.aistudyplanner.repository.StudentProfileRepository;
 import com.aistudyplanner.repository.StudentTopicKnowledgeRepository;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class RoadmapService {
@@ -30,13 +31,29 @@ public class RoadmapService {
     private final ObjectMapper objectMapper;
     private final StudentProfileRepository profileRepository;
     private final StudentTopicKnowledgeRepository topicKnowledgeRepository;
+    private final int timeoutSeconds;
+    public static final Set<String> DEFAULT_ALLOWED_HOSTS = Set.of(
+            "docs.python.org", "pytorch.org", "huggingface.co", "ai.google.dev",
+            "developer.mozilla.org", "spring.io", "docs.oracle.com", "scikit-learn.org",
+            "numpy.org", "pandas.pydata.org", "platform.openai.com", "docs.trychroma.com"
+    );
+
+    private final Set<String> allowedHosts;
 
     public RoadmapService(GeminiTestService geminiTestService) {
-        this(geminiTestService, new RoadmapValidator(), null, null);
+        this(geminiTestService, new RoadmapValidator(), null, null, 120, DEFAULT_ALLOWED_HOSTS);
     }
 
     public RoadmapService(GeminiTestService geminiTestService, RoadmapValidator roadmapValidator) {
-        this(geminiTestService, roadmapValidator, null, null);
+        this(geminiTestService, roadmapValidator, null, null, 120, DEFAULT_ALLOWED_HOSTS);
+    }
+
+    public RoadmapService(
+            GeminiTestService geminiTestService,
+            RoadmapValidator roadmapValidator,
+            StudentProfileRepository profileRepository,
+            StudentTopicKnowledgeRepository topicKnowledgeRepository) {
+        this(geminiTestService, roadmapValidator, profileRepository, topicKnowledgeRepository, 120, DEFAULT_ALLOWED_HOSTS);
     }
 
     @Autowired
@@ -44,11 +61,15 @@ public class RoadmapService {
             GeminiTestService geminiTestService,
             RoadmapValidator roadmapValidator,
             @Autowired(required = false) StudentProfileRepository profileRepository,
-            @Autowired(required = false) StudentTopicKnowledgeRepository topicKnowledgeRepository) {
+            @Autowired(required = false) StudentTopicKnowledgeRepository topicKnowledgeRepository,
+            @Value("${roadmap.generation.timeout-seconds:120}") int timeoutSeconds,
+            @Value("${roadmap.resources.allowed-hosts:docs.python.org,pytorch.org,huggingface.co,ai.google.dev,developer.mozilla.org,spring.io,docs.oracle.com,scikit-learn.org,numpy.org,pandas.pydata.org,platform.openai.com,docs.trychroma.com}") Set<String> allowedHosts) {
         this.geminiTestService = geminiTestService;
         this.roadmapValidator = roadmapValidator != null ? roadmapValidator : new RoadmapValidator();
         this.profileRepository = profileRepository;
         this.topicKnowledgeRepository = topicKnowledgeRepository;
+        this.timeoutSeconds = timeoutSeconds > 0 ? timeoutSeconds : 120;
+        this.allowedHosts = allowedHosts != null ? allowedHosts : Set.of();
         this.objectMapper = new ObjectMapper()
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
@@ -59,6 +80,9 @@ public class RoadmapService {
     }
 
     public RoadmapResponse generateRoadmap(RoadmapRequest request, String userEmail) {
+        long startTime = System.currentTimeMillis();
+        long deadlineMillis = startTime + (timeoutSeconds * 1000L);
+
         StudentProfile profile = null;
         List<StudentTopicKnowledge> skills = List.of();
 
@@ -67,7 +91,10 @@ public class RoadmapService {
                 profile = profileRepository.findByUserEmail(userEmail).orElse(null);
             }
             if (topicKnowledgeRepository != null) {
-                skills = topicKnowledgeRepository.findByStudentEmail(userEmail);
+                // Strictly filter to topics where rated_by_user == true
+                skills = topicKnowledgeRepository.findByStudentEmail(userEmail).stream()
+                        .filter(k -> Boolean.TRUE.equals(k.getRatedByUser()))
+                        .toList();
             }
         }
 
@@ -76,8 +103,9 @@ public class RoadmapService {
         RoadmapResponse candidate = null;
         List<String> lastValidationErrors = new ArrayList<>();
 
-        // Up to 2 attempts: initial call + 1 retry if validation fails
         for (int attempt = 1; attempt <= 2; attempt++) {
+            checkDeadline(deadlineMillis);
+
             String rawResponse;
             try {
                 rawResponse = geminiTestService.askGeminiJson(currentPrompt);
@@ -95,6 +123,13 @@ public class RoadmapService {
             } catch (Exception e) {
                 log.warn("Gemini output could not be parsed as valid JSON (attempt {}/2): {}", attempt, e.getMessage());
                 if (attempt == 1) {
+                    long remainingSeconds = (deadlineMillis - System.currentTimeMillis()) / 1000L;
+                    if (remainingSeconds < 40) {
+                        throw new RoadmapGenerationException(
+                                HttpStatus.BAD_GATEWAY,
+                                "Roadmap generation exceeded allowed time budget (" + timeoutSeconds + "s). Please retry."
+                        );
+                    }
                     currentPrompt = basePrompt + "\n\nCRITICAL FIX REQUIRED: Your previous output was not valid JSON or was malformed. You MUST return strictly valid JSON matching the schema.";
                     continue;
                 } else {
@@ -105,13 +140,19 @@ public class RoadmapService {
                 }
             }
 
-            // Populate metadata
+            // Populate and sanitize metadata & resources
             populateResponseMetadata(candidate, request, rawResponse);
 
-            // Validate using RoadmapValidator
-            List<String> errors = roadmapValidator.validate(candidate, request);
+            // 1. Structural validation via RoadmapValidator
+            List<String> errors = new ArrayList<>(roadmapValidator.validate(candidate, request));
+
+            // 2. AI Relevance Reviewer (cheap second call)
+            List<String> offTopicWarnings = reviewRelevanceWithAI(candidate, request);
+            if (!offTopicWarnings.isEmpty()) {
+                errors.addAll(offTopicWarnings);
+            }
+
             if (errors.isEmpty()) {
-                // Successful validation!
                 return candidate;
             }
 
@@ -119,10 +160,18 @@ public class RoadmapService {
             log.warn("Roadmap validation failed (attempt {}/2) with {} errors: {}", attempt, errors.size(), errors);
 
             if (attempt == 1) {
-                // Append retry error block to prompt
+                long remainingSeconds = (deadlineMillis - System.currentTimeMillis()) / 1000L;
+                if (remainingSeconds < 40) {
+                    log.warn("Only {}s remaining on deadline (less than 40s needed for retry). Aborting retry.", remainingSeconds);
+                    throw new RoadmapGenerationException(
+                            HttpStatus.BAD_GATEWAY,
+                            "Roadmap generation exceeded allowed time budget (" + timeoutSeconds + "s). Please retry."
+                    );
+                }
+
                 StringBuilder retryPrompt = new StringBuilder(basePrompt);
                 retryPrompt.append("\n\n[CRITICAL CORRECTIONS REQUIRED]\n");
-                retryPrompt.append("The previous roadmap failed validation with the following specific errors. You MUST correct all of them:\n");
+                retryPrompt.append("The previous roadmap failed quality validation with the following specific errors. You MUST fix every single one:\n");
                 for (String err : errors) {
                     retryPrompt.append("- ").append(err).append("\n");
                 }
@@ -131,11 +180,86 @@ public class RoadmapService {
             }
         }
 
-        // If we reach here, both attempts failed validation
         throw new RoadmapGenerationException(
                 HttpStatus.UNPROCESSABLE_ENTITY,
                 "AI generated a roadmap that failed quality validation: " + String.join("; ", lastValidationErrors)
         );
+    }
+
+    private void checkDeadline(long deadlineMillis) {
+        if (System.currentTimeMillis() >= deadlineMillis) {
+            throw new RoadmapGenerationException(
+                    HttpStatus.BAD_GATEWAY,
+                    "Roadmap generation timed out after " + timeoutSeconds + " seconds."
+            );
+        }
+    }
+
+    /**
+     * AI Relevance Reviewer: queries Gemini with goal and task titles to detect off-topic deviations.
+     * Non-blocking: logs and skips on any failure or invalid JSON.
+     */
+    private List<String> reviewRelevanceWithAI(RoadmapResponse candidate, RoadmapRequest request) {
+        List<String> offTopicDays = new ArrayList<>();
+        if (candidate.getPhases() == null || candidate.getPhases().isEmpty()) {
+            return offTopicDays;
+        }
+
+        StringBuilder taskSummary = new StringBuilder();
+        for (WeeklyPhase phase : candidate.getPhases()) {
+            if (phase.getDailyTasks() != null) {
+                for (DailyTask t : phase.getDailyTasks()) {
+                    taskSummary.append(String.format("Day %d: %s (Phase: %s)\n",
+                            t.getDayNumber(), t.getTitle(), phase.getPhaseTitle()));
+                }
+            }
+        }
+
+        String reviewerPrompt = String.format("""
+            You are a curriculum auditor.
+            Evaluate whether the following study plan tasks strictly belong to this student's specific goal:
+            Goal Subject: %s
+            Goal Description: %s
+
+            Tasks:
+            %s
+
+            Identify any tasks that are completely off-topic or teach unrelated topics (e.g. general algorithm puzzles for a Machine Learning goal, or unrelated web frameworks).
+            Return a JSON object with this exact shape:
+            {
+              "offTopicDays": [
+                {
+                  "dayNumber": 3,
+                  "reason": "Teaches competitive programming two-pointers instead of PyTorch or Machine Learning"
+                }
+              ]
+            }
+            If all tasks are on-topic and appropriate prerequisites for %s, return: { "offTopicDays": [] }
+            """,
+                request.getTopic(),
+                request.getDescription() != null ? request.getDescription() : "",
+                taskSummary,
+                request.getTopic()
+        );
+
+        try {
+            String rawJson = geminiTestService.askGeminiJson(reviewerPrompt);
+            JsonNode root = objectMapper.readTree(extractJson(rawJson));
+            JsonNode daysNode = root.get("offTopicDays");
+            if (daysNode != null && daysNode.isArray()) {
+                for (JsonNode item : daysNode) {
+                    if (item.hasNonNull("dayNumber")) {
+                        int dNum = item.get("dayNumber").asInt();
+                        String reason = item.hasNonNull("reason") ? item.get("reason").asText() : "Off-topic content";
+                        offTopicDays.add(String.format("Day %d is off-topic for %s: %s", dNum, request.getTopic(), reason));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("AI relevance reviewer encountered an issue (skipping review, proceeding with structural validation): {}", e.getMessage());
+        }
+
+        return offTopicDays;
     }
 
     public String buildPrompt(RoadmapRequest request) {
@@ -150,68 +274,24 @@ public class RoadmapService {
         String skillLevelGuidance = switch (request.getSkillLevel()) {
             case BEGINNER -> """
                 - Tailor for a BEGINNER:
-                  - Start from the ground up, assuming minimal prerequisite knowledge.
-                  - Break complex ideas into bite-sized analogies and concrete syntax examples.
-                  - Emphasize foundational mental models, prerequisite validation, and confidence-building practical exercises.
+                  - Start directly with foundational prerequisites strictly specific to this subject.
+                  - Break ideas into concrete syntax and working minimal examples.
+                  - Build confidence with scaffolded, guided hands-on exercises.
                 """;
             case INTERMEDIATE -> """
                 - Tailor for an INTERMEDIATE learner:
-                  - Skip introductory syntax and basics; assume familiar fundamentals.
-                  - Focus directly on architecture, design patterns, testing, performance, error-handling, and enterprise-grade integration.
-                  - Include realistic full-stack or end-to-end mini-projects.
+                  - Bypass elementary programming syntax; assume baseline fluency in the target language.
+                  - Focus directly on architecture, patterns, testing, performance, error handling, and realistic integration.
                 """;
             case ADVANCED -> """
                 - Tailor for an ADVANCED practitioner:
-                  - Fast-track or bypass common patterns; focus on internal mechanisms, high concurrency, distributed systems, deep profiling, and edge-case resiliency.
+                  - Focus on internal engine mechanisms, high concurrency, profiling, optimization, and edge-case resiliency.
                   - Real-world production architectures and rigorous benchmark-driven challenges.
                 """;
         };
 
-        StringBuilder personalizationDetails = new StringBuilder();
-        if (request.getSpecificTopics() != null && !request.getSpecificTopics().isBlank()) {
-            personalizationDetails.append("- Focus Areas / Specific Topics requested: ")
-                    .append(request.getSpecificTopics().trim()).append("\n");
-        }
-        if (request.getTargetOutcomes() != null && !request.getTargetOutcomes().isBlank()) {
-            personalizationDetails.append("- Desired Target Outcomes: ")
-                    .append(request.getTargetOutcomes().trim()).append("\n");
-        }
-        if (request.getPriorKnowledge() != null && !request.getPriorKnowledge().isBlank()) {
-            personalizationDetails.append("- Existing Student Background / Prior Knowledge: ")
-                    .append(request.getPriorKnowledge().trim())
-                    .append(" (Skip redundant basics already mastered!)\n");
-        }
-
-        // Incorporate Student Profile preferences & context
-        if (profile != null) {
-            personalizationDetails.append("\n[STUDENT LEARNING PROFILE & PREFERENCES]\n");
-            if (profile.getCareerGoal() != null && !profile.getCareerGoal().isBlank()) {
-                personalizationDetails.append("- Career Goal: ").append(profile.getCareerGoal().trim()).append("\n");
-            }
-            if (profile.getEducationLevel() != null && !profile.getEducationLevel().isBlank()) {
-                personalizationDetails.append("- Academic Background: ").append(profile.getEducationLevel().trim());
-                if (profile.getAcademicBackground() != null && !profile.getAcademicBackground().isBlank()) {
-                    personalizationDetails.append(" (").append(profile.getAcademicBackground().trim()).append(")");
-                }
-                personalizationDetails.append("\n");
-            }
-            if (profile.getExplanationStyle() != null && !profile.getExplanationStyle().isBlank()) {
-                personalizationDetails.append("- Preferred Explanation Style: ").append(profile.getExplanationStyle().trim())
-                        .append(" (Ensure explanations match this pedagogy)\n");
-            }
-            if (profile.getPracticeStyle() != null && !profile.getPracticeStyle().isBlank()) {
-                personalizationDetails.append("- Preferred Practice Style: ").append(profile.getPracticeStyle().trim())
-                        .append(" (Tailor daily exercises to this format)\n");
-            }
-            if (profile.getLearningMethods() != null && !profile.getLearningMethods().isBlank()) {
-                personalizationDetails.append("- Preferred Learning Formats: ").append(profile.getLearningMethods().trim()).append("\n");
-            }
-            if (profile.getAdditionalContext() != null && !profile.getAdditionalContext().isBlank()) {
-                personalizationDetails.append("- Student AI Tutor Notes: ").append(profile.getAdditionalContext().trim()).append("\n");
-            }
-        }
-
-        // Incorporate Student Topic Knowledge
+        // Knowledge-aware pedagogical constraints (ONLY rated_by_user topics)
+        StringBuilder knowledgeConstraints = new StringBuilder();
         if (studentSkills != null && !studentSkills.isEmpty()) {
             List<String> mastered = new ArrayList<>();
             List<String> intermediate = new ArrayList<>();
@@ -219,6 +299,9 @@ public class RoadmapService {
             List<String> unlearned = new ArrayList<>();
 
             for (StudentTopicKnowledge k : studentSkills) {
+                if (k == null || Boolean.FALSE.equals(k.getRatedByUser())) {
+                    continue;
+                }
                 switch (k.getKnowledgeLevel()) {
                     case MASTERED -> mastered.add(k.getTopicName());
                     case INTERMEDIATE -> intermediate.add(k.getTopicName());
@@ -227,77 +310,98 @@ public class RoadmapService {
                 }
             }
 
-            personalizationDetails.append("\n[KNOWLEDGE-AWARE PEDAGOGICAL CONSTRAINTS]\n");
-            if (!mastered.isEmpty()) {
-                personalizationDetails.append("- ALREADY MASTERED: ").append(String.join(", ", mastered))
-                        .append("\n  * RULE: Strictly exclude basic tutorials on these topics! Only include a rapid verification test or prerequisite checkpoint if essential.\n");
-            }
-            if (!intermediate.isEmpty()) {
-                personalizationDetails.append("- INTERMEDIATE / REVISION NEEDED: ").append(String.join(", ", intermediate))
-                        .append("\n  * RULE: Fast-track intro syntax; focus on rigorous practice, edge cases, and realistic problem-solving.\n");
-            }
-            if (!beginner.isEmpty()) {
-                personalizationDetails.append("- BEGINNER / FOUNDATIONS IN PROGRESS: ").append(String.join(", ", beginner))
-                        .append("\n  * RULE: Provide structured explanation, scaffolded examples, and guided practice exercises.\n");
-            }
-            if (!unlearned.isEmpty()) {
-                personalizationDetails.append("- UNFAMILIAR / NOT YET LEARNED: ").append(String.join(", ", unlearned))
-                        .append("\n  * RULE: Build solid intuition from scratch with clear conceptual breakdown before assigning problems.\n");
+            if (!mastered.isEmpty() || !intermediate.isEmpty() || !beginner.isEmpty() || !unlearned.isEmpty()) {
+                knowledgeConstraints.append("\n[KNOWLEDGE-AWARE CONSTRAINTS]\n");
+                if (!mastered.isEmpty()) {
+                    knowledgeConstraints.append("- ALREADY MASTERED: ").append(String.join(", ", mastered))
+                            .append("\n  * RULE: Strictly exclude basic tutorials on these topics; fast-track to advanced integration.\n");
+                }
+                if (!intermediate.isEmpty()) {
+                    knowledgeConstraints.append("- INTERMEDIATE / FAMILIAR: ").append(String.join(", ", intermediate))
+                            .append("\n  * RULE: Skip intro syntax; focus on rigorous practice and edge cases.\n");
+                }
+                if (!beginner.isEmpty()) {
+                    knowledgeConstraints.append("- BEGINNER / FOUNDATIONS IN PROGRESS: ").append(String.join(", ", beginner))
+                            .append("\n  * RULE: Provide structured explanation and scaffolded exercises.\n");
+                }
+                if (!unlearned.isEmpty()) {
+                    knowledgeConstraints.append("- UNFAMILIAR: ").append(String.join(", ", unlearned))
+                            .append("\n  * RULE: Introduce briefly, only as far as needed for the goal.\n");
+                }
             }
         }
 
-        String feasibilityGuidance;
-        if (totalHours < 12.0) {
-            feasibilityGuidance = String.format(
-                "NOTE ON TIME CONSTRAINT: Available time is very tight (%.1f total hours across %d days). " +
-                "Do NOT overwhelm the student with 30 broad topics. Strictly prioritize the 3-5 highest-leverage essentials. " +
-                "Include a clear, candid 'feasibilityNote' explaining what is achievable within this timeframe and what should be deferred.",
-                totalHours, request.getTargetDays()
-            );
-        } else {
-            feasibilityGuidance = String.format(
-                "Available study budget is %.1f total hours across %d days (approx %d daily minutes). " +
-                "Distribute topics, daily tasks, and exercises comprehensively across this duration.",
-                totalHours, request.getTargetDays(), dailyMinutes
-            );
+        // Student learning preferences (FORMAT ONLY)
+        StringBuilder profilePreferences = new StringBuilder();
+        if (profile != null) {
+            profilePreferences.append("\n[STUDENT FORMAT & PEDAGOGY PREFERENCES]\n");
+            profilePreferences.append("CRITICAL RULE ON PREFERENCES: Learning preferences and practice styles only modify the FORMAT of tasks, never the subject itself. " +
+                    "For example, if the goal is Machine Learning and the practice style is Algorithmic Challenges, practice tasks MUST be ML/Python exercises (e.g., vectorized tensor manipulations or loss calculations), NEVER general data-structure or LeetCode interview puzzles unless the goal itself is about them.\n");
+
+            if (profile.getCareerGoal() != null && !profile.getCareerGoal().isBlank()) {
+                profilePreferences.append("- Target Career Trajectory: ").append(profile.getCareerGoal().trim()).append("\n");
+            }
+            if (profile.getExplanationStyle() != null && !profile.getExplanationStyle().isBlank()) {
+                profilePreferences.append("- Explanation Format: ").append(profile.getExplanationStyle().trim()).append("\n");
+            }
+            if (profile.getPracticeStyle() != null && !profile.getPracticeStyle().isBlank()) {
+                profilePreferences.append("- Practice Task Format: ").append(profile.getPracticeStyle().trim()).append("\n");
+            }
+            if (profile.getLearningMethods() != null && !profile.getLearningMethods().isBlank()) {
+                profilePreferences.append("- Delivery Media: ").append(profile.getLearningMethods().trim()).append("\n");
+            }
         }
 
         return String.format("""
-            You are a world-class curriculum architect and AI tutor.
-            Design a comprehensive, realistic, and highly personalized learning roadmap for this student:
+            You are a curriculum architect and AI tutor.
+            Design a comprehensive, realistic, and personalized learning roadmap strictly for this student:
 
-            [STUDENT PROFILE]
-            - Topic: %s
+            [SUBJECT & CURRICULUM GOAL - PRIMARY DIRECTIVE]
+            Everything in this roadmap MUST serve this specific subject.
+            - Goal Topic: %s
             - Description / Objective: %s
-            - Skill Level: %s
+            - Target Skill Level: %s
             - Target Duration: %d days (approx %d weeks)
             - Daily Commitment: %.1f hours/day (%d minutes/day)
             - Total Available Study Time: %.1f hours
+            - Specific Topics Requested: %s
+            - Target Outcomes: %s
+            - Prior Knowledge / Baseline: %s
+
+            [PREREQUISITES & PHASE 1 RULE]
+            Phase 1 must contain ONLY the prerequisites actually needed for %s at the student's skill level. Do NOT inject generic programming foundations, generic data-structures, or LeetCode algorithms unless the goal itself is about them.
+            %s
             %s
             [PEDAGOGICAL STRATEGY]
             %s
-            %s
+
+            [CURRICULUM DIVERSITY & COMPOSITION RULES]
+            1. Total daily tasks across all phases combined MUST equal EXACTLY %d (1 task per day).
+            2. Allowed values for 'activityType' are strictly: STUDY, PRACTICE, PROJECT, REVIEW, CODING_PRACTICE, QUIZ, ASSESSMENT.
+            3. No single activityType may exceed 60%% of the total tasks (ensure a balanced mix of conceptual study, coding practice, review, and projects).
+            4. Include a REVIEW or ASSESSMENT day at least every 10 days.
+            5. The final phase must culminate in an end-to-end Capstone Project.
+            6. For each task, set 'estimatedMinutes' to a realistic value within the daily budget (range from 45 up to %d minutes). Total daily minutes must not exceed %d minutes.
 
             [JSON SCHEMA REQUIREMENT]
-            You MUST return a single, strictly valid JSON object. Do not include markdown code blocks, backticks, or outside text.
-            The JSON must conform to the following schema:
+            Return a single, strictly valid JSON object conforming exactly to this schema:
             {
               "overview": "2-3 sentences summarizing the curriculum trajectory and key capabilities the student will gain.",
               "feasibilityNote": "Honest assessment of curriculum feasibility within %.1f total hours and guidance on pacing.",
               "totalStudyHours": %.1f,
               "skillLevel": "%s",
               "prerequisites": [
-                "Prerequisite knowledge item 1",
-                "Prerequisite knowledge item 2"
+                "Prerequisite item 1",
+                "Prerequisite item 2"
               ],
               "phases": [
                 {
                   "phaseNumber": 1,
-                  "phaseTitle": "Phase 1: Clear Descriptive Title",
+                  "phaseTitle": "Phase 1: Descriptive Title",
                   "durationDays": 7,
-                  "topics": ["Core Topic 1", "Core Topic 2", "Core Topic 3"],
-                  "subtopics": ["Subtopic 1.1", "Subtopic 1.2", "Subtopic 2.1"],
-                  "milestones": ["Verifiable milestone 1", "Verifiable milestone 2"],
+                  "topics": ["Topic 1", "Topic 2"],
+                  "subtopics": ["Subtopic 1.1", "Subtopic 1.2"],
+                  "milestones": ["Verifiable milestone 1"],
                   "dailyTasks": [
                     {
                       "dayNumber": 1,
@@ -305,40 +409,37 @@ public class RoadmapService {
                       "description": "Specific study and practice instruction for this day",
                       "estimatedMinutes": %d,
                       "activityType": "STUDY",
-                      "learningObjectives": ["Clear learning objective 1", "Clear learning objective 2"],
-                      "subtopics": ["Granular subtopic 1", "Granular subtopic 2", "Granular subtopic 3"],
-                      "conceptExplanation": "Short 1-2 sentence core concept summary or key mental model",
-                      "practiceTasks": ["Actionable coding or hands-on practice step 1", "Practice step 2"],
-                      "quizQuestion": "Quick self-assessment check question on this daily concept"
+                      "learningObjectives": ["Objective 1", "Objective 2"],
+                      "subtopics": ["Subtopic 1", "Subtopic 2"],
+                      "conceptExplanation": "Short 1-2 sentence core concept summary",
+                      "practiceTasks": ["Actionable coding or hands-on practice step"],
+                      "quizQuestion": "Self-assessment check question"
                     }
                   ],
                   "practicalExercises": [
                     {
-                      "title": "Hands-on project or exercise title",
-                      "instructions": "Clear step-by-step guidance on what to build or code",
-                      "difficulty": "%s" // BEGINNER, INTERMEDIATE, ADVANCED
+                      "title": "Exercise title",
+                      "instructions": "Step-by-step guidance",
+                      "difficulty": "%s"
                     }
                   ],
                   "assessment": {
                     "title": "Phase Assessment Milestone",
-                    "type": "PROJECT", // Allowed: QUIZ, PROJECT, CODE_CHALLENGE
-                    "description": "What the student needs to solve or demonstrate to complete this phase",
-                    "passingCriteria": "Specific checklist to verify mastery"
+                    "type": "PROJECT",
+                    "description": "What to solve or demonstrate",
+                    "passingCriteria": "Verification checklist"
                   }
                 }
               ],
               "learningResources": [
                 {
-                  "title": "Authoritative Resource Name (e.g., Official Documentation, FreeCodeCamp)",
-                  "url": "https://valid-and-actual-resource-url.org",
-                  "type": "DOCUMENTATION", // Allowed: DOCUMENTATION, VIDEO, COURSE, BOOK, PRACTICE_PLATFORM
-                  "relevance": "Why this specific resource accelerates the learning for this topic",
-                  "isVerified": true
+                  "title": "Authoritative Resource Name",
+                  "url": "Optional documentation URL",
+                  "type": "DOCUMENTATION",
+                  "relevance": "Why this specific resource accelerates learning for this topic"
                 }
               ]
             }
-
-            Ensure all phases combined cover the full %d target days. Provide 4-6 high quality, realistic learning resources with real URLs.
             """,
                 request.getTopic(),
                 request.getDescription() != null && !request.getDescription().isBlank() ? request.getDescription() : "Mastery and practical application",
@@ -348,15 +449,21 @@ public class RoadmapService {
                 request.getHoursPerDay(),
                 dailyMinutes,
                 totalHours,
-                personalizationDetails,
+                request.getSpecificTopics() != null && !request.getSpecificTopics().isBlank() ? request.getSpecificTopics().trim() : "Comprehensive core topics",
+                request.getTargetOutcomes() != null && !request.getTargetOutcomes().isBlank() ? request.getTargetOutcomes().trim() : "Practical production mastery",
+                request.getPriorKnowledge() != null && !request.getPriorKnowledge().isBlank() ? request.getPriorKnowledge().trim() : "None stated",
+                request.getTopic(),
+                knowledgeConstraints,
+                profilePreferences,
                 skillLevelGuidance,
-                feasibilityGuidance,
-                totalHours,
-                totalHours,
-                request.getSkillLevel().name(),
+                request.getTargetDays(),
                 dailyMinutes,
+                dailyMinutes,
+                totalHours,
+                totalHours,
                 request.getSkillLevel().name(),
-                request.getTargetDays()
+                Math.min(dailyMinutes, 90),
+                request.getSkillLevel().name()
         );
     }
 
@@ -375,20 +482,23 @@ public class RoadmapService {
             response.setTotalStudyHours(totalHours);
         }
 
-        // Validate learning resources & sanitize URLs
+        // Sanitize learning resources against host allowlist
         if (response.getLearningResources() != null && !response.getLearningResources().isEmpty()) {
             for (ResourceItem r : response.getLearningResources()) {
+                r.setVerified(false); // New resources are always isVerified=false per Phase 2b spec
                 if (r.getUrl() != null && !r.getUrl().isBlank()) {
-                    boolean isValidUrl = isValidHttpUrl(r.getUrl());
-                    r.setVerified(isValidUrl);
+                    String cleanUrl = r.getUrl().trim();
+                    if (isAllowedUrl(cleanUrl)) {
+                        r.setUrl(cleanUrl);
+                    } else {
+                        r.setUrl(""); // Drop URL if not on allowlist or invalid
+                    }
                 } else {
                     r.setUrl("");
-                    r.setVerified(false);
                 }
             }
         }
 
-        // Ensure legacy resources list is populated
         if (response.getResources() == null || response.getResources().isEmpty()) {
             if (response.getLearningResources() != null && !response.getLearningResources().isEmpty()) {
                 List<String> legacyResources = response.getLearningResources().stream()
@@ -399,10 +509,28 @@ public class RoadmapService {
         }
     }
 
-    private boolean isValidHttpUrl(String url) {
+    public boolean isAllowedUrl(String url) {
+        if (url == null || url.isBlank()) return false;
         try {
             URI uri = URI.create(url.trim());
-            return "http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme());
+            String scheme = uri.getScheme();
+            if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
+                return false;
+            }
+            String host = uri.getHost();
+            if (host == null || host.isBlank()) {
+                return false;
+            }
+            host = host.toLowerCase();
+
+            for (String allowed : allowedHosts) {
+                String cleanAllowed = allowed.trim().toLowerCase();
+                if (cleanAllowed.isEmpty()) continue;
+                if (host.equals(cleanAllowed) || host.endsWith("." + cleanAllowed)) {
+                    return true;
+                }
+            }
+            return false;
         } catch (Exception e) {
             return false;
         }

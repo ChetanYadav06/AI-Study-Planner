@@ -1115,36 +1115,56 @@ export const InteractiveRoadmap = ({
               <h2 className="text-base sm:text-lg font-bold text-slate-900">Curated Learning Resources</h2>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Verified documentation and code sandboxes curated specifically for this curriculum.
+              Documentation and code sandboxes curated specifically for this curriculum.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
-            {roadmap.learningResources.map((res, rIdx) => (
-              <a
-                key={rIdx}
-                href={res.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-4 rounded-2xl border border-slate-200 hover:border-teal-400 bg-slate-50/50 hover:bg-white transition-all flex flex-col justify-between group shadow-2xs"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200/60 uppercase">
-                      {res.type || 'DOCUMENTATION'}
-                    </span>
-                    <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-600 transition" />
+            {roadmap.learningResources.map((res, rIdx) => {
+              const hasUrl = Boolean(res.url && res.url.trim());
+              const cardContent = (
+                <>
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200/60 uppercase">
+                        {res.type || 'DOCUMENTATION'}
+                      </span>
+                      {hasUrl && (
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-600 transition" />
+                      )}
+                    </div>
+                    <h3 className="text-xs md:text-sm font-bold text-slate-900 mt-2">{res.title}</h3>
+                    {res.relevance && (
+                      <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">{res.relevance}</p>
+                    )}
                   </div>
-                  <h3 className="text-xs md:text-sm font-bold text-slate-900 mt-2">{res.title}</h3>
-                  {res.relevance && (
-                    <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">{res.relevance}</p>
+                  {hasUrl && (
+                    <div className="mt-3 text-[10px] text-teal-600 font-bold flex items-center space-x-1 truncate">
+                      <span>Open resource ↗</span>
+                    </div>
                   )}
+                </>
+              );
+
+              return hasUrl ? (
+                <a
+                  key={rIdx}
+                  href={res.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-4 rounded-2xl border border-slate-200 hover:border-teal-400 bg-slate-50/50 hover:bg-white transition-all flex flex-col justify-between group shadow-2xs"
+                >
+                  {cardContent}
+                </a>
+              ) : (
+                <div
+                  key={rIdx}
+                  className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between shadow-2xs"
+                >
+                  {cardContent}
                 </div>
-                <div className="mt-3 text-[10px] text-teal-600 font-bold flex items-center space-x-1 truncate">
-                  <span>Visit resource ↗</span>
-                </div>
-              </a>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
