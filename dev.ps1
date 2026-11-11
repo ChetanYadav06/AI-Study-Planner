@@ -1,4 +1,4 @@
-# ============================================================
+﻿# ============================================================
 #  AI Study Planner — One-Command Dev Launcher
 #  Usage: .\dev.ps1
 #         .\dev.ps1 -SkipMysql    (if MySQL is already running)
@@ -28,6 +28,38 @@ function Wait-Port($port, $timeoutSec = 30) {
         Start-Sleep -Milliseconds 500
     }
     return $false
+}
+
+# ── 0. Environment Setup ─────────────────────────────────────
+$envFile = Join-Path $Root ".env"
+if (Test-Path $envFile) {
+    Get-Content $envFile | ForEach-Object {
+        $line = $_.Trim()
+        if ($line -and -not $line.StartsWith("#") -and ($line -match '^\s*([A-Za-z_0-9]+)\s*=\s*(.*)$')) {
+            $name = $matches[1]
+            $val = $matches[2].Trim(' "''')
+            if (-not [Environment]::GetEnvironmentVariable($name, 'Process')) {
+                [Environment]::SetEnvironmentVariable($name, $val, 'Process')
+            }
+        }
+    }
+}
+
+if (-not $env:JWT_SECRET) {
+    $userJwt = [Environment]::GetEnvironmentVariable('JWT_SECRET', 'User')
+    if (-not $userJwt) {
+        $userJwt = [Environment]::GetEnvironmentVariable('JWT_SECRET', 'Machine')
+    }
+    if ($userJwt) {
+        $env:JWT_SECRET = $userJwt
+    } else {
+        $genSecret = [guid]::NewGuid().ToString('N') + [guid]::NewGuid().ToString('N')
+        $env:JWT_SECRET = $genSecret
+        try {
+            [Environment]::SetEnvironmentVariable('JWT_SECRET', $genSecret, 'User')
+            Add-Content -Path $envFile -Value "JWT_SECRET=$genSecret" -ErrorAction SilentlyContinue
+        } catch {}
+    }
 }
 
 # ── 1. MySQL ─────────────────────────────────────────────────
@@ -65,9 +97,18 @@ if (-not $SkipMysql) {
 # ── 2. Backend (Spring Boot) ──────────────────────────────────
 Write-Step "Starting Spring Boot backend (port 8080)..."
 $backendDir = Join-Path $Root "backend"
+$backendCmd = "`$env:JWT_SECRET='$($env:JWT_SECRET)'; cd '$backendDir'; mvn spring-boot:run"
 Start-Process powershell `
-    -ArgumentList "-NoExit", "-Command", "cd '$backendDir'; mvn spring-boot:run" `
+    -ArgumentList "-NoExit", "-Command", $backendCmd `
     -WindowStyle Normal
+
+Write-Host "   Waiting for Spring Boot to accept connections on port 8080..." -ForegroundColor DarkGray
+$backendReady = Wait-Port 8080 -timeoutSec 45
+if ($backendReady) {
+    Write-Ok "Backend is ready on port 8080."
+} else {
+    Write-Warn "Backend did not respond within 45 s. Check the backend PowerShell window for startup errors."
+}
 
 # ── 3. Frontend (Vite) ────────────────────────────────────────
 Write-Step "Starting Vite frontend (port 5173)..."
