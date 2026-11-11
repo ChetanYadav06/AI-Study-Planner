@@ -126,6 +126,17 @@ export const deleteSavedRoadmap = async (id) => {
   return response.data;
 };
 
+// Resources API
+export const getResources = async () => {
+  const response = await api.get('/resources');
+  return response.data;
+};
+
+export const checkResourceLinks = async (urls) => {
+  const response = await api.post('/resources/check', { urls });
+  return response.data;
+};
+
 // Goals API
 export const getGoals = async () => {
   const response = await api.get('/goals');
