@@ -180,6 +180,17 @@ export const generateRoadmap = async (data) => {
   return response.data;
 };
 
+// Progress & Weekly Review API
+export const getProgressOverview = async (tz = 'UTC') => {
+  const response = await api.get('/progress/overview', { params: { tz } });
+  return response.data;
+};
+
+export const getWeeklyReview = async (tz = 'UTC') => {
+  const response = await api.get('/progress/weekly-review', { params: { tz } });
+  return response.data;
+};
+
 // Task Feedback API
 export const submitTaskFeedback = async (roadmapId, taskId, rating) => {
   const response = await api.put(`/ai/roadmaps/${roadmapId}/tasks/${taskId}/feedback`, { rating });
