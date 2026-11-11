@@ -322,7 +322,7 @@ export const ProgressView = () => {
         ) : (
           <EmptyState
             title="No goals tracked yet"
-            description="Create a learning goal to track your curriculum milestones."
+            description="Create a learning goal to track your milestone progress."
           />
         )}
       </Card>

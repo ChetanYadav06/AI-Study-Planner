@@ -497,7 +497,7 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
               <div className="py-6 text-center text-muted">
                 <CheckCircle2 className="w-6 h-6 text-success mx-auto mb-1" />
                 <p className="text-xs font-medium text-ink">All tasks completed</p>
-                <p className="text-xs text-muted mt-0.5">Explore new roadmap curricula in the Studio.</p>
+                <p className="text-xs text-muted mt-0.5">Explore new roadmap topics in your learning plans.</p>
               </div>
             )}
           </Card>
