@@ -180,4 +180,10 @@ export const generateRoadmap = async (data) => {
   return response.data;
 };
 
+// Task Feedback API
+export const submitTaskFeedback = async (roadmapId, taskId, rating) => {
+  const response = await api.put(`/ai/roadmaps/${roadmapId}/tasks/${taskId}/feedback`, { rating });
+  return response.data;
+};
+
 export default api;

@@ -31,7 +31,7 @@ public class GeminiTestService {
 
     public GeminiTestService(
             @Value("${gemini.api.key:}") String apiKey,
-            @Value("${gemini.api.models:${gemini.api.model:gemini-2.0-flash,gemini-1.5-flash,gemini-flash-lite-latest}}") String modelsConfig) {
+            @Value("${gemini.api.models:${gemini.api.model:gemini-3.5-flash-lite,gemini-flash-lite-latest}}") String modelsConfig) {
 
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(10));

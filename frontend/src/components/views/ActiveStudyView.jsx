@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Play, Pause, RotateCcw, CheckCircle2, Clock, FileText, Check } from 'lucide-react';
-import { getSavedRoadmaps, updateRoadmapProgress, createStudySession } from '../../services/api';
+import { getSavedRoadmaps, updateRoadmapProgress, createStudySession, submitTaskFeedback } from '../../services/api';
 import { computeStudyQueue } from '../../utils/studyQueue';
 import { formatEnum } from '../../utils/formatters';
 import { PageHeader, Card, Button } from '../ui';
@@ -16,6 +16,8 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
   const [loading, setLoading] = useState(true);
   const [markingDone, setMarkingDone] = useState(false);
   const [sessionSavedMsg, setSessionSavedMsg] = useState(null);
+  const [justCompletedTask, setJustCompletedTask] = useState(null); // { roadmapId, taskId, title }
+  const [feedbackRecorded, setFeedbackRecorded] = useState(false);
 
   // Retrieve current user ID from localStorage for isolated user timer & notes
   const currentUserId = useMemo(() => {
@@ -262,6 +264,9 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
   const handleMarkTaskComplete = async () => {
     if (!activeRoadmap || !currentTask) return;
     setMarkingDone(true);
+    const completedTaskId = currentTask.taskId;
+    const completedTaskTitle = currentTask.task.title;
+    const roadmapId = activeRoadmap.id;
     try {
       const currentCompleted = activeRoadmap.completedTasksJson
         ? JSON.parse(activeRoadmap.completedTasksJson)
@@ -277,13 +282,31 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
         progressPercentage: activeRoadmap.progressPercentage || 0
       });
 
+      setJustCompletedTask({ roadmapId, taskId: completedTaskId, title: completedTaskTitle });
+      setFeedbackRecorded(false);
+
       await loadRoadmaps();
-      setSessionSavedMsg(`Completed "${currentTask.task.title}". Next task queued.`);
+      setSessionSavedMsg(`Completed "${completedTaskTitle}". Next task queued.`);
       setTimeout(() => setSessionSavedMsg(null), 4000);
     } catch (err) {
       console.error('Failed to mark task complete:', err);
     } finally {
       setMarkingDone(false);
+    }
+  };
+
+  const handleRateTask = async (rating) => {
+    if (!justCompletedTask) return;
+    try {
+      await submitTaskFeedback(justCompletedTask.roadmapId, justCompletedTask.taskId, rating);
+      setFeedbackRecorded(true);
+      setTimeout(() => {
+        setJustCompletedTask(null);
+        setFeedbackRecorded(false);
+      }, 2500);
+    } catch (err) {
+      console.error('Failed to submit feedback:', err);
+      setJustCompletedTask(null);
     }
   };
 
@@ -427,6 +450,48 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
                     {markingDone ? 'Saving...' : 'Mark Task Complete'}
                   </Button>
                 </div>
+
+                {justCompletedTask && !feedbackRecorded && (
+                  <div className="mt-3 p-2.5 rounded-md bg-page border border-line flex items-center justify-between text-xs">
+                    <span className="text-muted">How was this task?</span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleRateTask('EASY')}
+                        className="px-2 py-0.5 rounded border border-line bg-white hover:border-slate-300 text-ink cursor-pointer"
+                      >
+                        Easy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRateTask('OK')}
+                        className="px-2 py-0.5 rounded border border-line bg-white hover:border-slate-300 text-ink cursor-pointer"
+                      >
+                        OK
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRateTask('HARD')}
+                        className="px-2 py-0.5 rounded border border-line bg-white hover:border-slate-300 text-ink cursor-pointer"
+                      >
+                        Hard
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setJustCompletedTask(null)}
+                        className="text-muted hover:text-ink cursor-pointer ml-1"
+                      >
+                        Skip
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {feedbackRecorded && (
+                  <div className="mt-2 text-xs px-2.5 py-1 text-accent bg-accent-soft rounded border border-accent/20">
+                    Feedback saved.
+                  </div>
+                )}
               </div>
             ) : (
               <div className="py-6 text-center text-muted">

@@ -23,7 +23,8 @@ import {
   getSavedRoadmaps,
   updateRoadmapProgress,
   getStudySessionsSummary,
-  getStudentProfile
+  getStudentProfile,
+  submitTaskFeedback
 } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { CreateGoalModal } from '../goals/CreateGoalModal';
@@ -51,6 +52,8 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
   const [selectedGoalForRoadmap, setSelectedGoalForRoadmap] = useState(null);
   const [actionMessage, setActionMessage] = useState(null);
   const [selectedDay, setSelectedDay] = useState(new Date().getDay());
+  const [taskFeedbackPrompt, setTaskFeedbackPrompt] = useState(null); // { taskId, title }
+  const [feedbackSavedTaskId, setFeedbackSavedTaskId] = useState(null);
 
   const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const shortDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -268,9 +271,10 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
       const currentCompleted = primaryRoadmap.completedTasksJson
         ? JSON.parse(primaryRoadmap.completedTasksJson)
         : [];
-      const updated = currentCompleted.includes(taskItem.taskId)
-        ? currentCompleted.filter(id => id !== taskItem.taskId)
-        : [...currentCompleted, taskItem.taskId];
+      const isNowCompleting = !currentCompleted.includes(taskItem.taskId);
+      const updated = isNowCompleting
+        ? [...currentCompleted, taskItem.taskId]
+        : currentCompleted.filter(id => id !== taskItem.taskId);
 
       await updateRoadmapProgress(primaryRoadmap.id, {
         completedTasksJson: JSON.stringify(updated),
@@ -278,11 +282,31 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
         progressPercentage: primaryRoadmap.progressPercentage || 0
       });
 
+      if (isNowCompleting) {
+        setTaskFeedbackPrompt({ taskId: taskItem.taskId, title: taskItem.task.title });
+      } else if (taskFeedbackPrompt?.taskId === taskItem.taskId) {
+        setTaskFeedbackPrompt(null);
+      }
+
       await loadDashboardData();
       setActionMessage(`Updated task "${taskItem.task.title}".`);
       setTimeout(() => setActionMessage(null), 3000);
     } catch (err) {
       console.error('Failed to toggle task:', err);
+    }
+  };
+
+  const handleRateTask = async (taskId, rating) => {
+    if (!primaryRoadmap) return;
+    try {
+      await submitTaskFeedback(primaryRoadmap.id, taskId, rating);
+      setFeedbackSavedTaskId(taskId);
+      setTaskFeedbackPrompt(null);
+      setTimeout(() => setFeedbackSavedTaskId(null), 3000);
+    } catch (err) {
+      // Non-blocking, fails gracefully
+      console.error('Failed to submit task feedback:', err);
+      setTaskFeedbackPrompt(null);
     }
   };
 
@@ -669,89 +693,133 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
               )}
 
               {selectedDayTasks.map((item) => (
-                <div
-                  key={item.taskId}
-                  className={`p-4 rounded-md border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                    item.isDone
-                      ? 'border-line bg-page/60 text-muted'
-                      : 'border-line bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-start gap-3.5 min-w-0">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleTask(item)}
-                      className={`w-5 h-5 rounded-sm border flex items-center justify-center transition-colors duration-150 cursor-pointer shrink-0 mt-0.5 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
-                        item.isDone
-                          ? 'bg-accent border-accent text-white'
-                          : 'border-line bg-white hover:border-accent'
-                      }`}
-                      title={item.isDone ? 'Mark incomplete' : 'Mark done'}
-                      aria-label={item.isDone ? 'Mark task incomplete' : 'Mark task complete'}
-                    >
-                      {item.isDone && <Check className="w-3.5 h-3.5 stroke-2" />}
-                    </button>
+                <div key={item.taskId} className="space-y-2">
+                  <div
+                    className={`p-4 rounded-md border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                      item.isDone
+                        ? 'border-line bg-page/60 text-muted'
+                        : 'border-line bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3.5 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleTask(item)}
+                        className={`w-5 h-5 rounded-sm border flex items-center justify-center transition-colors duration-150 cursor-pointer shrink-0 mt-0.5 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
+                          item.isDone
+                            ? 'bg-accent border-accent text-white'
+                            : 'border-line bg-white hover:border-accent'
+                        }`}
+                        title={item.isDone ? 'Mark incomplete' : 'Mark done'}
+                        aria-label={item.isDone ? 'Mark task incomplete' : 'Mark task complete'}
+                      >
+                        {item.isDone && <Check className="w-3.5 h-3.5 stroke-2" />}
+                      </button>
 
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className={`text-xs font-semibold ${item.isDone ? 'line-through text-muted' : 'text-ink'}`}>
-                          {item.task.title}
-                        </span>
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-accent-soft text-accent border border-accent/20">
-                          {formatEnum(item.task.activityType || 'Study')}
-                        </span>
-                        <span className="text-xs text-muted flex items-center gap-1 font-mono">
-                          <Clock className="w-3 h-3" />
-                          <span>{item.estimatedMinutes} min</span>
-                        </span>
-                        <span className="text-xs text-muted">
-                          • {item.phaseTitle}
-                        </span>
-                      </div>
-
-                      {item.task.description && (
-                        <p className={`text-xs leading-relaxed ${item.isDone ? 'text-muted/80' : 'text-muted'}`}>
-                          {item.task.description}
-                        </p>
-                      )}
-
-                      {/* Subtopics and Learning Objectives Chips */}
-                      {((item.task.subtopics && item.task.subtopics.length > 0) || (item.task.learningObjectives && item.task.learningObjectives.length > 0)) && (
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {item.task.subtopics?.map((sub, sIdx) => (
-                            <span key={`sub-${sIdx}`} className="text-xs px-1.5 py-0.5 rounded bg-page text-muted border border-line">
-                              {sub}
-                            </span>
-                          ))}
-                          {item.task.learningObjectives?.map((obj, oIdx) => (
-                            <span key={`obj-${oIdx}`} className="text-xs px-1.5 py-0.5 rounded bg-page text-ink border border-line">
-                              Goal: {obj}
-                            </span>
-                          ))}
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`text-xs font-semibold ${item.isDone ? 'line-through text-muted' : 'text-ink'}`}>
+                            {item.task.title}
+                          </span>
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-accent-soft text-accent border border-accent/20">
+                            {formatEnum(item.task.activityType || 'Study')}
+                          </span>
+                          <span className="text-xs text-muted flex items-center gap-1 font-mono">
+                            <Clock className="w-3 h-3" />
+                            <span>{item.estimatedMinutes} min</span>
+                          </span>
+                          <span className="text-xs text-muted">
+                            • {item.phaseTitle}
+                          </span>
                         </div>
+
+                        {item.task.description && (
+                          <p className={`text-xs leading-relaxed ${item.isDone ? 'text-muted/80' : 'text-muted'}`}>
+                            {item.task.description}
+                          </p>
+                        )}
+
+                        {/* Subtopics and Learning Objectives Chips */}
+                        {((item.task.subtopics && item.task.subtopics.length > 0) || (item.task.learningObjectives && item.task.learningObjectives.length > 0)) && (
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {item.task.subtopics?.map((sub, sIdx) => (
+                              <span key={`sub-${sIdx}`} className="text-xs px-1.5 py-0.5 rounded bg-page text-muted border border-line">
+                                {sub}
+                              </span>
+                            ))}
+                            {item.task.learningObjectives?.map((obj, oIdx) => (
+                              <span key={`obj-${oIdx}`} className="text-xs px-1.5 py-0.5 rounded bg-page text-ink border border-line">
+                                Goal: {obj}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                      <button
+                        type="button"
+                        onClick={() => onNavigateTab && onNavigateTab('active-study')}
+                        className="text-xs font-medium text-accent hover:underline cursor-pointer px-2.5 py-1.5 rounded-sm border border-accent/20 hover:bg-accent-soft transition"
+                      >
+                        Start Focus
+                      </button>
+                      {primaryRoadmap && (
+                        <button
+                          type="button"
+                          onClick={() => onNavigateRoadmap && onNavigateRoadmap(primaryRoadmap)}
+                          className="p-1.5 rounded-sm border border-line hover:border-slate-300 text-muted hover:text-ink transition cursor-pointer"
+                          title="View in full roadmap"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                    <button
-                      type="button"
-                      onClick={() => onNavigateTab && onNavigateTab('active-study')}
-                      className="text-xs font-medium text-accent hover:underline cursor-pointer px-2.5 py-1.5 rounded-sm border border-accent/20 hover:bg-accent-soft transition"
-                    >
-                      Start Focus
-                    </button>
-                    {primaryRoadmap && (
-                      <button
-                        type="button"
-                        onClick={() => onNavigateRoadmap && onNavigateRoadmap(primaryRoadmap)}
-                        className="p-1.5 rounded-sm border border-line hover:border-slate-300 text-muted hover:text-ink transition cursor-pointer"
-                        title="View in full roadmap"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
+                  {/* Optional Inline Feedback Prompt */}
+                  {taskFeedbackPrompt?.taskId === item.taskId && (
+                    <div className="flex items-center justify-between text-xs px-3 py-2 bg-page border border-line rounded-md">
+                      <span className="text-muted">How was this task?</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleRateTask(item.taskId, 'EASY')}
+                          className="px-2 py-0.5 text-xs font-medium rounded border border-line bg-white hover:border-slate-300 text-ink cursor-pointer"
+                        >
+                          Easy
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRateTask(item.taskId, 'OK')}
+                          className="px-2 py-0.5 text-xs font-medium rounded border border-line bg-white hover:border-slate-300 text-ink cursor-pointer"
+                        >
+                          OK
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRateTask(item.taskId, 'HARD')}
+                          className="px-2 py-0.5 text-xs font-medium rounded border border-line bg-white hover:border-slate-300 text-ink cursor-pointer"
+                        >
+                          Hard
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTaskFeedbackPrompt(null)}
+                          className="text-xs text-muted hover:text-ink cursor-pointer ml-1"
+                        >
+                          Skip
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {feedbackSavedTaskId === item.taskId && (
+                    <div className="text-xs px-3 py-1 text-accent bg-accent-soft rounded border border-accent/20">
+                      Feedback recorded.
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
