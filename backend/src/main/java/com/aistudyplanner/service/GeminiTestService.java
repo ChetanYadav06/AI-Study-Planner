@@ -3,6 +3,7 @@ package com.aistudyplanner.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import org.springframework.web.client.RestClient;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -29,22 +31,37 @@ public class GeminiTestService {
     private final String apiKey;
     private final List<String> configuredModels;
 
+    @Autowired
     public GeminiTestService(
             @Value("${gemini.api.key:}") String apiKey,
-            @Value("${gemini.api.models:${gemini.api.model:gemini-3.5-flash-lite,gemini-flash-lite-latest}}") String modelsConfig) {
+            @Value("${gemini.api.models:gemini-3.5-flash-lite,gemini-2.5-flash,gemini-flash-lite-latest}") String modelsConfig) {
+        this(
+            apiKey,
+            modelsConfig,
+            RestClient.builder()
+                .requestFactory(createDefaultRequestFactory())
+                .build()
+        );
+    }
 
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(Duration.ofSeconds(10));
-        requestFactory.setReadTimeout(Duration.ofSeconds(35));
-
-        this.restClient      = RestClient.builder()
-                .requestFactory(requestFactory)
-                .build();
-        this.apiKey          = apiKey;
+    public GeminiTestService(String apiKey, String modelsConfig, RestClient restClient) {
+        this.apiKey = apiKey;
+        this.restClient = restClient;
         this.configuredModels = Arrays.stream(modelsConfig.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .toList();
+    }
+
+    private static SimpleClientHttpRequestFactory createDefaultRequestFactory() {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(10));
+        requestFactory.setReadTimeout(Duration.ofSeconds(35));
+        return requestFactory;
+    }
+
+    public List<String> getConfiguredModels() {
+        return Collections.unmodifiableList(configuredModels);
     }
 
     public String askGemini(String prompt) {
