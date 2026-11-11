@@ -77,7 +77,7 @@ const AppContent = () => {
         />
 
         {/* Content View Canvas */}
-        <main className={`flex-1 p-4 sm:p-6 md:p-8 min-w-0 overflow-y-auto ${!isAuthenticated ? 'flex flex-col' : ''}`}>
+        <main className={`flex-1 min-w-0 overflow-y-auto ${!isAuthenticated ? 'flex flex-col justify-center items-center p-0' : 'p-4 sm:p-6 md:p-8'}`}>
           {activeTab === 'dashboard' && (
             isAuthenticated ? (
               <StudentDashboard
