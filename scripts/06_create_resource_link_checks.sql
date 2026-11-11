@@ -20,3 +20,4 @@ CREATE TABLE IF NOT EXISTS `resource_link_checks` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_resource_link_hash` (`url_hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

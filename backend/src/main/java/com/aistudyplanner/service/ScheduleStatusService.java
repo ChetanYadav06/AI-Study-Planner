@@ -4,6 +4,7 @@ import com.aistudyplanner.dto.ProgressOverviewResponse.ScheduleStatusDto;
 import com.aistudyplanner.entity.SavedRoadmap;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -16,6 +17,7 @@ public class ScheduleStatusService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
+    @Autowired
     public ScheduleStatusService(ObjectMapper objectMapper) {
         this(objectMapper, Clock.systemUTC());
     }
@@ -85,3 +87,4 @@ public class ScheduleStatusService {
         }
     }
 }
+

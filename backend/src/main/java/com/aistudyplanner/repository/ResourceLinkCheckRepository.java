@@ -10,3 +10,4 @@ import java.util.Optional;
 public interface ResourceLinkCheckRepository extends JpaRepository<ResourceLinkCheck, Long> {
     Optional<ResourceLinkCheck> findByUrlHash(String urlHash);
 }
+

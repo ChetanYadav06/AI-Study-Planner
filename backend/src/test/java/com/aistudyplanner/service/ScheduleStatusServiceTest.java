@@ -79,3 +79,4 @@ class ScheduleStatusServiceTest {
         assertEquals(0, result.getDelta());
     }
 }
+

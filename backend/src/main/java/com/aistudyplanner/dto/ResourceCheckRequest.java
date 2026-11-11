@@ -19,3 +19,4 @@ public class ResourceCheckRequest {
         this.urls = urls;
     }
 }
+

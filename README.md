@@ -289,3 +289,35 @@ Returns `200 OK` with `{"message": "Learning goal deleted successfully."}`.
 2. **Frontend Compilation:** Verified with `npm run build` (0 TypeScript / bundling errors).
 3. **Database Connectivity:** Live MySQL 8.0 server verified on port 3306 with InnoDB tables `users` and `goals`.
 
+---
+
+## 🔒 Security & Operations (Phase 5)
+
+### Required Environment Variables
+| Variable | Description | Required | Example |
+|---|---|---|---|
+| `JWT_SECRET` | 256-bit secret key for HMAC-SHA256 signing (minimum 32 bytes). App fails to start if missing or under 32 bytes. | Yes | `generate-with-openssl-rand-hex-32` |
+| `GEMINI_API_KEY` | Google Gemini AI API key | Yes | `AIzaSy...` |
+| `DB_URL` | MySQL JDBC connection string | No (default: localhost) | `jdbc:mysql://localhost:3306/ai_study_planner` |
+| `DB_USERNAME` | Database username | No (default: root) | `root` |
+| `DB_PASSWORD` | Database password | No (default: empty) | `secret` |
+| `CORS_ALLOWED_ORIGINS` | Permitted web frontend origin URLs | No (default: http://localhost:5173) | `http://localhost:5173` |
+
+### Database Backup & Migration Execution (PowerShell-Safe)
+Always back up the live database before applying any SQL migration script:
+
+```powershell
+# 1. Back up database
+& mysqldump -u root -p ai_study_planner > "backup_$(Get-Date -Format 'yyyyMMdd_HHmmss').sql"
+
+# 2. Apply migration scripts safely
+Get-Content ./scripts/05_create_task_feedback.sql | & mysql -u root -p ai_study_planner
+Get-Content ./scripts/06_create_resource_link_checks.sql | & mysql -u root -p ai_study_planner
+```
+
+### Rate Limiting & Protection Defaults
+- **Roadmap Generation:** In-memory sliding window limited to 5 generations per hour per authenticated student (`429 Too Many Requests`).
+- **Resource Link Checking:** Limited to 10 link checks per 5 minutes (`429 Too Many Requests`), restricted to a strict domain allowlist with private and loopback IP blocking.
+- **Login Defense:** Max 5 failed login attempts per 15 minutes per email+IP (`429 Too Many Requests`).
+
+

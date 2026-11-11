@@ -97,3 +97,4 @@ public class ResourceLinkCheck {
         this.checkedAt = checkedAt;
     }
 }
+

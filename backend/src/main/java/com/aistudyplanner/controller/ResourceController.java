@@ -9,6 +9,7 @@ import com.aistudyplanner.entity.User;
 import com.aistudyplanner.repository.ResourceLinkCheckRepository;
 import com.aistudyplanner.repository.SavedRoadmapRepository;
 import com.aistudyplanner.repository.UserRepository;
+import com.aistudyplanner.security.SlidingWindowRateLimiter;
 import com.aistudyplanner.service.LinkCheckerService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,22 +30,33 @@ public class ResourceController {
     private final SavedRoadmapRepository roadmapRepository;
     private final UserRepository userRepository;
     private final ResourceLinkCheckRepository checkRepository;
+    private final SlidingWindowRateLimiter rateLimiter;
     private final ObjectMapper objectMapper;
 
     public ResourceController(LinkCheckerService linkCheckerService,
                               SavedRoadmapRepository roadmapRepository,
                               UserRepository userRepository,
                               ResourceLinkCheckRepository checkRepository,
+                              SlidingWindowRateLimiter rateLimiter,
                               ObjectMapper objectMapper) {
         this.linkCheckerService = linkCheckerService;
         this.roadmapRepository = roadmapRepository;
         this.userRepository = userRepository;
         this.checkRepository = checkRepository;
+        this.rateLimiter = rateLimiter;
         this.objectMapper = objectMapper;
     }
 
     @PostMapping("/check")
-    public ResponseEntity<List<ResourceCheckResult>> checkLinks(@RequestBody ResourceCheckRequest request) {
+    public ResponseEntity<List<ResourceCheckResult>> checkLinks(Authentication authentication, @RequestBody ResourceCheckRequest request) {
+        String email = authentication != null ? authentication.getName() : "anonymous";
+        String rateLimitKey = "resource_check:" + email;
+
+        // 10 link checks per 5 minutes (300 seconds)
+        if (!rateLimiter.tryAcquire(rateLimitKey, 10, 300)) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Link check limit reached (maximum 10 checks per 5 minutes). Please wait before checking again.");
+        }
+
         List<String> urls = request.getUrls() != null ? request.getUrls() : Collections.emptyList();
         List<ResourceCheckResult> results = linkCheckerService.checkBatch(urls);
         return ResponseEntity.ok(results);

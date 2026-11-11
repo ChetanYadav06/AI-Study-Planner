@@ -90,3 +90,4 @@ public class ResourceWithCheckDto {
         this.checkedAt = checkedAt;
     }
 }
+

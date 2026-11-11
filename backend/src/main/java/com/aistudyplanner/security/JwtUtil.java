@@ -21,15 +21,11 @@ public class JwtUtil {
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.expiration:86400000}") long expirationMs) {
         // Ensure key length is at least 256 bits (32 bytes)
-        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        byte[] keyBytes = secret != null ? secret.getBytes(StandardCharsets.UTF_8) : new byte[0];
         if (keyBytes.length < 32) {
-            // Pad or extend if necessary for safety
-            byte[] padded = new byte[32];
-            System.arraycopy(keyBytes, 0, padded, 0, keyBytes.length);
-            this.signingKey = Keys.hmacShaKeyFor(padded);
-        } else {
-            this.signingKey = Keys.hmacShaKeyFor(keyBytes);
+            throw new IllegalStateException("JWT secret must be at least 32 bytes (256 bits) for HMAC-SHA256 security");
         }
+        this.signingKey = Keys.hmacShaKeyFor(keyBytes);
         this.expirationMs = expirationMs;
     }
 

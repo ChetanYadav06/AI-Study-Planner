@@ -102,3 +102,4 @@ public class WeeklyReviewResponse {
         this.suggestions = suggestions;
     }
 }
+

@@ -15,3 +15,4 @@ CREATE TABLE IF NOT EXISTS task_feedback (
     CONSTRAINT fk_task_feedback_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_task_feedback_roadmap FOREIGN KEY (roadmap_id) REFERENCES saved_roadmaps(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

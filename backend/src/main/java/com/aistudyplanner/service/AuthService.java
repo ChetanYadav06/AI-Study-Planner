@@ -7,6 +7,7 @@ import com.aistudyplanner.dto.UserProfileResponse;
 import com.aistudyplanner.entity.User;
 import com.aistudyplanner.repository.UserRepository;
 import com.aistudyplanner.security.JwtUtil;
+import com.aistudyplanner.security.SlidingWindowRateLimiter;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -24,15 +25,18 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
+    private final SlidingWindowRateLimiter rateLimiter;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        AuthenticationManager authenticationManager,
-                       JwtUtil jwtUtil) {
+                       JwtUtil jwtUtil,
+                       SlidingWindowRateLimiter rateLimiter) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
+        this.rateLimiter = rateLimiter;
     }
 
     @Transactional
@@ -61,14 +65,24 @@ public class AuthService {
         );
     }
 
-    public AuthResponse login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request, String clientIp) {
         String email = request.getEmail().trim().toLowerCase();
+        String rateLimitKey = "login_fail:" + email + ":" + (clientIp != null ? clientIp : "unknown");
+
+        // 5 failed login attempts per 15 minutes window (900 seconds)
+        // Check if rate limiter already has >= 5 recorded failures
+        if (!rateLimiter.tryAcquire(rateLimitKey, 5, 900)) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Too many failed login attempts. Please wait 15 minutes before trying again.");
+        }
 
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(email, request.getPassword())
             );
+            // On success, reset the failed attempt counter
+            rateLimiter.reset(rateLimitKey);
         } catch (BadCredentialsException e) {
+            // Permit consumed counts as a failed attempt
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password.");
         }
 
@@ -84,6 +98,10 @@ public class AuthService {
                 user.getEmail(),
                 "Login successful. Welcome back, " + user.getName() + "!"
         );
+    }
+
+    public AuthResponse login(LoginRequest request) {
+        return login(request, "0.0.0.0");
     }
 
     @Transactional(readOnly = true)

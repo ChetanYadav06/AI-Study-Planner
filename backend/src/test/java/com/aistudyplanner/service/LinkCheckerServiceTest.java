@@ -88,3 +88,4 @@ class LinkCheckerServiceTest {
         verify(checkRepository, never()).save(any());
     }
 }
+

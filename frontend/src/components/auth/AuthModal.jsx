@@ -79,19 +79,6 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
     }
   };
 
-  const fillDemoCredentials = () => {
-    if (mode === 'login') {
-      setEmail('student@example.com');
-      setPassword('StudyPlanner123!');
-    } else {
-      setName('Alex Sharma');
-      setEmail('alex.sharma@example.com');
-      setPassword('StudyPlanner123!');
-      setConfirmPassword('StudyPlanner123!');
-    }
-    setError(null);
-  };
-
   return (
     <div
       role="dialog"
@@ -269,19 +256,6 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
               <span>{mode === 'login' ? 'Sign in' : 'Create account'}</span>
             )}
           </Button>
-
-          {/* Sample Demo Helper Button (Development Only) */}
-          {import.meta.env.DEV && (
-            <div className="pt-1 text-center">
-              <button
-                type="button"
-                onClick={fillDemoCredentials}
-                className="text-xs text-accent hover:underline cursor-pointer"
-              >
-                Fill sample credentials (Dev only)
-              </button>
-            </div>
-          )}
         </form>
       </div>
     </div>

@@ -59,3 +59,4 @@ public class ResourceCheckResult {
         this.checkedAt = checkedAt;
     }
 }
+

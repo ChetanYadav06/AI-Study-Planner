@@ -4,6 +4,7 @@ import com.aistudyplanner.dto.AuthResponse;
 import com.aistudyplanner.dto.LoginRequest;
 import com.aistudyplanner.dto.RegisterRequest;
 import com.aistudyplanner.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,8 +27,14 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        AuthResponse response = authService.login(request);
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest servletRequest) {
+        String clientIp = servletRequest.getHeader("X-Forwarded-For");
+        if (clientIp == null || clientIp.isBlank()) {
+            clientIp = servletRequest.getRemoteAddr();
+        } else {
+            clientIp = clientIp.split(",")[0].trim();
+        }
+        AuthResponse response = authService.login(request, clientIp);
         return ResponseEntity.ok(response);
     }
 }
