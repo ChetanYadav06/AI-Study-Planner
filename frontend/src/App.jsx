@@ -55,7 +55,7 @@ const AppContent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-page flex flex-col md:flex-row text-ink">
+    <div className="h-screen bg-page flex flex-col md:flex-row text-ink overflow-hidden">
       {/* Sidebar: Desktop Flush Left / Mobile Drawer */}
       <Sidebar
         activeTab={activeTab}
@@ -68,7 +68,7 @@ const AppContent = () => {
         setMobileOpen={setMobileSidebarOpen}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Top Navbar */}
         <Navbar
           onOpenAuth={handleOpenAuth}
@@ -77,7 +77,7 @@ const AppContent = () => {
         />
 
         {/* Content View Canvas */}
-        <main className={`flex-1 min-w-0 overflow-y-auto ${!isAuthenticated ? 'flex flex-col justify-center items-center p-0' : 'p-4 sm:p-6 md:p-8'}`}>
+        <main className={`flex-1 min-w-0 overflow-y-auto ${!isAuthenticated ? 'flex flex-col items-center justify-center p-4' : 'p-4 sm:p-6 md:p-8'}`}>
           {activeTab === 'dashboard' && (
             isAuthenticated ? (
               <StudentDashboard
