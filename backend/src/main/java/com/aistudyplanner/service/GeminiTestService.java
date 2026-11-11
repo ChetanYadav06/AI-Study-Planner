@@ -24,11 +24,11 @@ public class GeminiTestService {
 
     private static final long BASE_DELAY_MS = 1000L;
 
-    // Reduced chain to at most 3 models per Phase 2b specifications
+    // Active and confirmed Gemini models chain
     private static final List<String> FALLBACK_MODELS = List.of(
-        "gemini-flash-lite-latest",
-        "gemini-3.1-flash-lite",
-        "gemini-3.5-flash"
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-flash-lite-latest"
     );
 
     private final RestClient restClient;

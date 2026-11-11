@@ -69,16 +69,35 @@ public class SavedRoadmapService {
     public SavedRoadmapResponse saveRoadmap(String email, SaveRoadmapRequest request) {
         User user = getAuthenticatedUser(email);
 
-        SavedRoadmap roadmap = new SavedRoadmap(
-                user,
-                request.getTitle().trim(),
-                request.getTopic().trim(),
-                request.getSkillLevel(),
-                request.getTargetDays(),
-                request.getHoursPerDay(),
-                request.getRoadmapJson()
-        );
-        roadmap.setGoalId(request.getGoalId());
+        // Prevent duplicate roadmaps for the same goal
+        SavedRoadmap roadmap = null;
+        if (request.getGoalId() != null) {
+            roadmap = roadmapRepository.findByGoalIdAndUserEmail(request.getGoalId(), email).orElse(null);
+        }
+
+        if (roadmap != null) {
+            // Update existing roadmap in-place instead of creating a duplicate
+            roadmap.setTitle(request.getTitle().trim());
+            roadmap.setTopic(request.getTopic().trim());
+            roadmap.setSkillLevel(request.getSkillLevel());
+            roadmap.setTargetDays(request.getTargetDays());
+            roadmap.setHoursPerDay(request.getHoursPerDay());
+            roadmap.setRoadmapJson(request.getRoadmapJson());
+            roadmap.setCompletedTasksJson("[]");
+            roadmap.setCompletedMilestonesJson("[]");
+            roadmap.setProgressPercentage(0);
+        } else {
+            roadmap = new SavedRoadmap(
+                    user,
+                    request.getTitle().trim(),
+                    request.getTopic().trim(),
+                    request.getSkillLevel(),
+                    request.getTargetDays(),
+                    request.getHoursPerDay(),
+                    request.getRoadmapJson()
+            );
+            roadmap.setGoalId(request.getGoalId());
+        }
 
         syncProgressAndLinkedGoal(roadmap);
 

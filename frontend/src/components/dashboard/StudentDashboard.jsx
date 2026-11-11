@@ -9,7 +9,10 @@ import {
   X,
   Loader2,
   Map,
-  Plus
+  Plus,
+  BookOpen,
+  Coffee,
+  CheckCircle2
 } from 'lucide-react';
 import {
   getGoals,
@@ -19,13 +22,14 @@ import {
   generateRoadmap,
   getSavedRoadmaps,
   updateRoadmapProgress,
-  getStudySessionsSummary
+  getStudySessionsSummary,
+  getStudentProfile
 } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { CreateGoalModal } from '../goals/CreateGoalModal';
 import { InteractiveRoadmap } from '../roadmap/InteractiveRoadmap';
 import { computeGoalStats } from '../../utils/goalStats';
-import { computeStudyQueue } from '../../utils/studyQueue';
+import { getCanonicalTaskId } from '../../utils/studyQueue';
 import { formatEnum } from '../../utils/formatters';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
@@ -38,6 +42,7 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
   const [goals, setGoals] = useState([]);
   const [stats, setStats] = useState(null);
   const [savedRoadmaps, setSavedRoadmaps] = useState([]);
+  const [profile, setProfile] = useState(null);
   const [todayLoggedMinutes, setTodayLoggedMinutes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -45,6 +50,10 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedGoalForRoadmap, setSelectedGoalForRoadmap] = useState(null);
   const [actionMessage, setActionMessage] = useState(null);
+  const [selectedDay, setSelectedDay] = useState(new Date().getDay());
+
+  const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const shortDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   // Roadmap generation state
   const [roadmapLoading, setRoadmapLoading] = useState(false);
@@ -83,16 +92,18 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
       const from = `${todayIso}T00:00:00`;
       const to = `${todayIso}T23:59:59`;
 
-      const [goalsData, statsData, roadmapsData, sessionSummary] = await Promise.all([
+      const [goalsData, statsData, roadmapsData, sessionSummary, profileData] = await Promise.all([
         getGoals().catch(() => []),
         getDashboardStats().catch(() => null),
         getSavedRoadmaps().catch(() => []),
-        getStudySessionsSummary({ from, to }).catch(() => null)
+        getStudySessionsSummary({ from, to }).catch(() => null),
+        getStudentProfile().catch(() => null)
       ]);
       setGoals(Array.isArray(goalsData) ? goalsData : []);
       setStats(statsData || null);
       setSavedRoadmaps(Array.isArray(roadmapsData) ? roadmapsData : []);
       setTodayLoggedMinutes(sessionSummary?.totalMinutes ?? 0);
+      setProfile(profileData || null);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
       setError('Unable to load your dashboard data. Please check your connection and try again.');
@@ -138,45 +149,133 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
     return savedRoadmaps[0];
   }, [savedRoadmaps, goals]);
 
-  // Extract today's tasks and up-next tasks using shared studyQueue
-  const studyQueue = useMemo(() => {
-    if (!primaryRoadmap) {
-      return { todayTasks: [], upNextTasks: [], todayDayNumber: null, upNextDays: [], currentFocusTask: null };
+  // Parse primary roadmap JSON & completed tasks
+  const { allRoadmapTasks, parsedRoadmap } = useMemo(() => {
+    if (!primaryRoadmap) return { allRoadmapTasks: [], parsedRoadmap: null };
+
+    let parsed = primaryRoadmap;
+    if (primaryRoadmap.roadmapJson) {
+      try {
+        parsed = typeof primaryRoadmap.roadmapJson === 'string'
+          ? JSON.parse(primaryRoadmap.roadmapJson)
+          : primaryRoadmap.roadmapJson;
+      } catch {
+        parsed = primaryRoadmap;
+      }
     }
-    const queue = computeStudyQueue(primaryRoadmap);
-    return {
-      ...queue,
-      todayTasks: queue.todayTasks.map(t => ({
-        ...t,
-        roadmapId: primaryRoadmap.id,
-        roadmapTitle: primaryRoadmap.topic || primaryRoadmap.title
-      })),
-      upNextTasks: queue.upNextTasks.map(t => ({
-        ...t,
-        roadmapId: primaryRoadmap.id,
-        roadmapTitle: primaryRoadmap.topic || primaryRoadmap.title
-      }))
-    };
+
+    let completedSet = new Set();
+    if (primaryRoadmap.completedTasksJson) {
+      try {
+        const arr = JSON.parse(primaryRoadmap.completedTasksJson);
+        if (Array.isArray(arr)) completedSet = new Set(arr);
+      } catch {}
+    }
+
+    const tasks = [];
+    const phases = parsed.phases || [];
+    phases.forEach((phase, pIdx) => {
+      const dailyTasks = phase.dailyTasks || [];
+      const suffixCounts = {};
+      dailyTasks.forEach((task, tIdx) => {
+        const taskId = getCanonicalTaskId(pIdx, task, tIdx, suffixCounts);
+        const isDone = completedSet.has(taskId);
+        const dayNumber = Number(task.dayNumber) || (tIdx + 1);
+
+        tasks.push({
+          taskId,
+          dayNumber,
+          phaseIdx: pIdx,
+          phaseTitle: phase.phaseTitle || phase.phase || `Phase ${pIdx + 1}`,
+          task,
+          isDone,
+          estimatedMinutes: task.estimatedMinutes != null && !isNaN(task.estimatedMinutes) ? Number(task.estimatedMinutes) : 90
+        });
+      });
+    });
+
+    return { allRoadmapTasks: tasks, parsedRoadmap: parsed };
   }, [primaryRoadmap]);
 
-  const todayTasks = studyQueue.todayTasks;
-  const upNextTasks = studyQueue.upNextTasks;
+  // Study schedule preference (default: 5 days/week -> Mon-Fri)
+  const availableDaysCount = Math.max(1, Math.min(7, profile?.availableDaysPerWeek ?? 5));
 
-  // Toggle today's task
-  const handleToggleTodayTask = async (taskItem) => {
-    const roadmap = savedRoadmaps.find(r => r.id === taskItem.roadmapId);
-    if (!roadmap) return;
+  const isStudyDayIndex = (dayIndex) => {
+    const mondayBased = (dayIndex + 6) % 7;
+    return mondayBased < availableDaysCount;
+  };
+
+  // Group all tasks by dayNumber
+  const tasksByDayNumber = useMemo(() => {
+    const map = new Map();
+    allRoadmapTasks.forEach(t => {
+      if (!map.has(t.dayNumber)) {
+        map.set(t.dayNumber, []);
+      }
+      map.get(t.dayNumber).push(t);
+    });
+    return Array.from(map.entries()).map(([dayNum, tasks]) => ({
+      dayNumber: dayNum,
+      tasks,
+      totalMinutes: tasks.reduce((sum, item) => sum + item.estimatedMinutes, 0),
+      isCompleted: tasks.every(t => t.isDone)
+    }));
+  }, [allRoadmapTasks]);
+
+  // Map weekly calendar days to scheduled roadmap days
+  const weeklySchedule = useMemo(() => {
+    const todayIndex = new Date().getDay();
+    const scheduleByDay = {};
+
+    // Find the next incomplete roadmap day or start from Day 1
+    const firstIncompleteIdx = tasksByDayNumber.findIndex(d => !d.isCompleted);
+    let startDayIdx = firstIncompleteIdx >= 0 ? firstIncompleteIdx : 0;
+    let studyDaySlotCounter = startDayIdx;
+
+    for (let offset = 0; offset < 7; offset++) {
+      const currentDayIdx = (todayIndex + offset) % 7;
+      const isStudy = isStudyDayIndex(currentDayIdx);
+
+      if (isStudy) {
+        const assignedRoadmapDay = tasksByDayNumber[studyDaySlotCounter] || null;
+        scheduleByDay[currentDayIdx] = {
+          isStudyDay: true,
+          roadmapDay: assignedRoadmapDay,
+          plannedMinutes: assignedRoadmapDay ? assignedRoadmapDay.totalMinutes : 0
+        };
+        studyDaySlotCounter++;
+      } else {
+        scheduleByDay[currentDayIdx] = {
+          isStudyDay: false,
+          roadmapDay: null,
+          plannedMinutes: 0
+        };
+      }
+    }
+
+    return scheduleByDay;
+  }, [tasksByDayNumber, availableDaysCount]);
+
+  const selectedDayInfo = weeklySchedule[selectedDay] || { isStudyDay: false, roadmapDay: null, plannedMinutes: 0 };
+  const selectedDayTasks = selectedDayInfo.roadmapDay?.tasks || [];
+  const selectedDayCompletedCount = selectedDayTasks.filter(t => t.isDone).length;
+
+  // Toggle task completion from dashboard
+  const handleToggleTask = async (taskItem) => {
+    if (!primaryRoadmap) return;
 
     try {
-      const currentCompleted = roadmap.completedTasksJson ? JSON.parse(roadmap.completedTasksJson) : [];
+      const currentCompleted = primaryRoadmap.completedTasksJson
+        ? JSON.parse(primaryRoadmap.completedTasksJson)
+        : [];
       const updated = currentCompleted.includes(taskItem.taskId)
         ? currentCompleted.filter(id => id !== taskItem.taskId)
         : [...currentCompleted, taskItem.taskId];
 
-      await updateRoadmapProgress(roadmap.id, {
+      await updateRoadmapProgress(primaryRoadmap.id, {
         completedTasksJson: JSON.stringify(updated),
-        completedMilestonesJson: roadmap.completedMilestonesJson || '[]',
-        progressPercentage: roadmap.progressPercentage || 0
+        completedMilestonesJson: primaryRoadmap.completedMilestonesJson || '[]',
+        progressPercentage: primaryRoadmap.progressPercentage || 0
       });
 
       await loadDashboardData();
@@ -297,7 +396,6 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
     }
     setSelectedGoalForRoadmap(goal);
     setRoadmapError(null);
-
     setRoadmapPrefs({
       skillLevel: goal.skillLevel || 'INTERMEDIATE',
       targetDays: goal.targetDays || 30,
@@ -492,35 +590,98 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
         </div>
       </div>
 
-      {/* 3. TODAY'S STUDY TASKS & UP NEXT */}
-      {(todayTasks.length > 0 || upNextTasks.length > 0) && (
-        <Card className="p-5 sm:p-6 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-line">
-            <div>
-              <h2 className="text-base font-semibold text-ink">
-                Today's Tasks {studyQueue.todayDayNumber != null && `(Day ${studyQueue.todayDayNumber})`}
-              </h2>
-              <p className="text-xs text-muted mt-0.5">Tasks scheduled from your active roadmap</p>
-            </div>
-            {todayTasks.length > 0 && (
-              <span className="text-xs text-muted">
-                {todayTasks.length} {todayTasks.length === 1 ? 'task' : 'tasks'}
-              </span>
-            )}
+      {/* 3. PLANNED TASKS FOR SELECTED DAY (WEEKLY CALENDAR) */}
+      <Card className="p-5 sm:p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-line">
+          <div>
+            <h2 className="text-base font-semibold text-ink">
+              Planned tasks for {daysOfWeek[selectedDay]}
+            </h2>
+            <p className="text-xs text-muted mt-0.5">
+              {primaryRoadmap ? (
+                <span>
+                  From active roadmap: <strong>{primaryRoadmap.topic || primaryRoadmap.title}</strong>
+                </span>
+              ) : (
+                'No active roadmap found. Create a roadmap to schedule tasks.'
+              )}
+            </p>
           </div>
 
-          {todayTasks.length > 0 ? (
-            <div className="space-y-2">
-              {todayTasks.map((item) => (
+          {selectedDayTasks.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-accent">
+                {selectedDayCompletedCount} of {selectedDayTasks.length} completed
+              </span>
+              <span className="text-xs text-muted">({selectedDayInfo.plannedMinutes} min planned)</span>
+            </div>
+          )}
+        </div>
+
+        {/* Days Selector Strip */}
+        <div className="grid grid-cols-7 gap-1 p-1 bg-page rounded-md border border-line">
+          {daysOfWeek.map((dayName, idx) => {
+            const isSelected = selectedDay === idx;
+            const isToday = new Date().getDay() === idx;
+            const daySched = weeklySchedule[idx];
+            const isRest = !daySched?.isStudyDay;
+
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setSelectedDay(idx)}
+                className={`p-2.5 rounded-sm text-center transition cursor-pointer flex flex-col items-center justify-center ${
+                  isSelected
+                    ? 'bg-accent text-white font-medium shadow-sm'
+                    : isRest
+                    ? 'bg-page text-muted hover:bg-slate-100'
+                    : 'hover:bg-surface text-ink'
+                }`}
+              >
+                <span className={`text-xs ${isSelected ? 'text-white/80' : 'text-muted'}`}>
+                  {shortDays[idx]}
+                </span>
+                <span className="text-xs font-semibold mt-0.5">
+                  {isToday ? 'Today' : `D${idx + 1}`}
+                </span>
+                <span className={`text-xs mt-0.5 ${isSelected ? 'text-white/90' : isRest ? 'text-muted' : 'text-accent'}`}>
+                  {isRest ? 'Rest' : 'Study'}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Task List for Selected Day */}
+        {selectedDayInfo.isStudyDay ? (
+          selectedDayTasks.length > 0 ? (
+            <div className="space-y-3 pt-1">
+              {selectedDayInfo.roadmapDay && (
+                <div className="p-2.5 bg-page rounded-md border border-line flex items-center justify-between text-xs">
+                  <span className="font-medium text-ink">
+                    Roadmap Day {selectedDayInfo.roadmapDay.dayNumber} focus
+                  </span>
+                  <span className="text-muted font-mono">
+                    {selectedDayInfo.plannedMinutes} mins estimated
+                  </span>
+                </div>
+              )}
+
+              {selectedDayTasks.map((item) => (
                 <div
                   key={item.taskId}
-                  className="p-3 rounded-md border border-line bg-white flex items-center justify-between gap-3 text-sm"
+                  className={`p-4 rounded-md border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                    item.isDone
+                      ? 'border-line bg-page/60 text-muted'
+                      : 'border-line bg-white hover:border-slate-300'
+                  }`}
                 >
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-start gap-3.5 min-w-0">
                     <button
                       type="button"
-                      onClick={() => handleToggleTodayTask(item)}
-                      className={`w-5 h-5 rounded-sm border flex items-center justify-center transition-colors duration-150 cursor-pointer shrink-0 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
+                      onClick={() => handleToggleTask(item)}
+                      className={`w-5 h-5 rounded-sm border flex items-center justify-center transition-colors duration-150 cursor-pointer shrink-0 mt-0.5 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
                         item.isDone
                           ? 'bg-accent border-accent text-white'
                           : 'border-line bg-white hover:border-accent'
@@ -528,77 +689,89 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                       title={item.isDone ? 'Mark incomplete' : 'Mark done'}
                       aria-label={item.isDone ? 'Mark task incomplete' : 'Mark task complete'}
                     >
-                      {item.isDone && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      {item.isDone && <Check className="w-3.5 h-3.5 stroke-2" />}
                     </button>
 
-                    <div className="min-w-0 truncate">
-                      <p className={`font-medium truncate ${item.isDone ? 'line-through text-muted' : 'text-ink'}`}>
-                        {item.task.title}
-                      </p>
-                      <p className="text-xs text-muted mt-0.5 flex items-center gap-2">
-                        <span>Day {item.task.dayNumber}</span>
-                        <span>•</span>
-                        <span>{formatEnum(item.task.activityType || 'Study')}</span>
-                        {item.task.estimatedMinutes != null && (
-                          <>
-                            <span>•</span>
-                            <span>{item.task.estimatedMinutes} min</span>
-                          </>
-                        )}
-                        <span>•</span>
-                        <span className="truncate">{item.roadmapTitle}</span>
-                      </p>
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`text-xs font-semibold ${item.isDone ? 'line-through text-muted' : 'text-ink'}`}>
+                          {item.task.title}
+                        </span>
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-accent-soft text-accent border border-accent/20">
+                          {formatEnum(item.task.activityType || 'Study')}
+                        </span>
+                        <span className="text-xs text-muted flex items-center gap-1 font-mono">
+                          <Clock className="w-3 h-3" />
+                          <span>{item.estimatedMinutes} min</span>
+                        </span>
+                        <span className="text-xs text-muted">
+                          • {item.phaseTitle}
+                        </span>
+                      </div>
+
+                      {item.task.description && (
+                        <p className={`text-xs leading-relaxed ${item.isDone ? 'text-muted/80' : 'text-muted'}`}>
+                          {item.task.description}
+                        </p>
+                      )}
+
+                      {/* Subtopics and Learning Objectives Chips */}
+                      {((item.task.subtopics && item.task.subtopics.length > 0) || (item.task.learningObjectives && item.task.learningObjectives.length > 0)) && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {item.task.subtopics?.map((sub, sIdx) => (
+                            <span key={`sub-${sIdx}`} className="text-xs px-1.5 py-0.5 rounded bg-page text-muted border border-line">
+                              {sub}
+                            </span>
+                          ))}
+                          {item.task.learningObjectives?.map((obj, oIdx) => (
+                            <span key={`obj-${oIdx}`} className="text-xs px-1.5 py-0.5 rounded bg-page text-ink border border-line">
+                              Goal: {obj}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => onNavigateTab && onNavigateTab('active-study')}
-                    className="text-xs font-medium text-accent hover:text-accent-hover hover:underline cursor-pointer shrink-0 min-h-[40px] px-2 flex items-center focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 rounded-sm"
-                  >
-                    Start
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                    <button
+                      type="button"
+                      onClick={() => onNavigateTab && onNavigateTab('active-study')}
+                      className="text-xs font-medium text-accent hover:underline cursor-pointer px-2.5 py-1.5 rounded-sm border border-accent/20 hover:bg-accent-soft transition"
+                    >
+                      Start Focus
+                    </button>
+                    {primaryRoadmap && (
+                      <button
+                        type="button"
+                        onClick={() => onNavigateRoadmap && onNavigateRoadmap(primaryRoadmap)}
+                        className="p-1.5 rounded-sm border border-line hover:border-slate-300 text-muted hover:text-ink transition cursor-pointer"
+                        title="View in full roadmap"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="py-2 text-xs text-muted">
-              All tasks for today are completed.
-            </p>
-          )}
-
-          {/* Up Next List */}
-          {upNextTasks.length > 0 && (
-            <div className="pt-3 border-t border-line space-y-2">
-              <div className="flex items-center justify-between text-xs text-muted">
-                <span className="font-medium text-ink">
-                  Up Next {studyQueue.upNextDays?.length > 0 && `(Days ${studyQueue.upNextDays.join(' & ')})`}
-                </span>
-                <span>{upNextTasks.length} upcoming</span>
-              </div>
-
-              <div className="space-y-1.5">
-                {upNextTasks.map((item) => (
-                  <div
-                    key={item.taskId}
-                    className="p-2.5 rounded-md border border-line bg-page flex items-center justify-between gap-3 text-xs text-muted"
-                  >
-                    <div className="truncate">
-                      <span className="font-medium text-ink mr-2">
-                        Day {item.task.dayNumber}: {item.task.title}
-                      </span>
-                      <span>{formatEnum(item.task.activityType || 'Study')}</span>
-                      {item.task.estimatedMinutes != null && (
-                        <span className="ml-2">• {item.task.estimatedMinutes} min</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="py-8 text-center text-muted space-y-1">
+              <CheckCircle2 className="w-7 h-7 mx-auto text-success mb-1" />
+              <p className="text-sm font-semibold text-ink">All tasks for {daysOfWeek[selectedDay]} are completed!</p>
+              <p className="text-xs text-muted">You have finished all queued tasks for this study day.</p>
             </div>
-          )}
-        </Card>
-      )}
+          )
+        ) : (
+          <div className="py-8 text-center text-muted space-y-1.5 bg-page rounded-md border border-line">
+            <Coffee className="w-7 h-7 mx-auto text-muted mb-1" />
+            <p className="text-sm font-semibold text-ink">Scheduled Rest & Recovery Day</p>
+            <p className="text-xs text-muted max-w-sm mx-auto">
+              Your profile is configured for {availableDaysCount} study days per week. Use this day to rest, reflect, or review past notes.
+            </p>
+          </div>
+        )}
+      </Card>
 
       {/* 4. GOALS: COMPACT CONSOLIDATED LIST */}
       <Card className="p-5 sm:p-6 space-y-4">
@@ -624,9 +797,9 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                 key={tab.id}
                 type="button"
                 onClick={() => setStatusFilter(tab.id)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors duration-150 cursor-pointer min-h-[36px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors duration-150 cursor-pointer min-h-9 ${
                   statusFilter === tab.id
-                    ? 'bg-accent text-white'
+                    ? 'bg-ink text-white'
                     : 'text-muted hover:text-ink hover:bg-page'
                 }`}
               >
@@ -636,213 +809,205 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
           </div>
         </div>
 
-        {/* Goals List Content */}
-        {loading ? (
-          <div className="py-12 text-center text-sm text-muted">
-            Loading learning goals...
-          </div>
-        ) : filteredGoals.length === 0 ? (
-          <EmptyState
-            title={goals.length === 0 ? 'No goals yet' : 'No goals match this filter'}
-            description="Create a goal to begin organizing your study plan."
-            action={
-              goals.length === 0 && (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => setIsCreateModalOpen(true)}
-                >
-                  Create Goal
-                </Button>
-              )
-            }
-          />
-        ) : (
+        {/* Goals List */}
+        {filteredGoals.length > 0 ? (
           <div className="space-y-3">
             {filteredGoals.map((goal) => {
-              const hasLinkedRoadmap = Boolean(
-                goal.hasLinkedRoadmap || savedRoadmaps.some(r => r.goalId === goal.id)
+              const matchedRoadmap = savedRoadmaps.find(
+                (r) => r.goalId === goal.id || r.topic === goal.title
               );
 
               return (
                 <div
                   key={goal.id}
-                  className="p-4 rounded-md border border-line bg-white hover:border-[#cbd5e1] transition-colors duration-150 space-y-3"
+                  className="p-4 rounded-md border border-line bg-white hover:border-slate-300 transition-colors duration-150 space-y-3"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="space-y-1 min-w-0">
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-semibold text-ink truncate">
                           {goal.title}
                         </h3>
                         {formatGoalStatus(goal.status)}
                       </div>
-
-                      <p className="text-xs text-muted flex items-center gap-2">
-                        <span>{formatEnum(goal.skillLevel)}</span>
-                        <span>•</span>
-                        <span>{goal.priority || 'MEDIUM'} priority</span>
-                        <span>•</span>
-                        <span>{goal.targetDays} days</span>
-                        <span>•</span>
-                        <span>{goal.hoursPerDay}h/day</span>
-                      </p>
+                      {goal.description && (
+                        <p className="text-xs text-muted mt-0.5 line-clamp-1">
+                          {goal.description}
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleOpenRoadmap(goal)}
-                      >
-                        {hasLinkedRoadmap ? 'View Roadmap' : 'Generate Roadmap'}
-                      </Button>
+                      {matchedRoadmap ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            if (onNavigateRoadmap) {
+                              onNavigateRoadmap(goal);
+                            } else {
+                              handleOpenRoadmap(goal);
+                            }
+                          }}
+                        >
+                          View Roadmap
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleOpenRoadmap(goal)}
+                        >
+                          Generate Roadmap
+                        </Button>
+                      )}
 
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <button
+                        type="button"
                         onClick={() => handleDeleteGoal(goal.id)}
-                        className="text-muted hover:text-danger p-2 min-h-[36px] min-w-[36px]"
+                        className="p-1.5 text-muted hover:text-danger rounded-md hover:bg-page transition-colors duration-150 cursor-pointer"
                         title="Delete Goal"
-                        aria-label="Delete Goal"
+                        aria-label={`Delete goal ${goal.title}`}
                       >
                         <Trash2 className="w-4 h-4" />
-                      </Button>
+                      </button>
                     </div>
                   </div>
 
-                  {goal.description && (
-                    <p className="text-xs text-muted line-clamp-2">
-                      {goal.description}
-                    </p>
-                  )}
-
-                  {/* Progress & Manual Actions (only for goals without linked roadmap) */}
-                  <div className="pt-2 border-t border-line flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                    <div className="flex-1 max-w-md flex items-center gap-3">
-                      <span className="text-muted shrink-0 font-medium">
-                        {goal.progressPercentage || 0}%
+                  {/* Progress Bar & Numerical Percentage */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted">
+                        Progress: <strong className="text-ink">{goal.progressPercentage || 0}%</strong>
                       </span>
-                      <ProgressBar
-                        value={goal.progressPercentage || 0}
-                        ariaLabel={`Progress for ${goal.title}`}
-                      />
+                      <span className="text-muted">
+                        {goal.targetDays || 30} days · {goal.hoursPerDay || 2}h/day
+                      </span>
                     </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      {hasLinkedRoadmap ? (
-                        <span className="text-xs text-muted">
-                          Roadmap linked
-                        </span>
-                      ) : (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateProgress(goal, -10)}
-                            className="px-2 py-1 text-xs font-medium rounded-md border border-line text-ink hover:bg-page transition-colors duration-150 cursor-pointer min-h-[32px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
-                            title="Decrease 10%"
-                          >
-                            -10%
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateProgress(goal, 10)}
-                            className="px-2 py-1 text-xs font-medium rounded-md border border-line text-ink hover:bg-page transition-colors duration-150 cursor-pointer min-h-[32px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
-                            title="Increase 10%"
-                          >
-                            +10%
-                          </button>
-                          {goal.progressPercentage < 100 && (
-                            <button
-                              type="button"
-                              onClick={() => handleSetExactProgress(goal, 100)}
-                              className="px-2.5 py-1 text-xs font-medium rounded-md bg-accent text-white hover:bg-accent-hover transition-colors duration-150 cursor-pointer min-h-[32px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
-                              title="Mark complete"
-                            >
-                              Complete
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    <ProgressBar value={goal.progressPercentage || 0} />
                   </div>
                 </div>
               );
             })}
           </div>
+        ) : (
+          <EmptyState
+            title="No goals found"
+            description="Create your first study goal to start tracking progress."
+            action={
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  if (onOpenCreateGoal) {
+                    onOpenCreateGoal();
+                  } else {
+                    setIsCreateModalOpen(true);
+                  }
+                }}
+              >
+                Create Goal
+              </Button>
+            }
+          />
         )}
       </Card>
 
-      {/* AI Roadmap Modal */}
+      {/* Global Modals */}
+      <CreateGoalModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onGoalCreated={() => {
+          setIsCreateModalOpen(false);
+          loadDashboardData();
+        }}
+      />
+
+      {/* Inline Roadmap Generation / Inspection Modal if not navigated */}
       {selectedGoalForRoadmap && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg w-full max-w-4xl border border-line my-8 overflow-hidden shadow-md">
-            <div className="flex items-center justify-between p-5 border-b border-line">
-              <div>
-                <h3 className="text-base font-semibold text-ink">
-                  {generatedRoadmap ? 'AI Study Roadmap' : 'Generate Roadmap'}
-                </h3>
-                <p className="text-xs text-muted mt-0.5">
-                  {selectedGoalForRoadmap.title}
-                </p>
-              </div>
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/40 flex items-center justify-center p-4"
+          onClick={handleCloseRoadmap}
+        >
+          <div
+            className="bg-white rounded-lg w-full max-w-4xl border border-line my-8 overflow-hidden shadow-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-line">
+              <h3 className="text-base font-semibold text-ink">
+                Roadmap: {selectedGoalForRoadmap.title}
+              </h3>
               <button
                 type="button"
                 onClick={handleCloseRoadmap}
-                className="p-1.5 rounded-md text-muted hover:text-ink hover:bg-page transition-colors duration-150 cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+                className="p-1 rounded-md text-muted hover:text-ink cursor-pointer"
                 aria-label="Close dialog"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5 sm:p-6 space-y-5">
-              {existingSavedRoadmap && !generatedRoadmap && (
-                <div className="p-4 rounded-md border border-line bg-page flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <span className="text-xs font-semibold text-ink block">
-                      Saved Roadmap Found ({existingSavedRoadmap.progressPercentage || 0}% Completed)
-                    </span>
-                    <span className="text-xs text-muted mt-0.5 block">
-                      Resume without regenerating from Gemini.
-                    </span>
-                  </div>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => {
-                      try {
-                        setGeneratedRoadmap(JSON.parse(existingSavedRoadmap.roadmapJson));
-                      } catch (e) {
-                        console.error('Error parsing roadmap json', e);
-                      }
-                    }}
-                  >
-                    Open Saved Roadmap
-                  </Button>
+            <div className="p-6">
+              {roadmapLoading ? (
+                <div className="py-16 text-center space-y-3">
+                  <Loader2 className="w-7 h-7 text-accent animate-spin mx-auto mb-2" />
+                  <p className="text-sm font-medium text-ink">
+                    Generating curriculum roadmap with Gemini AI...
+                  </p>
+                  <p className="text-xs text-muted">
+                    Calibrating daily tasks, exercises, and study schedule.
+                  </p>
                 </div>
-              )}
-
-              {!generatedRoadmap && !roadmapLoading && (
+              ) : generatedRoadmap ? (
+                <InteractiveRoadmap
+                  roadmap={generatedRoadmap}
+                  goal={selectedGoalForRoadmap}
+                  savedRoadmapId={existingSavedRoadmap?.id}
+                  onBack={handleCloseRoadmap}
+                  onProgressUpdate={(pct) => handleSyncGoalProgress(selectedGoalForRoadmap.id, pct)}
+                  onRegenerate={handleGenerateRoadmap}
+                />
+              ) : (
                 <div className="space-y-4">
-                  <div className="p-4 rounded-md bg-page border border-line text-xs text-muted space-y-1">
-                    <p className="font-semibold text-ink">{selectedGoalForRoadmap.title}</p>
-                    {selectedGoalForRoadmap.description && (
-                      <p>{selectedGoalForRoadmap.description}</p>
-                    )}
-                    <p>
-                      {roadmapPrefs.targetDays} days • {roadmapPrefs.hoursPerDay}h/day • {formatEnum(roadmapPrefs.skillLevel)}
-                    </p>
-                  </div>
-
                   {roadmapError && (
-                    <div className="p-3 rounded-md bg-red-50 border border-red-200 text-danger text-xs flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                      <span>{roadmapError}</span>
+                    <div className="p-3 rounded-md bg-red-50 border border-red-200 text-danger text-xs">
+                      {roadmapError}
                     </div>
                   )}
 
-                  <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-line">
+                  <p className="text-sm text-muted">
+                    No roadmap has been generated for this goal yet. Configure preferences or generate directly.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-ink mb-1">Target Days</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="365"
+                        value={roadmapPrefs.targetDays}
+                        onChange={(e) => setRoadmapPrefs({ ...roadmapPrefs, targetDays: e.target.value })}
+                        className="w-full px-3 py-2 text-sm rounded-md border border-line focus:border-accent outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-ink mb-1">Hours Per Day</label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="0.5"
+                        max="24"
+                        value={roadmapPrefs.hoursPerDay}
+                        onChange={(e) => setRoadmapPrefs({ ...roadmapPrefs, hoursPerDay: e.target.value })}
+                        className="w-full px-3 py-2 text-sm rounded-md border border-line focus:border-accent outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-4 border-t border-line">
                     <Button variant="secondary" size="sm" onClick={handleCloseRoadmap}>
                       Cancel
                     </Button>
@@ -852,39 +1017,10 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                   </div>
                 </div>
               )}
-
-              {roadmapLoading && (
-                <div className="py-12 text-center">
-                  <Loader2 className="w-7 h-7 text-accent animate-spin mx-auto mb-2" />
-                  <p className="text-sm font-semibold text-ink">
-                    Generating Roadmap
-                  </p>
-                  <p className="text-xs text-muted mt-1">
-                    Structuring daily activities and milestones...
-                  </p>
-                </div>
-              )}
-
-              {generatedRoadmap && !roadmapLoading && (
-                <InteractiveRoadmap
-                  roadmap={generatedRoadmap}
-                  goal={selectedGoalForRoadmap}
-                  onSyncGoalProgress={handleSyncGoalProgress}
-                  onRegenerate={() => setGeneratedRoadmap(null)}
-                  isModal={true}
-                />
-              )}
             </div>
           </div>
         </div>
       )}
-
-      {/* Create Goal Modal */}
-      <CreateGoalModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onGoalCreated={loadDashboardData}
-      />
     </div>
   );
 };

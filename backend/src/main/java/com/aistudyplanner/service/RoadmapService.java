@@ -482,6 +482,43 @@ public class RoadmapService {
             response.setTotalStudyHours(totalHours);
         }
 
+        // Calculate and calibrate estimatedMinutes deterministically on the backend
+        int targetDailyMinutes = (int) Math.round(request.getHoursPerDay() * 60);
+        if (targetDailyMinutes <= 0) {
+            targetDailyMinutes = 120;
+        }
+
+        if (response.getPhases() != null) {
+            for (WeeklyPhase phase : response.getPhases()) {
+                if (phase.getDailyTasks() != null) {
+                    for (DailyTask task : phase.getDailyTasks()) {
+                        int minutes = task.getEstimatedMinutes();
+                        // If missing, non-positive, or exceeding daily tolerance, calibrate deterministically
+                        if (minutes <= 0 || minutes > (targetDailyMinutes * RoadmapValidator.DAILY_MINUTES_TOLERANCE_RATIO)) {
+                            String act = task.getActivityType() != null ? task.getActivityType().trim().toUpperCase() : "STUDY";
+                            int calibrated = switch (act) {
+                                case "QUIZ" -> Math.max(30, (int) Math.round(targetDailyMinutes * 0.5));
+                                case "REVIEW", "ASSESSMENT" -> Math.max(45, (int) Math.round(targetDailyMinutes * 0.75));
+                                default -> targetDailyMinutes; // STUDY, PRACTICE, PROJECT, CODING_PRACTICE
+                            };
+                            task.setEstimatedMinutes(Math.min(calibrated, targetDailyMinutes));
+                        }
+
+                        // Ensure subtopics and learning objectives are initialized
+                        if (task.getSubtopics() == null) {
+                            task.setSubtopics(new ArrayList<>());
+                        }
+                        if (task.getLearningObjectives() == null) {
+                            task.setLearningObjectives(new ArrayList<>());
+                        }
+                        if (task.getPracticeTasks() == null) {
+                            task.setPracticeTasks(new ArrayList<>());
+                        }
+                    }
+                }
+            }
+        }
+
         // Sanitize learning resources against host allowlist
         if (response.getLearningResources() != null && !response.getLearningResources().isEmpty()) {
             for (ResourceItem r : response.getLearningResources()) {
