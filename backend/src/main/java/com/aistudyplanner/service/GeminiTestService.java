@@ -14,6 +14,7 @@ import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -24,20 +25,13 @@ public class GeminiTestService {
 
     private static final long BASE_DELAY_MS = 1000L;
 
-    // Active and confirmed Gemini models chain
-    private static final List<String> FALLBACK_MODELS = List.of(
-        "gemini-2.0-flash",
-        "gemini-1.5-flash",
-        "gemini-flash-lite-latest"
-    );
-
     private final RestClient restClient;
     private final String apiKey;
-    private final String preferredModel;
+    private final List<String> configuredModels;
 
     public GeminiTestService(
-            @Value("${gemini.api.key}") String apiKey,
-            @Value("${gemini.api.model}") String model) {
+            @Value("${gemini.api.key:}") String apiKey,
+            @Value("${gemini.api.models:${gemini.api.model:gemini-2.0-flash,gemini-1.5-flash,gemini-flash-lite-latest}}") String modelsConfig) {
 
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(10));
@@ -47,7 +41,10 @@ public class GeminiTestService {
                 .requestFactory(requestFactory)
                 .build();
         this.apiKey          = apiKey;
-        this.preferredModel  = model;
+        this.configuredModels = Arrays.stream(modelsConfig.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
     }
 
     public String askGemini(String prompt) {
@@ -78,12 +75,9 @@ public class GeminiTestService {
             );
         }
 
-        // Build model queue: at most 3 models
+        // Build model queue: at most 3 models from configured models list
         List<String> queue = new ArrayList<>();
-        if (preferredModel != null && !preferredModel.isBlank()) {
-            queue.add(preferredModel);
-        }
-        for (String m : FALLBACK_MODELS) {
+        for (String m : configuredModels) {
             if (queue.size() >= 3) break;
             if (!queue.contains(m)) queue.add(m);
         }
@@ -123,7 +117,7 @@ public class GeminiTestService {
                         throw new IllegalStateException("Gemini returned response without text parts.");
                     }
 
-                    log.info("Gemini call succeeded with model: {}", currentModel);
+                    log.info("Gemini generation completed successfully with model: {}", currentModel);
                     return text;
 
                 } catch (HttpClientErrorException.TooManyRequests e) {
