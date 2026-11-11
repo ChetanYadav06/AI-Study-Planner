@@ -755,6 +755,23 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                 </div>
               ))}
             </div>
+          ) : !primaryRoadmap ? (
+            <div className="py-8 text-center text-muted space-y-2">
+              <Calendar className="w-7 h-7 mx-auto text-muted mb-1" />
+              <p className="text-sm font-semibold text-ink">No active roadmap found</p>
+              <p className="text-xs text-muted max-w-sm mx-auto">
+                Create a goal and generate an AI study roadmap to see scheduled tasks for {daysOfWeek[selectedDay]}.
+              </p>
+              <div className="pt-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => onNavigateTab && onNavigateTab('my-roadmaps')}
+                >
+                  Create AI Roadmap
+                </Button>
+              </div>
+            </div>
           ) : (
             <div className="py-8 text-center text-muted space-y-1">
               <CheckCircle2 className="w-7 h-7 mx-auto text-success mb-1" />

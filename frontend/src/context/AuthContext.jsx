@@ -42,16 +42,26 @@ export const AuthProvider = ({ children }) => {
     const authData = await loginUser({ email, password });
     localStorage.setItem('token', authData.token);
     setToken(authData.token);
-    const profile = await getUserProfile();
-    setUser(profile);
+    const fallbackUser = { id: authData.id, name: authData.name, email: authData.email };
+    try {
+      const profile = await getUserProfile();
+      setUser(profile || fallbackUser);
+    } catch {
+      setUser(fallbackUser);
+    }
   };
 
   const register = async (name, email, password) => {
     const authData = await registerUser({ name, email, password });
     localStorage.setItem('token', authData.token);
     setToken(authData.token);
-    const profile = await getUserProfile();
-    setUser(profile);
+    const fallbackUser = { id: authData.id, name: authData.name, email: authData.email };
+    try {
+      const profile = await getUserProfile();
+      setUser(profile || fallbackUser);
+    } catch {
+      setUser(fallbackUser);
+    }
   };
 
   const logout = () => {
