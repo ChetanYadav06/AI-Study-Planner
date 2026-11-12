@@ -116,6 +116,34 @@ export const getDayPlan = async (roadmapId, dayNumber) => {
   return response.data;
 };
 
+// Topic Expansions & Extra Topics API
+export const expandTopic = async (roadmapId, dayNumber, data) => {
+  const response = await api.post(`/ai/roadmaps/${roadmapId}/days/${dayNumber}/topics/expand`, data);
+  return response.data;
+};
+
+export const suggestExtraTopics = async (roadmapId, dayNumber) => {
+  const response = await api.post(`/ai/roadmaps/${roadmapId}/days/${dayNumber}/extra-topics/suggest`);
+  return response.data;
+};
+
+export const deleteTopicExpansion = async (roadmapId, dayNumber, topicTitle, level = null) => {
+  const params = { topicTitle };
+  if (level) params.level = level;
+  const response = await api.delete(`/ai/roadmaps/${roadmapId}/days/${dayNumber}/topics/expand`, { params });
+  return response.data;
+};
+
+export const deleteExtraTopic = async (roadmapId, dayNumber, extraId) => {
+  const response = await api.delete(`/ai/roadmaps/${roadmapId}/days/${dayNumber}/extra-topics/${extraId}`);
+  return response.data;
+};
+
+export const getDayTopicsAndExpansions = async (roadmapId, dayNumber) => {
+  const response = await api.get(`/ai/roadmaps/${roadmapId}/days/${dayNumber}/topics`);
+  return response.data;
+};
+
 export const updateRoadmapProgress = async (id, data) => {
   const response = await api.patch(`/ai/roadmaps/${id}/progress`, data);
   return response.data;

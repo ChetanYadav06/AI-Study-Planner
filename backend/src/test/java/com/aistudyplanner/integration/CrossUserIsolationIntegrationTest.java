@@ -48,6 +48,9 @@ public class CrossUserIsolationIntegrationTest {
     private com.aistudyplanner.service.RoadmapJobService roadmapJobService;
 
     @Autowired
+    private com.aistudyplanner.service.TopicExpansionService topicExpansionService;
+
+    @Autowired
     private JwtUtil jwtUtil;
 
     private User alice;
@@ -147,5 +150,39 @@ public class CrossUserIsolationIntegrationTest {
 
         // Bob can access his day plan -> 200 OK
         assertNotNull(savedRoadmapService.getDayPlan(bob.getEmail(), bobRoadmapId, 1));
+    }
+
+    @Test
+    void testAliceCannotAccessOrMutateBobsTopicExpansions() {
+        // Create a roadmap owned by Bob
+        SavedRoadmap bobRoadmap = new SavedRoadmap();
+        bobRoadmap.setUser(bob);
+        bobRoadmap.setTitle("Bob Roadmap");
+        bobRoadmap.setTopic("Bob Topic");
+        bobRoadmap.setTargetDays(30);
+        bobRoadmap.setHoursPerDay(2.0);
+        bobRoadmap.setSkillLevel(SkillLevel.INTERMEDIATE);
+        bobRoadmap.setRoadmapJson("{\"phases\":[{\"phaseNumber\":1,\"dailyTasks\":[{\"dayNumber\":1,\"title\":\"Task 1\",\"topics\":[{\"title\":\"T1\",\"summary\":\"S1\"}]}]}]}");
+        bobRoadmap = savedRoadmapRepository.save(bobRoadmap);
+
+        Long bobRoadmapId = bobRoadmap.getId();
+
+        // Alice attempts to get Bob's topic expansions -> 403 Forbidden
+        ResponseStatusException ex1 = assertThrows(ResponseStatusException.class, () ->
+                topicExpansionService.getDayTopicsAndExpansions(alice.getEmail(), bobRoadmapId, 1)
+        );
+        assertEquals(org.springframework.http.HttpStatus.FORBIDDEN, ex1.getStatusCode());
+
+        // Alice attempts to expand topic on Bob's roadmap -> 403 Forbidden
+        ResponseStatusException ex2 = assertThrows(ResponseStatusException.class, () ->
+                topicExpansionService.expandTopic(alice.getEmail(), bobRoadmapId, 1, new com.aistudyplanner.dto.TopicExpansionRequest("T1", 1))
+        );
+        assertEquals(org.springframework.http.HttpStatus.FORBIDDEN, ex2.getStatusCode());
+
+        // Alice attempts to delete topic expansion on Bob's roadmap -> 403 Forbidden
+        ResponseStatusException ex3 = assertThrows(ResponseStatusException.class, () ->
+                topicExpansionService.deleteExpansion(alice.getEmail(), bobRoadmapId, 1, "T1", 1)
+        );
+        assertEquals(org.springframework.http.HttpStatus.FORBIDDEN, ex3.getStatusCode());
     }
 }

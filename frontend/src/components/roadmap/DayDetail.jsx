@@ -26,8 +26,14 @@ export const DayDetail = ({
   completedBlocks = {},
   onToggleBlock,
   onExpandTopic,
+  onDeleteExpansion,
+  onSuggestExtraTopics,
+  onDeleteExtraTopic,
   topicExpansions = {},
+  extraTopics = [],
   loadingExpansion = null,
+  suggestingExtra = false,
+  canMutate = true,
   phase = null
 }) => {
   if (!taskItem) {
@@ -143,10 +149,16 @@ export const DayDetail = ({
       <Card className="p-5 sm:p-6">
         <TopicList
           topics={topics}
+          extraTopics={extraTopics}
           dayNumber={dayNumber}
           onExpandTopic={onExpandTopic}
+          onDeleteExpansion={onDeleteExpansion}
+          onSuggestExtraTopics={onSuggestExtraTopics}
+          onDeleteExtraTopic={onDeleteExtraTopic}
           expansions={topicExpansions}
           loadingExpansion={loadingExpansion}
+          suggestingExtra={suggestingExtra}
+          canMutate={canMutate}
         />
       </Card>
 

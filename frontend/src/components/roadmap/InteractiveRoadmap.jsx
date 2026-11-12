@@ -10,7 +10,16 @@ import {
   ArrowLeft,
   ArrowRight
 } from 'lucide-react';
-import { updateRoadmapProgress, saveRoadmap, getDayPlan } from '../../services/api';
+import {
+  updateRoadmapProgress,
+  saveRoadmap,
+  getDayPlan,
+  expandTopic,
+  suggestExtraTopics,
+  deleteTopicExpansion,
+  deleteExtraTopic,
+  getDayTopicsAndExpansions
+} from '../../services/api';
 import { formatEnum } from '../../utils/formatters';
 import { getCanonicalTaskId } from '../../utils/studyQueue';
 import { Button } from '../ui/Button';
@@ -198,6 +207,156 @@ export const InteractiveRoadmap = ({
       isMounted = false;
     };
   }, [currentSavedId, selectedDayNumber, dayPlanCache]);
+
+  // Topic Expansions and Extra Topics state
+  const [dayTopicsCache, setDayTopicsCache] = useState({});
+  const [loadingExpansionState, setLoadingExpansionState] = useState(null);
+  const [suggestingExtra, setSuggestingExtra] = useState(false);
+  const [topicError, setTopicError] = useState(null);
+
+  // Fetch expansions and extra topics when day or savedId changes
+  useEffect(() => {
+    if (!currentSavedId) return;
+    if (dayTopicsCache[selectedDayNumber]) return;
+
+    let isMounted = true;
+    getDayTopicsAndExpansions(currentSavedId, selectedDayNumber)
+      .then((data) => {
+        if (isMounted && data) {
+          setDayTopicsCache(prev => ({
+            ...prev,
+            [selectedDayNumber]: data
+          }));
+        }
+      })
+      .catch((err) => {
+        console.warn(`Could not fetch topics and expansions for day ${selectedDayNumber}:`, err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentSavedId, selectedDayNumber, dayTopicsCache]);
+
+  const handleExpandTopic = async (topicTitle, level) => {
+    if (!currentSavedId) return;
+    const loadKey = `${topicTitle}_${level}`;
+    setLoadingExpansionState(loadKey);
+    setTopicError(null);
+
+    try {
+      const res = await expandTopic(currentSavedId, selectedDayNumber, { topicTitle, level });
+      if (res && res.markdownContent) {
+        setDayTopicsCache(prev => {
+          const currentDayData = prev[selectedDayNumber] || {
+            dayNumber: selectedDayNumber,
+            baseTopics: [],
+            extraTopics: [],
+            expansions: {}
+          };
+          const currentExpansions = { ...currentDayData.expansions };
+          const topicMap = { ...(currentExpansions[topicTitle] || {}) };
+          topicMap[level] = res.markdownContent;
+          currentExpansions[topicTitle] = topicMap;
+
+          return {
+            ...prev,
+            [selectedDayNumber]: {
+              ...currentDayData,
+              expansions: currentExpansions
+            }
+          };
+        });
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data || err.message || 'Failed to expand topic.';
+      setTopicError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    } finally {
+      setLoadingExpansionState(null);
+    }
+  };
+
+  const handleDeleteExpansion = async (topicTitle, level) => {
+    if (!currentSavedId) return;
+    try {
+      await deleteTopicExpansion(currentSavedId, selectedDayNumber, topicTitle, level);
+      setDayTopicsCache(prev => {
+        const currentDayData = prev[selectedDayNumber];
+        if (!currentDayData) return prev;
+
+        const currentExpansions = { ...currentDayData.expansions };
+        const topicMap = { ...(currentExpansions[topicTitle] || {}) };
+        if (level === 1) {
+          delete currentExpansions[topicTitle];
+        } else {
+          delete topicMap[level];
+          currentExpansions[topicTitle] = topicMap;
+        }
+
+        return {
+          ...prev,
+          [selectedDayNumber]: {
+            ...currentDayData,
+            expansions: currentExpansions
+          }
+        };
+      });
+    } catch (err) {
+      console.warn('Failed to delete expansion:', err);
+    }
+  };
+
+  const handleSuggestExtraTopics = async () => {
+    if (!currentSavedId) return;
+    setSuggestingExtra(true);
+    setTopicError(null);
+    try {
+      const extras = await suggestExtraTopics(currentSavedId, selectedDayNumber);
+      if (extras && extras.length > 0) {
+        setDayTopicsCache(prev => {
+          const currentDayData = prev[selectedDayNumber] || {
+            dayNumber: selectedDayNumber,
+            baseTopics: [],
+            extraTopics: [],
+            expansions: {}
+          };
+          const existingExtras = currentDayData.extraTopics || [];
+          return {
+            ...prev,
+            [selectedDayNumber]: {
+              ...currentDayData,
+              extraTopics: [...existingExtras, ...extras]
+            }
+          };
+        });
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data || err.message || 'Failed to suggest extra topics.';
+      setTopicError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    } finally {
+      setSuggestingExtra(false);
+    }
+  };
+
+  const handleDeleteExtraTopic = async (extraId) => {
+    if (!currentSavedId) return;
+    try {
+      await deleteExtraTopic(currentSavedId, selectedDayNumber, extraId);
+      setDayTopicsCache(prev => {
+        const currentDayData = prev[selectedDayNumber];
+        if (!currentDayData) return prev;
+        return {
+          ...prev,
+          [selectedDayNumber]: {
+            ...currentDayData,
+            extraTopics: (currentDayData.extraTopics || []).filter(e => e.id !== extraId)
+          }
+        };
+      });
+    } catch (err) {
+      console.warn('Failed to delete extra topic:', err);
+    }
+  };
 
   // Completed count and canonical progress percentage
   const completedTasksCount = useMemo(() => {
@@ -528,6 +687,20 @@ export const InteractiveRoadmap = ({
         </Card>
       )}
 
+      {/* Error alert if expansion or extra topic fails */}
+      {topicError && (
+        <div className="p-3.5 rounded-md border border-line bg-page text-danger text-[13px] flex items-center justify-between">
+          <span>{topicError}</span>
+          <button
+            type="button"
+            onClick={() => setTopicError(null)}
+            className="text-muted hover:text-ink font-semibold ml-2"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* MASTER-DETAIL VIEW: PhaseList (Master) + DayDetail (Detail) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: PhaseList (Master) */}
@@ -563,9 +736,15 @@ export const InteractiveRoadmap = ({
             loadingPlan={loadingPlan}
             completedBlocks={completedBlocks}
             onToggleBlock={handleToggleBlock}
-            onExpandTopic={onExpandTopic}
-            topicExpansions={topicExpansions}
-            loadingExpansion={loadingExpansion}
+            onExpandTopic={onExpandTopic || handleExpandTopic}
+            onDeleteExpansion={handleDeleteExpansion}
+            onSuggestExtraTopics={handleSuggestExtraTopics}
+            onDeleteExtraTopic={handleDeleteExtraTopic}
+            topicExpansions={dayTopicsCache[selectedDayNumber]?.expansions || topicExpansions || {}}
+            extraTopics={dayTopicsCache[selectedDayNumber]?.extraTopics || []}
+            loadingExpansion={loadingExpansion || loadingExpansionState}
+            suggestingExtra={suggestingExtra}
+            canMutate={Boolean(currentSavedId)}
             phase={selectedPhase}
           />
         </div>
