@@ -42,7 +42,7 @@ public class SaveRoadmapRequest {
     }
 
     public void setTitle(String title) {
-        this.title = title;
+        this.title = title != null ? title.replaceAll("\\s*\\(\\d+\\s*Days?\\)$", "").trim() : null;
     }
 
     public String getTopic() {

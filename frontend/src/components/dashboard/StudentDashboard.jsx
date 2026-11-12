@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Calendar,
   Clock,
@@ -19,6 +19,8 @@ import {
   updateGoalStatus,
   deleteGoal,
   generateRoadmap,
+  startRoadmapJob,
+  getRoadmapJobStatus,
   getSavedRoadmaps,
   updateRoadmapProgress,
   getStudySessionsSummary,
@@ -59,9 +61,19 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
 
   // Roadmap generation state
   const [roadmapLoading, setRoadmapLoading] = useState(false);
+  const [roadmapProgress, setRoadmapProgress] = useState(null);
   const [roadmapError, setRoadmapError] = useState(null);
   const [generatedRoadmap, setGeneratedRoadmap] = useState(null);
   const [existingSavedRoadmap, setExistingSavedRoadmap] = useState(null);
+  const dashboardPollRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (dashboardPollRef.current) {
+        clearInterval(dashboardPollRef.current);
+      }
+    };
+  }, []);
   const [roadmapPrefs, setRoadmapPrefs] = useState({
     skillLevel: 'INTERMEDIATE',
     targetDays: 30,
@@ -456,18 +468,66 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
   const handleGenerateRoadmap = async () => {
     if (!selectedGoalForRoadmap) return;
     setRoadmapLoading(true);
+    setRoadmapProgress('Initializing roadmap generation...');
     setRoadmapError(null);
+
+    const topicClean = (selectedGoalForRoadmap.title || '').replace(/\s*\(\d+\s*Days?\)$/i, '').trim();
+
+    const payload = {
+      topic: topicClean,
+      description: selectedGoalForRoadmap.description || '',
+      skillLevel: roadmapPrefs.skillLevel,
+      targetDays: Number(roadmapPrefs.targetDays),
+      hoursPerDay: Number(roadmapPrefs.hoursPerDay),
+      goalId: selectedGoalForRoadmap.id,
+      specificTopics: roadmapPrefs.specificTopics?.trim() || undefined,
+      targetOutcomes: roadmapPrefs.targetOutcomes?.trim() || undefined,
+      priorKnowledge: roadmapPrefs.priorKnowledge?.trim() || undefined,
+    };
+
     try {
-      const result = await generateRoadmap({
-        topic: selectedGoalForRoadmap.title,
-        description: selectedGoalForRoadmap.description || '',
-        skillLevel: roadmapPrefs.skillLevel,
-        targetDays: Number(roadmapPrefs.targetDays),
-        hoursPerDay: Number(roadmapPrefs.hoursPerDay),
-        goalId: selectedGoalForRoadmap.id,
-        specificTopics: roadmapPrefs.specificTopics?.trim() || undefined,
-        targetOutcomes: roadmapPrefs.targetOutcomes?.trim() || undefined,
-        priorKnowledge: roadmapPrefs.priorKnowledge?.trim() || undefined,
+      const { jobId } = await startRoadmapJob(payload);
+
+      const result = await new Promise((resolve, reject) => {
+        let consecutiveErrors = 0;
+        if (dashboardPollRef.current) {
+          clearInterval(dashboardPollRef.current);
+        }
+
+        const timer = setInterval(async () => {
+          try {
+            const job = await getRoadmapJobStatus(jobId);
+            consecutiveErrors = 0;
+            if (job.phasesTotal > 0) {
+              setRoadmapProgress(`Phase ${job.phasesDone} of ${job.phasesTotal}: ${job.message || ''}`);
+            } else if (job.message) {
+              setRoadmapProgress(job.message);
+            }
+
+            if (job.state === 'DONE') {
+              clearInterval(timer);
+              dashboardPollRef.current = null;
+              resolve(job.result);
+            } else if (job.state === 'FAILED') {
+              clearInterval(timer);
+              dashboardPollRef.current = null;
+              const err = new Error(job.message || 'Generation failed.');
+              err.errorCode = job.errorCode;
+              reject(err);
+            }
+          } catch (apiErr) {
+            consecutiveErrors++;
+            if (consecutiveErrors >= 5) {
+              clearInterval(timer);
+              dashboardPollRef.current = null;
+              reject(new Error(apiErr.response?.data?.message || 'Connection lost while polling generation.'));
+            } else {
+              setRoadmapProgress('Reconnecting to server...');
+            }
+          }
+        }, 2000);
+
+        dashboardPollRef.current = timer;
       });
 
       result.id = result.id || `roadmap_${Date.now()}`;
@@ -484,12 +544,22 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
       }
     } catch (err) {
       console.error('Roadmap generation failed:', err);
-      setRoadmapError(
-        err?.response?.data?.message ||
-        'Failed to generate roadmap. Please check your Gemini connection and try again.'
-      );
+      let msg = err.message || 'Failed to generate roadmap. Please retry.';
+      if (err.errorCode === 'TIMEOUT') {
+        msg = 'The AI took too long. Try again or choose fewer days.';
+      } else if (err.errorCode === 'RATE_LIMITED' || err.response?.status === 429) {
+        msg = 'Roadmap generation limit reached (maximum 5 per hour). Please try again later.';
+      } else if (err.errorCode === 'AI_UNAVAILABLE') {
+        msg = 'AI service is temporarily unavailable. Please try again later.';
+      } else if (err.errorCode === 'INVALID_PLAN') {
+        msg = err.message || 'Generated roadmap did not pass validation checks. Please retry.';
+      } else if (err.response?.status === 409) {
+        msg = 'A roadmap generation is already in progress for your account.';
+      }
+      setRoadmapError(msg);
     } finally {
       setRoadmapLoading(false);
+      setRoadmapProgress(null);
     }
   };
 
@@ -1038,7 +1108,7 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                 <div className="py-16 text-center space-y-3">
                   <Loader2 className="w-7 h-7 text-accent animate-spin mx-auto mb-2" />
                   <p className="text-sm font-medium text-ink">
-                    Generating curriculum roadmap with Gemini AI...
+                    {roadmapProgress || 'Generating curriculum roadmap with Gemini AI...'}
                   </p>
                   <p className="text-xs text-muted">
                     Calibrating daily tasks, exercises, and study schedule.

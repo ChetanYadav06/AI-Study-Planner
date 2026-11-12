@@ -56,7 +56,7 @@ public class SavedRoadmapService {
         this.roadmapRepository = roadmapRepository;
         this.userRepository = userRepository;
         this.goalRepository = goalRepository;
-        this.objectMapper = objectMapper;
+        this.objectMapper = objectMapper != null ? objectMapper : new ObjectMapper();
         this.roadmapValidator = roadmapValidator != null ? roadmapValidator : new RoadmapValidator();
     }
 
@@ -218,6 +218,26 @@ public class SavedRoadmapService {
         return new SavedRoadmapResponse(saved);
     }
 
+    public record ProgressCalculation(int completedTasks, int totalTasks, int percentage) {}
+
+    /**
+     * Single canonical progress computation from roadmap JSON and completed tasks JSON.
+     * Evaluates strictly canonical task IDs.
+     */
+    public ProgressCalculation calculateProgress(String roadmapJson, String completedTasksJson) {
+        if (roadmapJson == null || roadmapJson.isBlank()) {
+            return new ProgressCalculation(0, 0, 0);
+        }
+        Set<String> validTaskIds = extractValidTaskIds(roadmapJson);
+        int totalTasks = validTaskIds.size();
+        Set<String> completedIds = parseCompletedTaskIds(completedTasksJson);
+        int validCompletedCount = (int) completedIds.stream().filter(validTaskIds::contains).count();
+        int progress = totalTasks > 0
+                ? Math.min(100, Math.max(0, (int) Math.round(((double) validCompletedCount / (double) totalTasks) * 100.0)))
+                : 0;
+        return new ProgressCalculation(validCompletedCount, totalTasks, progress);
+    }
+
     /**
      * Recomputes roadmap progress percentage from valid task completions and syncs the linked goal.
      */
@@ -226,16 +246,12 @@ public class SavedRoadmapService {
             return;
         }
 
-        Set<String> validTaskIds = extractValidTaskIds(roadmap.getRoadmapJson());
-        int totalTasks = validTaskIds.size();
-
-        Set<String> completedIds = parseCompletedTaskIds(roadmap.getCompletedTasksJson());
-        long validCompletedCount = completedIds.stream().filter(validTaskIds::contains).count();
-
+        ProgressCalculation calc = calculateProgress(roadmap.getRoadmapJson(), roadmap.getCompletedTasksJson());
+        int totalTasks = calc.totalTasks();
+        int validCompletedCount = calc.completedTasks();
         int progress;
         if (totalTasks > 0) {
-            progress = (int) Math.round(((double) validCompletedCount / (double) totalTasks) * 100.0);
-            progress = Math.min(100, Math.max(0, progress));
+            progress = calc.percentage();
             roadmap.setProgressPercentage(progress);
         } else if (roadmap.getGoalId() != null) {
             progress = 0;
@@ -246,7 +262,7 @@ public class SavedRoadmapService {
 
         if (roadmap.getGoalId() != null) {
             final int finalProgress = progress;
-            final long completedCount = validCompletedCount;
+            final int completedCount = validCompletedCount;
             goalRepository.findById(roadmap.getGoalId()).ifPresent(goal -> {
                 goal.setProgressPercentage(finalProgress);
                 if (completedCount == 0) {

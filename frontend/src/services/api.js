@@ -191,6 +191,17 @@ export const generateRoadmap = async (data) => {
   return response.data;
 };
 
+// Async Roadmap Generation Job API
+export const startRoadmapJob = async (data) => {
+  const response = await api.post('/ai/roadmap/generate', data);
+  return response.data;
+};
+
+export const getRoadmapJobStatus = async (jobId) => {
+  const response = await api.get(`/ai/roadmap/generate/${jobId}`);
+  return response.data;
+};
+
 // Progress & Weekly Review API
 export const getProgressOverview = async (tz = 'UTC') => {
   const response = await api.get('/progress/overview', { params: { tz } });

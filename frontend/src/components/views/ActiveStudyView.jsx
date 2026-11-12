@@ -392,12 +392,13 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
             )}
 
             <Button
-              variant="outline"
+              variant="secondary"
               size="md"
               onClick={handleResetTimer}
-              icon={RotateCcw}
-              aria-label="Reset Timer"
-            />
+              aria-label="Reset timer"
+            >
+              <RotateCcw className="w-4 h-4 text-muted" aria-label="Reset timer" />
+            </Button>
           </div>
         </Card>
 

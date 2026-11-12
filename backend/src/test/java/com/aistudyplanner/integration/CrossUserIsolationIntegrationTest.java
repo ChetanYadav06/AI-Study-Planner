@@ -45,6 +45,9 @@ public class CrossUserIsolationIntegrationTest {
     private SavedRoadmapService savedRoadmapService;
 
     @Autowired
+    private com.aistudyplanner.service.RoadmapJobService roadmapJobService;
+
+    @Autowired
     private JwtUtil jwtUtil;
 
     private User alice;
@@ -94,5 +97,30 @@ public class CrossUserIsolationIntegrationTest {
 
         // Confirm Bob's roadmap is still present
         assertTrue(savedRoadmapRepository.findById(bobRoadmapId).isPresent());
+    }
+
+    @Test
+    void testAliceCannotAccessBobsRoadmapJob() {
+        // Register a job owned by Bob
+        String bobJobId = "job_bob_test_123";
+        com.aistudyplanner.service.RoadmapJobService.JobRecord bobJob = new com.aistudyplanner.service.RoadmapJobService.JobRecord(
+                bobJobId,
+                bob.getEmail(),
+                java.time.Instant.now(),
+                com.aistudyplanner.dto.RoadmapJobResponse.State.RUNNING,
+                0,
+                3,
+                "Generating..."
+        );
+        roadmapJobService.getJobStore().put(bobJobId, bobJob);
+
+        // Alice attempts to get Bob's job -> 403 Forbidden
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                roadmapJobService.getJob(bobJobId, alice.getEmail())
+        );
+        assertEquals(org.springframework.http.HttpStatus.FORBIDDEN, ex.getStatusCode());
+
+        // Bob can access his own job -> 200 OK
+        assertNotNull(roadmapJobService.getJob(bobJobId, bob.getEmail()));
     }
 }

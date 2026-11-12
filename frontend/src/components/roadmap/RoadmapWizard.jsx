@@ -86,6 +86,7 @@ export const RoadmapWizard = ({
   onGenerate,
   onCancel,
   loading = false,
+  progressMessage = null,
   error = null
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -368,7 +369,7 @@ export const RoadmapWizard = ({
             </span>
             <h3 className="text-base font-semibold text-ink mt-1">Synthesizing Your Curriculum</h3>
             <p className="text-xs text-muted mt-1.5 min-h-[36px]">
-              {SYNTHESIS_STAGES[synthesisStageIdx]}
+              {progressMessage || SYNTHESIS_STAGES[synthesisStageIdx]}
             </p>
           </div>
 

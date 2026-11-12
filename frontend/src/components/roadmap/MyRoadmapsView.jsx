@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Trash2,
   Map as MapIcon
@@ -8,6 +8,8 @@ import {
   getSavedRoadmaps,
   deleteSavedRoadmap,
   generateRoadmap,
+  startRoadmapJob,
+  getRoadmapJobStatus,
   saveRoadmap,
   replaceRoadmap
 } from '../../services/api';
@@ -38,7 +40,18 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
 
   // Generation state
   const [generating, setGenerating] = useState(false);
+  const [generateProgress, setGenerateProgress] = useState(null);
   const [generateError, setGenerateError] = useState(null);
+  const pollIntervalRef = useRef(null);
+
+  // Stop polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
 
   // Fetch saved roadmaps from MySQL API
   const fetchRoadmaps = async () => {
@@ -74,21 +87,101 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
     };
   }, [savedRoadmaps]);
 
+  const pollJobUntilComplete = (jobId) => {
+    return new Promise((resolve, reject) => {
+      let consecutiveErrors = 0;
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+
+      const timer = setInterval(async () => {
+        try {
+          const job = await getRoadmapJobStatus(jobId);
+          consecutiveErrors = 0;
+
+          if (job.phasesTotal > 0) {
+            setGenerateProgress(`Phase ${job.phasesDone} of ${job.phasesTotal}: ${job.message || 'Generating daily tasks'}`);
+          } else if (job.message) {
+            setGenerateProgress(job.message);
+          }
+
+          if (job.state === 'DONE') {
+            clearInterval(timer);
+            pollIntervalRef.current = null;
+            resolve(job.result);
+          } else if (job.state === 'FAILED') {
+            clearInterval(timer);
+            pollIntervalRef.current = null;
+            const err = new Error(job.message || 'Roadmap generation failed.');
+            err.errorCode = job.errorCode;
+            reject(err);
+          }
+        } catch (apiErr) {
+          consecutiveErrors++;
+          console.warn('Polling error:', apiErr);
+          if (consecutiveErrors >= 5) {
+            clearInterval(timer);
+            pollIntervalRef.current = null;
+            const err = new Error(
+              apiErr.response?.data?.message ||
+              'Connection to server lost while generating roadmap. Please retry.'
+            );
+            reject(err);
+          } else {
+            setGenerateProgress('Network connection hiccup, reconnecting...');
+          }
+        }
+      }, 2000);
+
+      pollIntervalRef.current = timer;
+    });
+  };
+
+  const formatGenerationError = (err) => {
+    if (err.errorCode === 'TIMEOUT') {
+      return 'The AI took too long. Try again or choose fewer days.';
+    }
+    if (err.errorCode === 'RATE_LIMITED' || err.response?.status === 429) {
+      return 'Roadmap generation limit reached (maximum 5 per hour). Please try again later.';
+    }
+    if (err.errorCode === 'AI_UNAVAILABLE') {
+      return 'AI service is temporarily unavailable. Please try again later.';
+    }
+    if (err.errorCode === 'INVALID_PLAN') {
+      return err.message || 'Generated roadmap did not pass validation checks. Please retry.';
+    }
+    if (err.response?.status === 409) {
+      return 'A roadmap generation is already in progress for your account.';
+    }
+    if (err.code === 'ERR_NETWORK' || !err.response) {
+      return 'Network connection failed. Please check your internet and retry.';
+    }
+    return err.response?.data?.message || err.message || 'Roadmap generation failed. Please retry.';
+  };
+
   // When user completes the 5-step wizard
   const handleWizardGenerate = async (payload) => {
     setGenerating(true);
+    setGenerateProgress('Initializing roadmap generation...');
     setGenerateError(null);
 
+    // Clean any '(N Days)' suffix from topic
+    const cleanedPayload = {
+      ...payload,
+      topic: (payload.topic || '').replace(/\s*\(\d+\s*Days?\)$/i, '').trim()
+    };
+
     try {
-      const result = await generateRoadmap(payload);
+      const { jobId } = await startRoadmapJob(cleanedPayload);
+      const result = await pollJobUntilComplete(jobId);
 
       let savedRecord = null;
       try {
         savedRecord = await saveRoadmap({
-          goalId: payload.goalId,
-          title: `${result.topic} (${result.targetDays} Days)`,
+          goalId: cleanedPayload.goalId,
+          title: result.topic,
           topic: result.topic,
-          skillLevel: result.skillLevel || payload.skillLevel || 'INTERMEDIATE',
+          skillLevel: result.skillLevel || cleanedPayload.skillLevel || 'INTERMEDIATE',
           targetDays: result.targetDays,
           hoursPerDay: result.hoursPerDay,
           roadmapJson: JSON.stringify(result)
@@ -99,8 +192,8 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
 
       setActiveRoadmap(result);
       setActiveSavedId(savedRecord?.id || null);
-      if (payload.goalId) {
-        const found = goals.find(g => String(g.id) === String(payload.goalId));
+      if (cleanedPayload.goalId) {
+        const found = goals.find(g => String(g.id) === String(cleanedPayload.goalId));
         setActiveGoal(found || null);
       } else {
         setActiveGoal(null);
@@ -110,12 +203,10 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
       fetchRoadmaps();
     } catch (err) {
       console.error('Roadmap generation failed:', err);
-      setGenerateError(
-        err.response?.data?.message ||
-        'Roadmap generation encountered a network issue. Please retry.'
-      );
+      setGenerateError(formatGenerationError(err));
     } finally {
       setGenerating(false);
+      setGenerateProgress(null);
     }
   };
 
@@ -169,6 +260,7 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
           onGenerate={handleWizardGenerate}
           onCancel={() => setViewMode('LIST')}
           loading={generating}
+          progressMessage={generateProgress}
           error={generateError}
         />
       )}
@@ -186,17 +278,18 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
           onRegenerate={async () => {
             if (!activeRoadmap) return;
             const payload = {
-              topic: activeRoadmap.topic,
+              topic: (activeRoadmap.topic || '').replace(/\s*\(\d+\s*Days?\)$/i, '').trim(),
               skillLevel: activeRoadmap.skillLevel || 'INTERMEDIATE',
               targetDays: activeRoadmap.targetDays,
               hoursPerDay: activeGoal?.hoursPerDay || activeRoadmap.hoursPerDay || 2.0,
               description: activeGoal?.description || ''
             };
-            const result = await generateRoadmap(payload);
+            const { jobId } = await startRoadmapJob(payload);
+            const result = await pollJobUntilComplete(jobId);
             if (activeSavedId) {
               await replaceRoadmap(activeSavedId, {
                 roadmapJson: JSON.stringify(result),
-                title: `${result.topic} (${result.targetDays} Days)`,
+                title: result.topic,
                 targetDays: result.targetDays,
                 hoursPerDay: result.hoursPerDay
               });

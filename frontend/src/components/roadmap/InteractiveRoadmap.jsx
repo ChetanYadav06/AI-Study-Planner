@@ -165,11 +165,11 @@ export const InteractiveRoadmap = ({
   const completedMilestonesCount = useMemo(() => Object.values(completedMilestones).filter(Boolean).length, [completedMilestones]);
   const totalCompletedCount = completedTasksCount + completedMilestonesCount;
 
-  // Overall percentage
+  // Overall percentage (canonical tasks basis)
   const progressPercent = useMemo(() => {
-    if (totalItemsCount === 0) return 0;
-    return Math.min(100, Math.round((totalCompletedCount / totalItemsCount) * 100));
-  }, [totalCompletedCount, totalItemsCount]);
+    if (totalTasksCount === 0) return 0;
+    return Math.min(100, Math.round((completedTasksCount / totalTasksCount) * 100));
+  }, [completedTasksCount, totalTasksCount]);
 
   // Next Recommended Action (first uncompleted task)
   const nextRecommendedAction = useMemo(() => {
@@ -363,7 +363,7 @@ export const InteractiveRoadmap = ({
 
       const res = await saveRoadmap({
         goalId: goal?.id || null,
-        title: `${roadmap.topic} (${roadmap.targetDays} Days)`,
+        title: roadmap.topic,
         topic: roadmap.topic,
         skillLevel: roadmap.skillLevel || 'INTERMEDIATE',
         targetDays: roadmap.targetDays,
@@ -516,7 +516,7 @@ export const InteractiveRoadmap = ({
             <TrendingUp className="w-4 h-4 text-accent" />
             <span>Completion:</span>
             <span className="font-semibold text-accent">
-              {progressPercent}% ({totalCompletedCount}/{totalItemsCount} activities)
+              {progressPercent}% ({completedTasksCount}/{totalTasksCount} tasks)
             </span>
           </div>
 

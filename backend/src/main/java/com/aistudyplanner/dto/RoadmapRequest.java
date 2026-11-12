@@ -34,7 +34,9 @@ public class RoadmapRequest {
     public RoadmapRequest() {}
 
     public String getTopic() { return topic; }
-    public void setTopic(String topic) { this.topic = topic; }
+    public void setTopic(String topic) {
+        this.topic = topic != null ? topic.replaceAll("\\s*\\(\\d+\\s*Days?\\)$", "").trim() : null;
+    }
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
