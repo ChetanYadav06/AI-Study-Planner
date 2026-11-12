@@ -572,6 +572,9 @@ public class RoadmapService {
             if (profile.getLearningMethods() != null && !profile.getLearningMethods().isBlank()) {
                 profilePreferences.append("- Delivery Media: ").append(profile.getLearningMethods().trim()).append("\n");
             }
+            if (profile.getAdditionalContext() != null && !profile.getAdditionalContext().isBlank()) {
+                profilePreferences.append("- Personalization & Revision Notes: ").append(profile.getAdditionalContext().trim()).append("\n");
+            }
         }
 
         return String.format("""
@@ -915,6 +918,9 @@ public class RoadmapService {
             }
             if (profile.getLearningMethods() != null && !profile.getLearningMethods().isBlank()) {
                 profilePreferences.append("- Delivery Media: ").append(profile.getLearningMethods().trim()).append("\n");
+            }
+            if (profile.getAdditionalContext() != null && !profile.getAdditionalContext().isBlank()) {
+                profilePreferences.append("- Personalization & Revision Notes: ").append(profile.getAdditionalContext().trim()).append("\n");
             }
         }
 
