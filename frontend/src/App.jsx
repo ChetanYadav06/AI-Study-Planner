@@ -12,6 +12,7 @@ import { StudyPlannerView } from './components/views/StudyPlannerView';
 import { ActiveStudyView } from './components/views/ActiveStudyView';
 import { ProgressView } from './components/views/ProgressView';
 import { SavedResourcesView } from './components/views/SavedResourcesView';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 const AppContent = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -163,9 +164,11 @@ const AppContent = () => {
 
 export const App = () => {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 };
 

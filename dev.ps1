@@ -1,4 +1,4 @@
-﻿# ============================================================
+# ============================================================
 #  AI Study Planner — One-Command Dev Launcher
 #  Usage: .\dev.ps1
 #         .\dev.ps1 -SkipMysql    (if MySQL is already running)

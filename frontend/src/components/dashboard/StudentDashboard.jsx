@@ -8,7 +8,6 @@ import {
   ChevronRight,
   X,
   Loader2,
-  Map,
   Plus,
   BookOpen,
   Coffee,
