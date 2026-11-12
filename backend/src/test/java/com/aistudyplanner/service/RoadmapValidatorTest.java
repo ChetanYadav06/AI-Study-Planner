@@ -270,6 +270,72 @@ class RoadmapValidatorTest {
                 "Expected 60% rule failure error, found: " + errors);
     }
 
+    @Test
+    @DisplayName("Should accept roadmap without optional topics (backward compatibility)")
+    void shouldAcceptRoadmapWithoutTopics() {
+        RoadmapRequest req = createSampleRequest("Java Spring Boot", 2, 2.0);
+        RoadmapResponse res = createValidResponse(2, 2.0, "Java Spring Boot");
+
+        List<String> errors = validator.validate(res, req);
+        assertTrue(errors.isEmpty(), "Roadmaps without topics should validate cleanly: " + errors);
+    }
+
+    @Test
+    @DisplayName("Should accept roadmap with valid daily topics")
+    void shouldAcceptRoadmapWithValidTopics() {
+        RoadmapRequest req = createSampleRequest("Java Spring Boot", 2, 2.0); // 120 mins -> n=4 topics
+        RoadmapResponse res = createValidResponse(2, 2.0, "Java Spring Boot");
+
+        DailyTask day1 = res.getPhases().get(0).getDailyTasks().get(0);
+        day1.setTopics(List.of(
+                new RoadmapResponse.DailyTopic("Dependency Injection", "Understanding IoC container and bean lifecycle management."),
+                new RoadmapResponse.DailyTopic("Component Scanning", "How Spring detects and registers components automatically."),
+                new RoadmapResponse.DailyTopic("Configuration Properties", "Externalizing application properties and type-safe binding."),
+                new RoadmapResponse.DailyTopic("Application Context", "Bootstrapping and configuring the Spring application context.")
+        ));
+
+        List<String> errors = validator.validate(res, req);
+        assertTrue(errors.isEmpty(), "Valid topics should validate cleanly: " + errors);
+    }
+
+    @Test
+    @DisplayName("Should reject out-of-range topic count")
+    void shouldRejectOutOfRangeTopicCount() {
+        RoadmapRequest req = createSampleRequest("Java Spring Boot", 2, 2.0); // 120 mins -> n=4, min=3, max=5
+        RoadmapResponse res = createValidResponse(2, 2.0, "Java Spring Boot");
+
+        DailyTask day1 = res.getPhases().get(0).getDailyTasks().get(0);
+        // Only 1 topic (below min 3)
+        day1.setTopics(List.of(
+                new RoadmapResponse.DailyTopic("Dependency Injection", "Understanding IoC container and bean lifecycle management.")
+        ));
+
+        List<String> errors = validator.validate(res, req);
+        assertFalse(errors.isEmpty(), "Should fail with out-of-range topic count");
+        assertTrue(errors.stream().anyMatch(e -> e.contains("Day 1 has 1 topics, expected between 3 and 5")),
+                "Expected count error, found: " + errors);
+    }
+
+    @Test
+    @DisplayName("Should reject invalid title, summary, or duplicate topic titles")
+    void shouldRejectInvalidTitleSummaryOrDuplicates() {
+        RoadmapRequest req = createSampleRequest("Java Spring Boot", 2, 2.0);
+        RoadmapResponse res = createValidResponse(2, 2.0, "Java Spring Boot");
+
+        DailyTask day1 = res.getPhases().get(0).getDailyTasks().get(0);
+        day1.setTopics(List.of(
+                new RoadmapResponse.DailyTopic("DI", "Valid summary with more than ten characters."), // Title < 3 chars
+                new RoadmapResponse.DailyTopic("Spring IoC Container", "Short"), // Summary < 10 chars
+                new RoadmapResponse.DailyTopic("Spring IoC Container", "Duplicate title check with valid length summary for the test.") // Duplicate title
+        ));
+
+        List<String> errors = validator.validate(res, req);
+        assertFalse(errors.isEmpty());
+        assertTrue(errors.stream().anyMatch(e -> e.contains("topic title must be between 3 and 60 characters")));
+        assertTrue(errors.stream().anyMatch(e -> e.contains("topic summary must be between 10 and 160 characters")));
+        assertTrue(errors.stream().anyMatch(e -> e.contains("duplicate topic title")));
+    }
+
     private String getRoadmap9Json() {
         StringBuilder sb = new StringBuilder();
         sb.append("{\"phases\":[");

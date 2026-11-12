@@ -41,7 +41,8 @@ public class RoadmapValidator {
         }
 
         int targetDays = request.getTargetDays();
-        double maxAllowedMinutes = (request.getHoursPerDay() * 60) * DAILY_MINUTES_TOLERANCE_RATIO;
+        int targetDailyMinutes = (int) Math.round(request.getHoursPerDay() * 60);
+        double maxAllowedMinutes = targetDailyMinutes * DAILY_MINUTES_TOLERANCE_RATIO;
 
         int totalTasks = 0;
         int expectedNextDayNumber = 1;
@@ -130,6 +131,39 @@ public class RoadmapValidator {
                 if (task.getEstimatedMinutes() > maxAllowedMinutes) {
                     errors.add(String.format("Task '%s' estimated minutes (%d) exceeds daily target allowance (%.0f min).",
                             task.getTitle(), task.getEstimatedMinutes(), maxAllowedMinutes));
+                }
+
+                // Optional topics validation (Sub-step 7B)
+                if (task.getTopics() != null && !task.getTopics().isEmpty()) {
+                    int n = Math.min(5, Math.max(2, (int) Math.round((double) targetDailyMinutes / 30.0)));
+                    int minCount = Math.max(2, n - 1);
+                    int maxCount = Math.min(5, n + 1);
+
+                    if (task.getTopics().size() < minCount || task.getTopics().size() > maxCount) {
+                        errors.add(String.format("Day %d has %d topics, expected between %d and %d.",
+                                dayNumber, task.getTopics().size(), minCount, maxCount));
+                    }
+
+                    Set<String> seenTopicTitles = new HashSet<>();
+                    for (RoadmapResponse.DailyTopic dt : task.getTopics()) {
+                        if (dt == null) {
+                            errors.add(String.format("Day %d contains a null topic.", dayNumber));
+                            continue;
+                        }
+                        String tTitle = dt.getTitle();
+                        if (tTitle == null || tTitle.trim().length() < 3 || tTitle.trim().length() > 60) {
+                            errors.add(String.format("Day %d topic title must be between 3 and 60 characters.", dayNumber));
+                        } else {
+                            if (!seenTopicTitles.add(tTitle.trim().toLowerCase())) {
+                                errors.add(String.format("Day %d has duplicate topic title '%s'.", dayNumber, tTitle.trim()));
+                            }
+                        }
+
+                        String tSummary = dt.getSummary();
+                        if (tSummary == null || tSummary.trim().length() < 10 || tSummary.trim().length() > 160) {
+                            errors.add(String.format("Day %d topic summary must be between 10 and 160 characters.", dayNumber));
+                        }
+                    }
                 }
 
                 // Relevance check: check task title, description, phase title, and phase topics
@@ -223,6 +257,14 @@ public class RoadmapValidator {
         StringBuilder sb = new StringBuilder();
         if (task.getTitle() != null) sb.append(task.getTitle()).append(" ");
         if (task.getDescription() != null) sb.append(task.getDescription()).append(" ");
+        if (task.getTopics() != null) {
+            for (RoadmapResponse.DailyTopic dt : task.getTopics()) {
+                if (dt != null) {
+                    if (dt.getTitle() != null) sb.append(dt.getTitle()).append(" ");
+                    if (dt.getSummary() != null) sb.append(dt.getSummary()).append(" ");
+                }
+            }
+        }
         if (phase.getPhaseTitle() != null) sb.append(phase.getPhaseTitle()).append(" ");
         if (phase.getTopics() != null) {
             for (String t : phase.getTopics()) {

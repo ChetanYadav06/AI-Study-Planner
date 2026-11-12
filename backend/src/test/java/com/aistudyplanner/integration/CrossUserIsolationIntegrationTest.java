@@ -123,4 +123,29 @@ public class CrossUserIsolationIntegrationTest {
         // Bob can access his own job -> 200 OK
         assertNotNull(roadmapJobService.getJob(bobJobId, bob.getEmail()));
     }
+
+    @Test
+    void testAliceCannotAccessBobsDayPlan() {
+        // Create a roadmap owned by Bob
+        SavedRoadmap bobRoadmap = new SavedRoadmap();
+        bobRoadmap.setUser(bob);
+        bobRoadmap.setTitle("Bob Roadmap");
+        bobRoadmap.setTopic("Bob Topic");
+        bobRoadmap.setTargetDays(30);
+        bobRoadmap.setHoursPerDay(2.0);
+        bobRoadmap.setSkillLevel(SkillLevel.INTERMEDIATE);
+        bobRoadmap.setRoadmapJson("{\"phases\":[{\"phaseNumber\":1,\"title\":\"P1\",\"dailyTasks\":[{\"dayNumber\":1,\"title\":\"Task 1\",\"estimatedMinutes\":120,\"activityType\":\"LEARNING\",\"topics\":[{\"title\":\"T1\",\"summary\":\"S1\"},{\"title\":\"T2\",\"summary\":\"S2\"}]}]}]}");
+        bobRoadmap = savedRoadmapRepository.save(bobRoadmap);
+
+        Long bobRoadmapId = bobRoadmap.getId();
+
+        // Alice attempts to get Bob's day plan -> 403 Forbidden
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                savedRoadmapService.getDayPlan(alice.getEmail(), bobRoadmapId, 1)
+        );
+        assertEquals(org.springframework.http.HttpStatus.FORBIDDEN, ex.getStatusCode());
+
+        // Bob can access his day plan -> 200 OK
+        assertNotNull(savedRoadmapService.getDayPlan(bob.getEmail(), bobRoadmapId, 1));
+    }
 }

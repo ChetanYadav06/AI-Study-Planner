@@ -26,6 +26,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -216,6 +218,180 @@ public class SavedRoadmapService {
 
         SavedRoadmap saved = roadmapRepository.save(roadmap);
         return new SavedRoadmapResponse(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public com.aistudyplanner.dto.DayPlanResponse getDayPlan(String userEmail, Long roadmapId, int dayNumber) {
+        if (userEmail == null || userEmail.isBlank() || "anonymous".equalsIgnoreCase(userEmail)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required.");
+        }
+
+        SavedRoadmap roadmap = roadmapRepository.findById(roadmapId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Roadmap not found."));
+
+        if (!roadmap.getUser().getEmail().equalsIgnoreCase(userEmail)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied to this roadmap.");
+        }
+
+        int targetDays = roadmap.getTargetDays() != null ? roadmap.getTargetDays() : 30;
+        if (dayNumber < 1 || dayNumber > targetDays) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Day number " + dayNumber + " is outside roadmap range (1-" + targetDays + ").");
+        }
+
+        RoadmapResponse parsedRoadmap;
+        try {
+            parsedRoadmap = objectMapper.readValue(roadmap.getRoadmapJson(), RoadmapResponse.class);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to parse roadmap content.");
+        }
+
+        RoadmapResponse.DailyTask foundTask = null;
+        int taskPhaseIndex = 0;
+        boolean isFinalDay = (dayNumber == targetDays);
+
+        if (parsedRoadmap.getPhases() != null) {
+            for (int pIdx = 0; pIdx < parsedRoadmap.getPhases().size(); pIdx++) {
+                RoadmapResponse.WeeklyPhase p = parsedRoadmap.getPhases().get(pIdx);
+                if (p.getDailyTasks() != null) {
+                    for (RoadmapResponse.DailyTask dt : p.getDailyTasks()) {
+                        if (dt.getDayNumber() == dayNumber) {
+                            foundTask = dt;
+                            taskPhaseIndex = pIdx;
+                            break;
+                        }
+                    }
+                }
+                if (foundTask != null) break;
+            }
+        }
+
+        if (foundTask == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Day " + dayNumber + " task not found in roadmap.");
+        }
+
+        String canonicalTaskId = taskPhaseIndex + "-task-" + dayNumber;
+        Set<String> completedIds = parseCompletedTaskIds(roadmap.getCompletedTasksJson());
+        boolean isCompleted = completedIds.contains(canonicalTaskId);
+
+        List<RoadmapResponse.DailyTopic> topics = new ArrayList<>();
+        if (foundTask.getTopics() != null && !foundTask.getTopics().isEmpty()) {
+            for (int tIdx = 0; tIdx < foundTask.getTopics().size(); tIdx++) {
+                RoadmapResponse.DailyTopic dt = foundTask.getTopics().get(tIdx);
+                String tId = dt.getId() != null && !dt.getId().isBlank() ? dt.getId() : "day-" + dayNumber + "-topic-" + tIdx;
+                topics.add(new RoadmapResponse.DailyTopic(tId, dt.getTitle(), dt.getSummary(), dt.getExpanded()));
+            }
+        } else if (foundTask.getSubtopics() != null && !foundTask.getSubtopics().isEmpty()) {
+            for (int sIdx = 0; sIdx < foundTask.getSubtopics().size(); sIdx++) {
+                String sub = foundTask.getSubtopics().get(sIdx);
+                String tId = "day-" + dayNumber + "-topic-" + sIdx;
+                topics.add(new RoadmapResponse.DailyTopic(tId, sub, "Study and practical application of " + sub + ".", false));
+            }
+        } else {
+            topics.add(new RoadmapResponse.DailyTopic("day-" + dayNumber + "-topic-0", foundTask.getTitle(), "Core concepts and foundation for " + foundTask.getTitle() + ".", false));
+            topics.add(new RoadmapResponse.DailyTopic("day-" + dayNumber + "-topic-1", "Hands-on Exercise", "Practical implementation and verification.", false));
+        }
+
+        int estMinutes = foundTask.getEstimatedMinutes() > 0 ? foundTask.getEstimatedMinutes() : (int) Math.round((roadmap.getHoursPerDay() != null ? roadmap.getHoursPerDay() : 2.0) * 60);
+        if (estMinutes <= 0) estMinutes = 120;
+
+        List<com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto> blocks = generateDeterministicBlocks(
+                dayNumber,
+                estMinutes,
+                foundTask.getActivityType(),
+                foundTask.getTitle(),
+                canonicalTaskId,
+                isCompleted,
+                isFinalDay,
+                topics
+        );
+
+        return new com.aistudyplanner.dto.DayPlanResponse(
+                dayNumber,
+                foundTask.getTitle(),
+                foundTask.getDescription(),
+                estMinutes,
+                foundTask.getActivityType() != null ? foundTask.getActivityType().trim().toUpperCase() : "STUDY",
+                topics,
+                blocks,
+                isCompleted
+        );
+    }
+
+    public List<com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto> generateDeterministicBlocks(
+            int dayNumber,
+            int estimatedMinutes,
+            String activityType,
+            String taskTitle,
+            String canonicalTaskId,
+            boolean completed,
+            boolean isFinalDay,
+            List<RoadmapResponse.DailyTopic> topics) {
+
+        String act = activityType != null ? activityType.trim().toUpperCase() : "STUDY";
+        List<com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto> blocks = new ArrayList<>();
+
+        boolean isReviewDay = (dayNumber % 10 == 0) || "REVIEW".equals(act);
+        boolean isAssessment = "QUIZ".equals(act) || "ASSESSMENT".equals(act);
+        boolean isProject = "PROJECT".equals(act) || isFinalDay;
+
+        String topic1 = (topics != null && !topics.isEmpty()) ? topics.get(0).getTitle() : taskTitle;
+        String topic2 = (topics != null && topics.size() > 1) ? topics.get(1).getTitle() : "Hands-on Implementation";
+
+        if (isProject) {
+            int m1 = (int) Math.round(estimatedMinutes * 0.25);
+            int m2 = (int) Math.round(estimatedMinutes * 0.50);
+            int m3 = estimatedMinutes - (m1 + m2);
+
+            blocks.add(new com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto(canonicalTaskId + "-block-0", "STUDY", "Project Architecture & Requirements", m1, 0, completed));
+            blocks.add(new com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto(canonicalTaskId + "-block-1", "CODING_PRACTICE", "Core Feature Development: " + topic1, m2, 1, completed));
+            blocks.add(new com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto(canonicalTaskId + "-block-2", "PROJECT", "Integration, Testing & Deployment", m3, 2, completed));
+        } else if (isAssessment) {
+            int m1 = (int) Math.round(estimatedMinutes * 0.30);
+            int m2 = (int) Math.round(estimatedMinutes * 0.50);
+            int m3 = estimatedMinutes - (m1 + m2);
+
+            blocks.add(new com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto(canonicalTaskId + "-block-0", "STUDY", "Concept Review & Key Principles", m1, 0, completed));
+            blocks.add(new com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto(canonicalTaskId + "-block-1", act, "Assessment & Problem Solving", m2, 1, completed));
+            blocks.add(new com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto(canonicalTaskId + "-block-2", "REVIEW", "Answer Review & Knowledge Gap Analysis", m3, 2, completed));
+        } else if (isReviewDay) {
+            int m1 = (int) Math.round(estimatedMinutes * 0.35);
+            int m2 = (int) Math.round(estimatedMinutes * 0.40);
+            int m3 = estimatedMinutes - (m1 + m2);
+
+            blocks.add(new com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto(canonicalTaskId + "-block-0", "STUDY", "Milestone Knowledge Recap", m1, 0, completed));
+            blocks.add(new com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto(canonicalTaskId + "-block-1", "PRACTICE", "Spaced Repetition & Exercises", m2, 1, completed));
+            blocks.add(new com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto(canonicalTaskId + "-block-2", "REVIEW", "Self-Assessment & Progress Reflection", m3, 2, completed));
+        } else if ("CODING_PRACTICE".equals(act)) {
+            int m1 = (int) Math.round(estimatedMinutes * 0.30);
+            int m2 = (int) Math.round(estimatedMinutes * 0.50);
+            int m3 = estimatedMinutes - (m1 + m2);
+
+            blocks.add(new com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto(canonicalTaskId + "-block-0", "STUDY", "Syntax & Pattern Analysis: " + topic1, m1, 0, completed));
+            blocks.add(new com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto(canonicalTaskId + "-block-1", "CODING_PRACTICE", "Hands-on Implementation: " + topic2, m2, 1, completed));
+            blocks.add(new com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto(canonicalTaskId + "-block-2", "PRACTICE", "Edge Cases & Debugging Drills", m3, 2, completed));
+        } else {
+            int m1 = (int) Math.round(estimatedMinutes * 0.40);
+            int m2 = (int) Math.round(estimatedMinutes * 0.40);
+            int m3 = estimatedMinutes - (m1 + m2);
+
+            blocks.add(new com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto(canonicalTaskId + "-block-0", "STUDY", "Core Theory & Concept: " + topic1, m1, 0, completed));
+            blocks.add(new com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto(canonicalTaskId + "-block-1", "PRACTICE", "Guided Practice & Application: " + topic2, m2, 1, completed));
+            blocks.add(new com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto(canonicalTaskId + "-block-2", "QUIZ", "Knowledge Verification & Summary", m3, 2, completed));
+        }
+
+        // Exact sum invariant check: adjust largest block for any rounding difference
+        int sum = blocks.stream().mapToInt(com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto::getMinutes).sum();
+        if (sum != estimatedMinutes && !blocks.isEmpty()) {
+            com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto largest = blocks.get(0);
+            for (com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto b : blocks) {
+                if (b.getMinutes() > largest.getMinutes()) {
+                    largest = b;
+                }
+            }
+            largest.setMinutes(largest.getMinutes() + (estimatedMinutes - sum));
+        }
+
+        return blocks;
     }
 
     public record ProgressCalculation(int completedTasks, int totalTasks, int percentage) {}

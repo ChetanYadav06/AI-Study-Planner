@@ -724,6 +724,8 @@ public class RoadmapService {
             prompt.append(String.format("5. As this is the final phase of the roadmap, Day %d must culminate in an end-to-end Capstone Project.\n", endDay));
         }
         prompt.append(String.format("6. For each task, set 'estimatedMinutes' within daily budget (45 up to %d minutes).\n", dailyMinutes));
+        int nTopics = Math.min(5, Math.max(2, (int) Math.round((double) dailyMinutes / 30.0)));
+        prompt.append(String.format("7. Each daily task MUST include a 'topics' array with EXACTLY %d distinct topics. Each topic object must have 'title' (3 to 60 characters) and 'summary' (10 to 160 characters) explaining the concept.\n", nTopics));
 
         prompt.append("\n[JSON SCHEMA REQUIREMENT]\n");
         prompt.append("Return a single JSON object conforming strictly to this format:\n");
@@ -735,6 +737,9 @@ public class RoadmapService {
         prompt.append("      \"description\": \"Specific study and practice instruction\",\n");
         prompt.append(String.format("      \"estimatedMinutes\": %d,\n", dailyMinutes));
         prompt.append("      \"activityType\": \"STUDY\",\n");
+        prompt.append("      \"topics\": [\n");
+        prompt.append("        {\"title\": \"Core Topic Title\", \"summary\": \"Specific explanation of the core concept (10-160 characters).\"}\n");
+        prompt.append("      ],\n");
         prompt.append("      \"learningObjectives\": [\"Objective 1\", \"Objective 2\"],\n");
         prompt.append("      \"subtopics\": [\"Subtopic 1\", \"Subtopic 2\"],\n");
         prompt.append("      \"conceptExplanation\": \"Short 1-2 sentence core concept summary\",\n");
@@ -1065,8 +1070,20 @@ public class RoadmapService {
                             task.setEstimatedMinutes(Math.min(calibrated, targetDailyMinutes));
                         }
 
-                        // Ensure subtopics and learning objectives are initialized
-                        if (task.getSubtopics() == null) {
+                        // Derive subtopics from topics if topics present (Sub-step 7B)
+                        if (task.getTopics() != null && !task.getTopics().isEmpty()) {
+                            task.setSubtopics(task.getTopics().stream()
+                                    .map(DailyTopic::getTitle)
+                                    .filter(Objects::nonNull)
+                                    .toList());
+                            int tIdx = 0;
+                            for (DailyTopic dt : task.getTopics()) {
+                                if (dt.getId() == null || dt.getId().isBlank()) {
+                                    dt.setId("day-" + task.getDayNumber() + "-topic-" + tIdx);
+                                }
+                                tIdx++;
+                            }
+                        } else if (task.getSubtopics() == null) {
                             task.setSubtopics(new ArrayList<>());
                         }
                         if (task.getLearningObjectives() == null) {

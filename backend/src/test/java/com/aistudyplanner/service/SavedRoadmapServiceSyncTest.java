@@ -243,5 +243,40 @@ class SavedRoadmapServiceSyncTest {
         assertEquals(GoalStatus.IN_PROGRESS, response.getStatus());
         verify(goalRepository).save(testGoal);
     }
+
+    @Test
+    @DisplayName("Should return deterministic day plan with exact sum invariant")
+    void shouldReturnDeterministicDayPlanWithExactSumInvariant() {
+        when(roadmapRepository.findById(testRoadmap.getId())).thenReturn(Optional.of(testRoadmap));
+
+        com.aistudyplanner.dto.DayPlanResponse plan = roadmapService.getDayPlan(testUser.getEmail(), testRoadmap.getId(), 1);
+
+        assertNotNull(plan);
+        assertEquals(1, plan.getDayNumber());
+        assertEquals("Day 1 Task", plan.getTitle());
+        assertFalse(plan.getBlocks().isEmpty());
+        assertFalse(plan.getTopics().isEmpty());
+
+        int totalBlockMinutes = plan.getBlocks().stream()
+                .mapToInt(com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto::getMinutes)
+                .sum();
+        assertEquals(plan.getEstimatedMinutes(), totalBlockMinutes, "Sum of block minutes must exactly match estimatedMinutes");
+    }
+
+    @Test
+    @DisplayName("Should throw 404 when dayNumber is outside targetDays or not found")
+    void shouldThrow404OnUnknownDayNumber() {
+        when(roadmapRepository.findById(testRoadmap.getId())).thenReturn(Optional.of(testRoadmap));
+
+        ResponseStatusException exDay0 = assertThrows(ResponseStatusException.class, () ->
+                roadmapService.getDayPlan(testUser.getEmail(), testRoadmap.getId(), 0)
+        );
+        assertEquals(org.springframework.http.HttpStatus.NOT_FOUND, exDay0.getStatusCode());
+
+        ResponseStatusException exDay999 = assertThrows(ResponseStatusException.class, () ->
+                roadmapService.getDayPlan(testUser.getEmail(), testRoadmap.getId(), 999)
+        );
+        assertEquals(org.springframework.http.HttpStatus.NOT_FOUND, exDay999.getStatusCode());
+    }
 }
 

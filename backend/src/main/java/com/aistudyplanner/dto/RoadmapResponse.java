@@ -33,6 +33,7 @@ public class RoadmapResponse {
         private List<String> learningObjectives = new ArrayList<>();
         private List<String> subtopics = new ArrayList<>();
         private String conceptExplanation;
+        private List<DailyTopic> topics = new ArrayList<>();
         private List<String> practiceTasks = new ArrayList<>();
         private String quizQuestion;
 
@@ -61,6 +62,11 @@ public class RoadmapResponse {
         public String getActivityType() { return activityType; }
         public void setActivityType(String activityType) { this.activityType = activityType; }
 
+        public List<DailyTopic> getTopics() { return topics; }
+        public void setTopics(List<DailyTopic> topics) {
+            this.topics = topics != null ? topics : new ArrayList<>();
+        }
+
         public List<String> getLearningObjectives() { return learningObjectives; }
         public void setLearningObjectives(List<String> learningObjectives) {
             this.learningObjectives = learningObjectives != null ? learningObjectives : new ArrayList<>();
@@ -81,6 +87,36 @@ public class RoadmapResponse {
 
         public String getQuizQuestion() { return quizQuestion; }
         public void setQuizQuestion(String quizQuestion) { this.quizQuestion = quizQuestion; }
+    }
+
+    public static class DailyTopic {
+        private String id;
+        private String title;
+        private String summary;
+        private Boolean expanded = false;
+
+        public DailyTopic() {}
+
+        public DailyTopic(String title, String summary) {
+            this.title = title;
+            this.summary = summary;
+        }
+
+        public DailyTopic(String id, String title, String summary, Boolean expanded) {
+            this.id = id;
+            this.title = title;
+            this.summary = summary;
+            this.expanded = expanded != null ? expanded : false;
+        }
+
+        public String getId() { return id; }
+        public void setId(String id) { this.id = id; }
+        public String getTitle() { return title; }
+        public void setTitle(String title) { this.title = title; }
+        public String getSummary() { return summary; }
+        public void setSummary(String summary) { this.summary = summary; }
+        public Boolean getExpanded() { return expanded; }
+        public void setExpanded(Boolean expanded) { this.expanded = expanded != null ? expanded : false; }
     }
 
     public static class PracticalExercise {

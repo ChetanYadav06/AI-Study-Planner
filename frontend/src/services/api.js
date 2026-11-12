@@ -111,6 +111,11 @@ export const getSavedRoadmapById = async (id) => {
   return response.data;
 };
 
+export const getDayPlan = async (roadmapId, dayNumber) => {
+  const response = await api.get(`/ai/roadmaps/${roadmapId}/days/${dayNumber}/plan`);
+  return response.data;
+};
+
 export const updateRoadmapProgress = async (id, data) => {
   const response = await api.patch(`/ai/roadmaps/${id}/progress`, data);
   return response.data;

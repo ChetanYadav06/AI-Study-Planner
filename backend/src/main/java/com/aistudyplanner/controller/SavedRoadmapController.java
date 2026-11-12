@@ -70,5 +70,14 @@ public class SavedRoadmapController {
         service.deleteSavedRoadmap(authentication.getName(), id);
         return ResponseEntity.ok(Map.of("message", "Saved roadmap deleted successfully."));
     }
+
+    @GetMapping("/{id}/days/{dayNumber}/plan")
+    public ResponseEntity<com.aistudyplanner.dto.DayPlanResponse> getDayPlan(
+            Authentication authentication,
+            @PathVariable Long id,
+            @PathVariable int dayNumber) {
+        com.aistudyplanner.dto.DayPlanResponse plan = service.getDayPlan(authentication.getName(), id, dayNumber);
+        return ResponseEntity.ok(plan);
+    }
 }
 
