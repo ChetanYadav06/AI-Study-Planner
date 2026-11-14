@@ -1,0 +1,67 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-test-and-build:
+    name: Backend CI (Spring Boot 3.4.3 / Java 24)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpassword
+          MYSQL_DATABASE: ai_study_planner_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h localhost" --health-interval=10s --health-timeout=5s --health-retries=5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 24 (Oracle)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '24'
+          distribution: 'oracle'
+          cache: 'maven'
+
+      - name: Run Backend Tests
+        env:
+          JWT_SECRET: "test-only-jwt-secret-key-for-unit-and-integration-tests-minimum-32-bytes"
+          DB_URL: "jdbc:mysql://127.0.0.1:3306/ai_study_planner_test?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+          DB_USERNAME: "root"
+          DB_PASSWORD: "rootpassword"
+          GEMINI_API_KEY: "test-key"
+        run: mvn -f backend/pom.xml clean test
+
+      - name: Build Backend Artifact (JAR)
+        run: mvn -f backend/pom.xml package -DskipTests
+
+  frontend-build:
+    name: Frontend CI (React 19 / Vite / Tailwind v4)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: npm --prefix frontend ci
+
+      - name: Build Frontend Application
+        run: npm --prefix frontend run build
+
