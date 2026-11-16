@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Play, Pause, RotateCcw, CheckCircle2, Clock, FileText, Check } from 'lucide-react';
-import { getSavedRoadmaps, updateRoadmapProgress, createStudySession, submitTaskFeedback } from '../../services/api';
+import { getSavedRoadmaps, createStudySession, submitTaskFeedback } from '../../services/api';
 import { computeStudyQueue } from '../../utils/studyQueue';
 import { formatEnum } from '../../utils/formatters';
+import { useData } from '../../context/DataContext';
 import { PageHeader, Card, Button } from '../ui';
 
 const DURATION_BY_MODE = {
@@ -12,8 +13,9 @@ const DURATION_BY_MODE = {
 };
 
 export const ActiveStudyView = ({ onNavigateRoadmap }) => {
-  const [roadmaps, setRoadmaps] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { roadmaps: contextRoadmaps, loading: contextLoading, refreshData, toggleTaskCompletion } = useData();
+  const roadmaps = contextRoadmaps;
+  const loading = contextLoading;
   const [markingDone, setMarkingDone] = useState(false);
   const [sessionSavedMsg, setSessionSavedMsg] = useState(null);
   const [justCompletedTask, setJustCompletedTask] = useState(null); // { roadmapId, taskId, title }
@@ -43,21 +45,35 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
           if (parsed.running && parsed.startedAt) {
             const elapsed = Math.floor((Date.now() - parsed.startedAt) / 1000);
             const remaining = Math.max(0, totalSecs - elapsed);
-            return {
-              mode,
-              durationSeconds: totalSecs,
-              startedAt: parsed.startedAt,
-              running: remaining > 0,
-              remainingSeconds: remaining,
-              sessionStartTime: parsed.sessionStartTime || parsed.startedAt
-            };
+            if (remaining > 0) {
+              return {
+                mode,
+                durationSeconds: totalSecs,
+                startedAt: parsed.startedAt,
+                running: true,
+                remainingSeconds: remaining,
+                sessionStartTime: parsed.sessionStartTime || parsed.startedAt
+              };
+            } else {
+              return {
+                mode,
+                durationSeconds: totalSecs,
+                startedAt: null,
+                running: false,
+                remainingSeconds: totalSecs,
+                sessionStartTime: null
+              };
+            }
           } else {
+            const rem = (parsed.remainingSeconds && parsed.remainingSeconds > 0)
+              ? parsed.remainingSeconds
+              : totalSecs;
             return {
               mode,
               durationSeconds: totalSecs,
               startedAt: null,
               running: false,
-              remainingSeconds: parsed.remainingSeconds ?? totalSecs,
+              remainingSeconds: rem,
               sessionStartTime: null
             };
           }
@@ -78,20 +94,9 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
 
   const [timerState, setTimerState] = useState(getInitialTimerState);
 
-  const loadRoadmaps = useCallback(async () => {
-    try {
-      const data = await getSavedRoadmaps();
-      setRoadmaps(Array.isArray(data) ? data : []);
-    } catch (e) {
-      setRoadmaps([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    loadRoadmaps();
-  }, [loadRoadmaps]);
+    refreshData();
+  }, [refreshData]);
 
   // Active roadmap & study queue
   const activeRoadmap = roadmaps[0] || null;
@@ -167,11 +172,13 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
         const totalDuration = timerState.durationSeconds;
         recordSession(totalDuration, timerState.mode, true);
 
+        const resetSecs = DURATION_BY_MODE[timerState.mode] || 25 * 60;
         setTimerState(prev => ({
           ...prev,
           running: false,
           startedAt: null,
-          remainingSeconds: 0,
+          remainingSeconds: resetSecs,
+          durationSeconds: resetSecs,
           sessionStartTime: null
         }));
       } else {
@@ -268,24 +275,11 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
     const completedTaskTitle = currentTask.task.title;
     const roadmapId = activeRoadmap.id;
     try {
-      const currentCompleted = activeRoadmap.completedTasksJson
-        ? JSON.parse(activeRoadmap.completedTasksJson)
-        : [];
-
-      const updated = currentCompleted.includes(currentTask.taskId)
-        ? currentCompleted
-        : [...currentCompleted, currentTask.taskId];
-
-      await updateRoadmapProgress(activeRoadmap.id, {
-        completedTasksJson: JSON.stringify(updated),
-        completedMilestonesJson: activeRoadmap.completedMilestonesJson || '[]',
-        progressPercentage: activeRoadmap.progressPercentage || 0
-      });
+      await toggleTaskCompletion(roadmapId, completedTaskId, true);
 
       setJustCompletedTask({ roadmapId, taskId: completedTaskId, title: completedTaskTitle });
       setFeedbackRecorded(false);
 
-      await loadRoadmaps();
       setSessionSavedMsg(`Completed "${completedTaskTitle}". Next task queued.`);
       setTimeout(() => setSessionSavedMsg(null), 4000);
     } catch (err) {

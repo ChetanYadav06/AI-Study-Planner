@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ExternalLink, Bookmark, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 import { getResources, checkResourceLinks } from '../../services/api';
+import { formatEnum } from '../../utils/formatters';
 import { Card } from '../ui/Card';
 import { PageHeader } from '../ui/PageHeader';
 import { EmptyState } from '../ui/EmptyState';
@@ -131,7 +132,7 @@ export const SavedResourcesView = () => {
                   : 'border-transparent text-muted hover:text-ink hover:border-line'
               }`}
             >
-              {type === 'ALL' ? 'All' : type.charAt(0) + type.slice(1).toLowerCase()}
+              {type === 'ALL' ? 'All' : formatEnum(type)}
             </button>
           );
         })}

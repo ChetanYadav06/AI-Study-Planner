@@ -33,6 +33,8 @@ import { InteractiveRoadmap } from '../roadmap/InteractiveRoadmap';
 import { computeGoalStats } from '../../utils/goalStats';
 import { getCanonicalTaskId } from '../../utils/studyQueue';
 import { formatEnum } from '../../utils/formatters';
+import { useRouter } from '../../context/RouterContext';
+import { useData } from '../../context/DataContext';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { StatusText } from '../ui/StatusText';
@@ -41,9 +43,17 @@ import { EmptyState } from '../ui/EmptyState';
 
 export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRoadmap }) => {
   const { user } = useAuth();
-  const [goals, setGoals] = useState([]);
+  const { navigate } = useRouter();
+  const {
+    goals: cachedGoals,
+    roadmaps: cachedRoadmaps,
+    refreshData,
+    removeGoal: removeGoalFromCache
+  } = useData();
+
+  const [goals, setGoals] = useState(cachedGoals || []);
   const [stats, setStats] = useState(null);
-  const [savedRoadmaps, setSavedRoadmaps] = useState([]);
+  const [savedRoadmaps, setSavedRoadmaps] = useState(cachedRoadmaps || []);
   const [profile, setProfile] = useState(null);
   const [todayLoggedMinutes, setTodayLoggedMinutes] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -53,6 +63,18 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
   const [selectedGoalForRoadmap, setSelectedGoalForRoadmap] = useState(null);
   const [actionMessage, setActionMessage] = useState(null);
   const [selectedDay, setSelectedDay] = useState(new Date().getDay());
+
+  useEffect(() => {
+    if (cachedGoals) {
+      setGoals(cachedGoals);
+    }
+  }, [cachedGoals]);
+
+  useEffect(() => {
+    if (cachedRoadmaps) {
+      setSavedRoadmaps(cachedRoadmaps);
+    }
+  }, [cachedRoadmaps]);
   const [taskFeedbackPrompt, setTaskFeedbackPrompt] = useState(null); // { taskId, title }
   const [feedbackSavedTaskId, setFeedbackSavedTaskId] = useState(null);
 
@@ -414,7 +436,8 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
     if (!window.confirm('Are you sure you want to delete this learning goal?')) return;
     try {
       await deleteGoal(id);
-      setGoals(goals.filter((g) => g.id !== id));
+      removeGoalFromCache(id);
+      setGoals(prev => prev.filter((g) => g.id !== id));
       const freshStats = await getDashboardStats().catch(() => null);
       if (freshStats) setStats(freshStats);
       setActionMessage('Learning goal deleted successfully.');
@@ -425,35 +448,12 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
   };
 
   const handleOpenRoadmap = (goal) => {
-    if (onNavigateRoadmap) {
-      onNavigateRoadmap(goal);
-      return;
-    }
-    setSelectedGoalForRoadmap(goal);
-    setRoadmapError(null);
-    setRoadmapPrefs({
-      skillLevel: goal.skillLevel || 'INTERMEDIATE',
-      targetDays: goal.targetDays || 30,
-      hoursPerDay: goal.hoursPerDay || 2.0,
-      priorKnowledge: '',
-      specificTopics: goal.specificTopics || '',
-      targetOutcomes: goal.targetOutcome || '',
-      showPersonalization: Boolean(goal.specificTopics || goal.targetOutcome),
-    });
-
-    const match = savedRoadmaps.find(r => r.goalId === goal.id || r.topic === goal.title);
+    const list = savedRoadmaps.length > 0 ? savedRoadmaps : cachedRoadmaps;
+    const match = list.find(r => r.goalId === goal.id || r.topic === goal.title);
     if (match) {
-      try {
-        const parsed = JSON.parse(match.roadmapJson);
-        setExistingSavedRoadmap(match);
-        setGeneratedRoadmap(parsed);
-      } catch {
-        setExistingSavedRoadmap(null);
-        setGeneratedRoadmap(null);
-      }
+      navigate(`#/roadmaps/${match.id}`);
     } else {
-      setExistingSavedRoadmap(null);
-      setGeneratedRoadmap(null);
+      navigate(`#/roadmaps/new?goal=${goal.id}`);
     }
   };
 
@@ -829,7 +829,7 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                     <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                       <button
                         type="button"
-                        onClick={() => onNavigateTab && onNavigateTab('active-study')}
+                        onClick={() => navigate('#/active-study')}
                         className="text-xs font-medium text-accent hover:underline cursor-pointer px-2.5 py-1.5 rounded-sm border border-accent/20 hover:bg-accent-soft transition"
                       >
                         Start Focus
@@ -837,7 +837,7 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                       {primaryRoadmap && (
                         <button
                           type="button"
-                          onClick={() => onNavigateRoadmap && onNavigateRoadmap(primaryRoadmap)}
+                          onClick={() => navigate(`#/roadmaps/${primaryRoadmap.id}`)}
                           className="p-1.5 rounded-sm border border-line hover:border-slate-300 text-muted hover:text-ink transition cursor-pointer"
                           title="View in full roadmap"
                         >
@@ -996,13 +996,7 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                         <Button
                           variant="secondary"
                           size="sm"
-                          onClick={() => {
-                            if (onNavigateRoadmap) {
-                              onNavigateRoadmap(goal);
-                            } else {
-                              handleOpenRoadmap(goal);
-                            }
-                          }}
+                          onClick={() => navigate(`#/roadmaps/${matchedRoadmap.id}`)}
                         >
                           View Roadmap
                         </Button>
@@ -1010,7 +1004,7 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
                         <Button
                           variant="primary"
                           size="sm"
-                          onClick={() => handleOpenRoadmap(goal)}
+                          onClick={() => navigate(`#/roadmaps/new?goal=${goal.id}`)}
                         >
                           Generate Roadmap
                         </Button>

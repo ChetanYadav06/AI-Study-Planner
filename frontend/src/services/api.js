@@ -149,6 +149,11 @@ export const updateRoadmapProgress = async (id, data) => {
   return response.data;
 };
 
+export const setTaskCompletion = async (roadmapId, taskId, completed) => {
+  const response = await api.put(`/ai/roadmaps/${roadmapId}/tasks/${taskId}/completion`, { completed });
+  return response.data;
+};
+
 export const replaceRoadmap = async (id, data) => {
   const response = await api.put(`/ai/roadmaps/${id}/replace`, data);
   return response.data;

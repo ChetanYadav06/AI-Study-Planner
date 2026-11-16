@@ -54,6 +54,17 @@ public class SavedRoadmapController {
         return ResponseEntity.ok(updated);
     }
 
+    @PutMapping("/{id}/tasks/{taskId}/completion")
+    public ResponseEntity<com.aistudyplanner.dto.TaskCompletionResponse> updateTaskCompletion(
+            Authentication authentication,
+            @PathVariable Long id,
+            @PathVariable String taskId,
+            @Valid @RequestBody com.aistudyplanner.dto.TaskCompletionRequest request) {
+        com.aistudyplanner.dto.TaskCompletionResponse response = service.updateTaskCompletion(
+                authentication.getName(), id, taskId, request.getCompleted());
+        return ResponseEntity.ok(response);
+    }
+
     @PutMapping("/{id}/replace")
     public ResponseEntity<SavedRoadmapResponse> replaceRoadmap(
             Authentication authentication,

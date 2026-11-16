@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   LayoutDashboard,
   Map,
@@ -17,6 +17,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useRouter } from '../../context/RouterContext';
 import { SettingsModal } from './SettingsModal';
 
 export const Sidebar = ({
@@ -30,9 +31,22 @@ export const Sidebar = ({
   setMobileOpen
 }) => {
   const { isAuthenticated, logout } = useAuth();
+  const { route, navigate } = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [customizeOpen, setCustomizeOpen] = useState(false);
+
+  // Active item mapped from URL route
+  const currentActiveId = useMemo(() => {
+    if (route === 'dashboard') return 'dashboard';
+    if (route === 'roadmaps' || route === 'roadmaps-new' || route === 'roadmap-detail') return 'my-roadmaps';
+    if (route === 'study-planner') return 'study-planner';
+    if (route === 'active-study') return 'active-study';
+    if (route === 'progress') return 'my-progress';
+    if (route === 'profile') return 'profile';
+    if (route === 'resources') return 'saved-resources';
+    return activeTab || 'dashboard';
+  }, [route, activeTab]);
 
   // Customization preferences for non-core sidebar items
   const [hiddenItems, setHiddenItems] = useState(() => {
@@ -76,7 +90,19 @@ export const Sidebar = ({
       onOpenAuth('login');
       return;
     }
-    setActiveTab(itemId);
+    const routeMap = {
+      'dashboard': '#/dashboard',
+      'my-roadmaps': '#/roadmaps',
+      'study-planner': '#/study-planner',
+      'active-study': '#/active-study',
+      'my-progress': '#/progress',
+      'profile': '#/profile',
+      'saved-resources': '#/resources'
+    };
+    if (routeMap[itemId]) {
+      navigate(routeMap[itemId]);
+    }
+    if (setActiveTab) setActiveTab(itemId);
     if (setMobileOpen) setMobileOpen(false);
   };
 
@@ -158,7 +184,7 @@ export const Sidebar = ({
           <nav className="space-y-1">
             {visibleNavItems.map((item) => {
               const Icon = item.icon;
-              const isActive = activeTab === item.id;
+              const isActive = currentActiveId === item.id;
 
               return (
                 <button

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { RouterProvider, useRouter } from './context/RouterContext';
+import { DataProvider } from './context/DataContext';
 import { Navbar } from './components/common/Navbar';
 import { Sidebar } from './components/common/Sidebar';
 import { StudentPortalLanding } from './components/dashboard/StudentPortalLanding';
@@ -12,14 +14,14 @@ import { StudyPlannerView } from './components/views/StudyPlannerView';
 import { ActiveStudyView } from './components/views/ActiveStudyView';
 import { ProgressView } from './components/views/ProgressView';
 import { SavedResourcesView } from './components/views/SavedResourcesView';
+import { NotFoundView } from './components/common/NotFoundView';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 const AppContent = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const { route, navigate } = useRouter();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [createGoalModalOpen, setCreateGoalModalOpen] = useState(false);
-  const [selectedGoalForRoadmap, setSelectedGoalForRoadmap] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
@@ -35,7 +37,7 @@ const AppContent = () => {
       handleOpenAuth('login');
       return;
     }
-    setActiveTab('profile');
+    navigate('#/profile');
   };
 
   const handleOpenCreateGoal = () => {
@@ -46,21 +48,10 @@ const AppContent = () => {
     setCreateGoalModalOpen(true);
   };
 
-  const handleNavigateRoadmap = (goal = null) => {
-    if (!isAuthenticated) {
-      handleOpenAuth('login');
-      return;
-    }
-    setSelectedGoalForRoadmap(goal);
-    setActiveTab('my-roadmaps');
-  };
-
   return (
     <div className="h-screen bg-page flex flex-col md:flex-row text-ink overflow-hidden">
       {/* Sidebar: Desktop Flush Left / Mobile Drawer */}
       <Sidebar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
         onOpenAuth={handleOpenAuth}
         onOpenCreateGoal={handleOpenCreateGoal}
         isCollapsed={sidebarCollapsed}
@@ -79,51 +70,50 @@ const AppContent = () => {
 
         {/* Content View Canvas */}
         <main className={`flex-1 min-w-0 overflow-y-auto ${!isAuthenticated ? 'flex flex-col items-center justify-center p-4' : 'p-4 sm:p-6 md:p-8'}`}>
-          {activeTab === 'dashboard' && (
+          {route === 'dashboard' && (
             isAuthenticated ? (
               <StudentDashboard
-                onNavigateTab={setActiveTab}
                 onOpenCreateGoal={handleOpenCreateGoal}
-                onNavigateRoadmap={handleNavigateRoadmap}
               />
             ) : (
               <StudentPortalLanding onOpenAuth={handleOpenAuth} />
             )
           )}
 
-          {activeTab === 'my-roadmaps' && (
+          {(route === 'roadmaps' || route === 'roadmaps-new' || route === 'roadmap-detail') && (
             isAuthenticated ? (
-              <MyRoadmapsView
-                onNavigateTab={setActiveTab}
-                initialGoal={selectedGoalForRoadmap}
-              />
+              <MyRoadmapsView />
             ) : (
               <StudentPortalLanding onOpenAuth={handleOpenAuth} />
             )
           )}
 
-          {activeTab === 'study-planner' && (
+          {route === 'study-planner' && (
             isAuthenticated ? (
               <StudyPlannerView
                 onOpenCreateGoal={handleOpenCreateGoal}
-                onNavigateRoadmap={handleNavigateRoadmap}
+                onNavigateRoadmap={(goal) => {
+                  navigate(goal?.id ? `#/roadmaps/new?goal=${goal.id}` : '#/roadmaps');
+                }}
               />
             ) : (
               <StudentPortalLanding onOpenAuth={handleOpenAuth} />
             )
           )}
 
-          {activeTab === 'active-study' && (
+          {route === 'active-study' && (
             isAuthenticated ? (
               <ActiveStudyView
-                onNavigateRoadmap={handleNavigateRoadmap}
+                onNavigateRoadmap={(roadmap) => {
+                  navigate(roadmap?.id ? `#/roadmaps/${roadmap.id}` : '#/roadmaps');
+                }}
               />
             ) : (
               <StudentPortalLanding onOpenAuth={handleOpenAuth} />
             )
           )}
 
-          {activeTab === 'my-progress' && (
+          {route === 'progress' && (
             isAuthenticated ? (
               <ProgressView />
             ) : (
@@ -131,14 +121,18 @@ const AppContent = () => {
             )
           )}
 
-          {activeTab === 'profile' && <ProfileView />}
+          {route === 'profile' && <ProfileView />}
 
-          {activeTab === 'saved-resources' && (
+          {route === 'resources' && (
             isAuthenticated ? (
               <SavedResourcesView />
             ) : (
               <StudentPortalLanding onOpenAuth={handleOpenAuth} />
             )
+          )}
+
+          {route === 'not-found' && (
+            <NotFoundView message="The page or roadmap you are looking for does not exist." />
           )}
         </main>
       </div>
@@ -155,7 +149,7 @@ const AppContent = () => {
         isOpen={createGoalModalOpen}
         onClose={() => setCreateGoalModalOpen(false)}
         onGoalCreated={() => {
-          setActiveTab('dashboard');
+          navigate('#/dashboard');
         }}
       />
     </div>
@@ -166,7 +160,11 @@ export const App = () => {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <AppContent />
+        <RouterProvider>
+          <DataProvider>
+            <AppContent />
+          </DataProvider>
+        </RouterProvider>
       </AuthProvider>
     </ErrorBoundary>
   );

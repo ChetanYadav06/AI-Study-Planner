@@ -5,6 +5,7 @@ import com.aistudyplanner.dto.RoadmapRequest;
 import com.aistudyplanner.dto.RoadmapResponse;
 import com.aistudyplanner.dto.SavedRoadmapResponse;
 import com.aistudyplanner.dto.SaveRoadmapRequest;
+import com.aistudyplanner.dto.TaskCompletionResponse;
 import com.aistudyplanner.dto.UpdateRoadmapProgressRequest;
 import com.aistudyplanner.entity.Goal;
 import com.aistudyplanner.entity.GoalStatus;
@@ -142,6 +143,56 @@ public class SavedRoadmapService {
 
         SavedRoadmap saved = roadmapRepository.save(roadmap);
         return new SavedRoadmapResponse(saved);
+    }
+
+    @Transactional
+    public TaskCompletionResponse updateTaskCompletion(String email, Long roadmapId, String taskId, boolean completed) {
+        SavedRoadmap roadmap = roadmapRepository.findByIdAndUserEmailForUpdate(roadmapId, email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Roadmap not found."));
+
+        Set<String> validTaskIds = extractValidTaskIds(roadmap.getRoadmapJson());
+        if (!validTaskIds.contains(taskId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Task ID '" + taskId + "' not found in roadmap.");
+        }
+
+        Set<String> currentCompleted = parseCompletedTaskIds(roadmap.getCompletedTasksJson());
+        if (completed) {
+            currentCompleted.add(taskId);
+        } else {
+            currentCompleted.remove(taskId);
+        }
+
+        try {
+            roadmap.setCompletedTasksJson(objectMapper.writeValueAsString(currentCompleted));
+        } catch (Exception e) {
+            log.error("Failed to serialize completed tasks: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to serialize task progress.");
+        }
+
+        // Recalculate progress and synchronize to linked goal
+        syncProgressAndLinkedGoal(roadmap);
+        SavedRoadmap updatedRoadmap = roadmapRepository.save(roadmap);
+
+        ProgressCalculation calc = calculateProgress(updatedRoadmap.getRoadmapJson(), updatedRoadmap.getCompletedTasksJson());
+
+        Integer goalProgress = null;
+        String goalStatus = null;
+        if (updatedRoadmap.getGoalId() != null) {
+            Goal goal = goalRepository.findById(updatedRoadmap.getGoalId()).orElse(null);
+            if (goal != null) {
+                goalProgress = goal.getProgressPercentage();
+                goalStatus = goal.getStatus() != null ? goal.getStatus().name() : null;
+            }
+        }
+
+        return new TaskCompletionResponse(
+                new ArrayList<>(currentCompleted),
+                calc.completedTasks(),
+                calc.totalTasks(),
+                updatedRoadmap.getProgressPercentage() != null ? updatedRoadmap.getProgressPercentage() : 0,
+                goalProgress,
+                goalStatus
+        );
     }
 
     @Transactional

@@ -4,16 +4,15 @@ import {
   Map as MapIcon
 } from 'lucide-react';
 import {
-  getGoals,
-  getSavedRoadmaps,
   deleteSavedRoadmap,
-  generateRoadmap,
   startRoadmapJob,
   getRoadmapJobStatus,
   saveRoadmap,
   replaceRoadmap
 } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useRouter } from '../../context/RouterContext';
+import { useData } from '../../context/DataContext';
 import { RoadmapWizard } from './RoadmapWizard';
 import { InteractiveRoadmap } from './InteractiveRoadmap';
 import { formatEnum } from '../../utils/formatters';
@@ -24,25 +23,31 @@ import { ProgressBar } from '../ui/ProgressBar';
 import { StatusText } from '../ui/StatusText';
 import { EmptyState } from '../ui/EmptyState';
 
-export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
+export const MyRoadmapsView = ({ onNavigateTab }) => {
   const { user } = useAuth();
+  const { route, params, query, navigate } = useRouter();
+  const {
+    roadmaps: savedRoadmaps,
+    goals,
+    loading: loadingRoadmaps,
+    refreshData,
+    removeRoadmap,
+    addRoadmap
+  } = useData();
 
-  // View modes: 'LIST' | 'CREATE' | 'VIEW'
-  const [viewMode, setViewMode] = useState(initialGoal ? 'CREATE' : 'LIST');
-  const [goals, setGoals] = useState([]);
-  const [savedRoadmaps, setSavedRoadmaps] = useState([]);
-  const [loadingRoadmaps, setLoadingRoadmaps] = useState(true);
-
-  // Active viewing/editing state
-  const [activeRoadmap, setActiveRoadmap] = useState(null);
-  const [activeSavedId, setActiveSavedId] = useState(null);
-  const [activeGoal, setActiveGoal] = useState(initialGoal);
+  // Active viewing state if freshly generated in memory
+  const [inMemoryRoadmap, setInMemoryRoadmap] = useState(null);
 
   // Generation state
   const [generating, setGenerating] = useState(false);
   const [generateProgress, setGenerateProgress] = useState(null);
   const [generateError, setGenerateError] = useState(null);
   const pollIntervalRef = useRef(null);
+
+  // Refresh data if older than 30s
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
 
   // Stop polling on unmount
   useEffect(() => {
@@ -53,37 +58,17 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
     };
   }, []);
 
-  // Fetch saved roadmaps from MySQL API
-  const fetchRoadmaps = async () => {
-    setLoadingRoadmaps(true);
-    try {
-      const [roadmapsData, goalsData] = await Promise.all([
-        getSavedRoadmaps().catch(() => []),
-        getGoals().catch(() => [])
-      ]);
-      setSavedRoadmaps(Array.isArray(roadmapsData) ? roadmapsData : []);
-      setGoals(Array.isArray(goalsData) ? goalsData : []);
-    } catch (err) {
-      console.error('Failed to load saved roadmaps:', err);
-    } finally {
-      setLoadingRoadmaps(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchRoadmaps();
-  }, []);
-
   // Compute aggregate stats across saved roadmaps
   const roadmapStats = useMemo(() => {
     const total = savedRoadmaps.length;
-    if (total === 0) return { total: 0, avgProgress: 0, completedCount: 0 };
+    if (total === 0) return { total: 0, avgProgress: 0, completedCount: 0, inProgressCount: 0 };
     const completedCount = savedRoadmaps.filter(r => (r.progressPercentage || 0) >= 100).length;
     const sumPct = savedRoadmaps.reduce((acc, r) => acc + (r.progressPercentage || 0), 0);
     return {
       total,
       avgProgress: Math.round(sumPct / total),
-      completedCount
+      completedCount,
+      inProgressCount: total - completedCount
     };
   }, [savedRoadmaps]);
 
@@ -159,6 +144,14 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
     return err.response?.data?.message || err.message || 'Roadmap generation failed. Please retry.';
   };
 
+  // Preselected goal from query parameter if on /roadmaps/new?goal=ID
+  const preselectedGoal = useMemo(() => {
+    if (query.goal) {
+      return goals.find(g => String(g.id) === String(query.goal)) || null;
+    }
+    return null;
+  }, [query.goal, goals]);
+
   // When user completes the 5-step wizard
   const handleWizardGenerate = async (payload) => {
     setGenerating(true);
@@ -190,46 +183,18 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
         console.warn('Could not autosave generated roadmap to backend:', saveErr);
       }
 
-      setActiveRoadmap(result);
-      setActiveSavedId(savedRecord?.id || null);
-      if (cleanedPayload.goalId) {
-        const found = goals.find(g => String(g.id) === String(cleanedPayload.goalId));
-        setActiveGoal(found || null);
+      if (savedRecord?.id) {
+        addRoadmap(savedRecord);
+        navigate(`#/roadmaps/${savedRecord.id}`);
       } else {
-        setActiveGoal(null);
+        setInMemoryRoadmap(result);
       }
-
-      setViewMode('VIEW');
-      fetchRoadmaps();
     } catch (err) {
       console.error('Roadmap generation failed:', err);
       setGenerateError(formatGenerationError(err));
     } finally {
       setGenerating(false);
       setGenerateProgress(null);
-    }
-  };
-
-  // Open an existing saved roadmap
-  const handleOpenSavedRoadmap = (saved) => {
-    try {
-      const parsed = JSON.parse(saved.roadmapJson);
-      parsed.completedTasksJson = saved.completedTasksJson;
-      parsed.completedMilestonesJson = saved.completedMilestonesJson;
-
-      setActiveRoadmap(parsed);
-      setActiveSavedId(saved.id);
-
-      if (saved.goalId) {
-        const g = goals.find(g => g.id === saved.goalId);
-        setActiveGoal(g || null);
-      } else {
-        setActiveGoal(null);
-      }
-
-      setViewMode('VIEW');
-    } catch (err) {
-      console.error('Error opening saved roadmap:', err);
     }
   };
 
@@ -240,71 +205,71 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
 
     try {
       await deleteSavedRoadmap(id);
-      setSavedRoadmaps(prev => prev.filter(r => r.id !== id));
-      if (activeSavedId === id) {
-        setViewMode('LIST');
-        setActiveRoadmap(null);
+      removeRoadmap(id);
+      if (params.id === id) {
+        navigate('#/roadmaps');
       }
     } catch (err) {
       console.error('Failed to delete roadmap:', err);
     }
   };
 
+  // Determine which sub-view to render
+  const isCreateRoute = route === 'roadmaps-new';
+  const isDetailRoute = route === 'roadmap-detail';
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-16">
-      {/* VIEW MODE: CREATE (WIZARD) */}
-      {viewMode === 'CREATE' && (
+      {/* VIEW: CREATE (WIZARD) */}
+      {isCreateRoute && (
         <RoadmapWizard
           goals={goals}
-          initialGoal={activeGoal}
+          initialGoal={preselectedGoal}
           onGenerate={handleWizardGenerate}
-          onCancel={() => setViewMode('LIST')}
+          onCancel={() => navigate('#/roadmaps')}
           loading={generating}
           progressMessage={generateProgress}
           error={generateError}
         />
       )}
 
-      {/* VIEW MODE: VIEW (INTERACTIVE DISPLAY) */}
-      {viewMode === 'VIEW' && activeRoadmap && (
+      {/* VIEW: DETAIL (INTERACTIVE ROADMAP) */}
+      {isDetailRoute && (
         <InteractiveRoadmap
-          roadmap={activeRoadmap}
-          goal={activeGoal}
-          savedRoadmapId={activeSavedId}
-          onBack={() => setViewMode('LIST')}
-          onProgressUpdate={(newPct) => {
-            setSavedRoadmaps(prev => prev.map(r => r.id === activeSavedId ? { ...r, progressPercentage: newPct } : r));
-          }}
+          savedRoadmapId={params.id}
+          onBack={() => navigate('#/roadmaps')}
           onRegenerate={async () => {
-            if (!activeRoadmap) return;
+            const current = savedRoadmaps.find(r => r.id === params.id);
+            if (!current) return;
             const payload = {
-              topic: (activeRoadmap.topic || '').replace(/\s*\(\d+\s*Days?\)$/i, '').trim(),
-              skillLevel: activeRoadmap.skillLevel || 'INTERMEDIATE',
-              targetDays: activeRoadmap.targetDays,
-              hoursPerDay: activeGoal?.hoursPerDay || activeRoadmap.hoursPerDay || 2.0,
-              description: activeGoal?.description || ''
+              topic: (current.topic || current.title || '').replace(/\s*\(\d+\s*Days?\)$/i, '').trim(),
+              skillLevel: current.skillLevel || 'INTERMEDIATE',
+              targetDays: current.targetDays,
+              hoursPerDay: current.hoursPerDay || 2.0
             };
             const { jobId } = await startRoadmapJob(payload);
             const result = await pollJobUntilComplete(jobId);
-            if (activeSavedId) {
-              await replaceRoadmap(activeSavedId, {
-                roadmapJson: JSON.stringify(result),
-                title: result.topic,
-                targetDays: result.targetDays,
-                hoursPerDay: result.hoursPerDay
-              });
-              result.completedTasksJson = '[]';
-              result.completedMilestonesJson = '[]';
-              result.progressPercentage = 0;
-            }
-            setActiveRoadmap(result);
-            fetchRoadmaps();
+            await replaceRoadmap(params.id, {
+              roadmapJson: JSON.stringify(result),
+              title: result.topic,
+              targetDays: result.targetDays,
+              hoursPerDay: result.hoursPerDay
+            });
+            refreshData(true);
           }}
         />
       )}
 
-      {/* VIEW MODE: LIST (SAVED ROADMAPS) */}
-      {viewMode === 'LIST' && (
+      {/* Fallback in-memory preview if backend save failed */}
+      {!isCreateRoute && !isDetailRoute && inMemoryRoadmap && (
+        <InteractiveRoadmap
+          roadmap={inMemoryRoadmap}
+          onBack={() => setInMemoryRoadmap(null)}
+        />
+      )}
+
+      {/* VIEW: LIST (SAVED ROADMAPS) */}
+      {!isCreateRoute && !isDetailRoute && !inMemoryRoadmap && (
         <div className="space-y-6">
           <PageHeader
             title="Roadmaps"
@@ -313,10 +278,7 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => {
-                  setActiveGoal(null);
-                  setViewMode('CREATE');
-                }}
+                onClick={() => navigate('#/roadmaps/new')}
               >
                 Create New Roadmap
               </Button>
@@ -325,7 +287,7 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
 
           {savedRoadmaps.length > 0 && (
             <p className="text-sm text-muted">
-              {roadmapStats.total} active, {roadmapStats.completedCount} completed
+              {roadmapStats.inProgressCount} in progress, {roadmapStats.completedCount} completed
             </p>
           )}
 
@@ -344,8 +306,8 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
                 return (
                   <Card
                     key={roadmap.id}
-                    onClick={() => handleOpenSavedRoadmap(roadmap)}
-                    className="p-5 hover:border-[#cbd5e1] transition-colors duration-150 cursor-pointer space-y-3"
+                    onClick={() => navigate(`#/roadmaps/${roadmap.id}`)}
+                    className="p-5 hover:border-slate-300 transition-colors duration-150 cursor-pointer space-y-3"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div className="space-y-1 min-w-0">
@@ -411,7 +373,7 @@ export const MyRoadmapsView = ({ onNavigateTab, initialGoal = null }) => {
                 <Button
                   variant="primary"
                   size="sm"
-                  onClick={() => setViewMode('CREATE')}
+                  onClick={() => navigate('#/roadmaps/new')}
                 >
                   Create New Roadmap
                 </Button>

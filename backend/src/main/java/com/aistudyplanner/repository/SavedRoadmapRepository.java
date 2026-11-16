@@ -18,6 +18,10 @@ public interface SavedRoadmapRepository extends JpaRepository<SavedRoadmap, Long
     @Query("SELECT r FROM SavedRoadmap r WHERE r.id = :id AND r.user.email = :email")
     Optional<SavedRoadmap> findByIdAndUserEmail(@Param("id") Long id, @Param("email") String email);
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM SavedRoadmap r WHERE r.id = :id AND r.user.email = :email")
+    Optional<SavedRoadmap> findByIdAndUserEmailForUpdate(@Param("id") Long id, @Param("email") String email);
+
     @Query("SELECT COUNT(r) FROM SavedRoadmap r WHERE r.user.email = :email")
     long countByUserEmail(@Param("email") String email);
 
