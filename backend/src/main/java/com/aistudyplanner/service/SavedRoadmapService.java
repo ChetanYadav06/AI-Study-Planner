@@ -325,7 +325,9 @@ public class SavedRoadmapService {
         boolean isCompleted = completedIds.contains(canonicalTaskId);
 
         List<RoadmapResponse.DailyTopic> topics = new ArrayList<>();
+        boolean isGenuineTopics = false;
         if (foundTask.getTopics() != null && !foundTask.getTopics().isEmpty()) {
+            isGenuineTopics = true;
             for (int tIdx = 0; tIdx < foundTask.getTopics().size(); tIdx++) {
                 RoadmapResponse.DailyTopic dt = foundTask.getTopics().get(tIdx);
                 String tId = dt.getId() != null && !dt.getId().isBlank() ? dt.getId() : "day-" + dayNumber + "-topic-" + tIdx;
@@ -355,6 +357,14 @@ public class SavedRoadmapService {
                 isFinalDay,
                 topics
         );
+
+        if (isGenuineTopics && !topics.isEmpty()) {
+            int learnMinutes = blocks.stream()
+                    .filter(b -> "STUDY".equalsIgnoreCase(b.getKind()) || "LEARN".equalsIgnoreCase(b.getKind()))
+                    .mapToInt(com.aistudyplanner.dto.DayPlanResponse.TimeBlockDto::getMinutes)
+                    .sum();
+            distributeMinutesEvenly(topics, learnMinutes);
+        }
 
         return new com.aistudyplanner.dto.DayPlanResponse(
                 dayNumber,
@@ -443,6 +453,17 @@ public class SavedRoadmapService {
         }
 
         return blocks;
+    }
+
+    public static void distributeMinutesEvenly(List<RoadmapResponse.DailyTopic> topics, int totalMinutes) {
+        if (topics == null || topics.isEmpty()) return;
+        int n = topics.size();
+        int base = totalMinutes / n;
+        int rem = totalMinutes % n;
+        for (int i = 0; i < n; i++) {
+            int assigned = base + (i < rem ? 1 : 0);
+            topics.get(i).setMinutes(assigned);
+        }
     }
 
     public record ProgressCalculation(int completedTasks, int totalTasks, int percentage) {}

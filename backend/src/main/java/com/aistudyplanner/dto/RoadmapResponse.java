@@ -1,5 +1,7 @@
 package com.aistudyplanner.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -89,11 +91,13 @@ public class RoadmapResponse {
         public void setQuizQuestion(String quizQuestion) { this.quizQuestion = quizQuestion; }
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class DailyTopic {
         private String id;
         private String title;
         private String summary;
         private Boolean expanded = false;
+        private Integer minutes;
 
         public DailyTopic() {}
 
@@ -102,11 +106,26 @@ public class RoadmapResponse {
             this.summary = summary;
         }
 
+        public DailyTopic(String id, String title, String summary) {
+            this.id = id;
+            this.title = title;
+            this.summary = summary;
+            this.expanded = false;
+        }
+
         public DailyTopic(String id, String title, String summary, Boolean expanded) {
             this.id = id;
             this.title = title;
             this.summary = summary;
             this.expanded = expanded != null ? expanded : false;
+        }
+
+        public DailyTopic(String id, String title, String summary, Boolean expanded, Integer minutes) {
+            this.id = id;
+            this.title = title;
+            this.summary = summary;
+            this.expanded = expanded != null ? expanded : false;
+            this.minutes = minutes;
         }
 
         public String getId() { return id; }
@@ -117,6 +136,8 @@ public class RoadmapResponse {
         public void setSummary(String summary) { this.summary = summary; }
         public Boolean getExpanded() { return expanded; }
         public void setExpanded(Boolean expanded) { this.expanded = expanded != null ? expanded : false; }
+        public Integer getMinutes() { return minutes; }
+        public void setMinutes(Integer minutes) { this.minutes = minutes; }
     }
 
     public static class PracticalExercise {

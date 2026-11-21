@@ -1,5 +1,6 @@
 package com.aistudyplanner.service;
 
+import com.aistudyplanner.dto.RoadmapResponse;
 import com.aistudyplanner.dto.UpdateGoalStatusRequest;
 import com.aistudyplanner.dto.UpdateRoadmapProgressRequest;
 import com.aistudyplanner.entity.Goal;
@@ -20,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -277,6 +279,83 @@ class SavedRoadmapServiceSyncTest {
                 roadmapService.getDayPlan(testUser.getEmail(), testRoadmap.getId(), 999)
         );
         assertEquals(org.springframework.http.HttpStatus.NOT_FOUND, exDay999.getStatusCode());
+    }
+
+    @Test
+    @DisplayName("Should distribute Learn blocks minutes evenly across 1, 2, 3, 4, 5 topics and sum exactly")
+    void shouldDistributeMinutesAcrossTopics() {
+        for (int topicCount = 1; topicCount <= 5; topicCount++) {
+            List<RoadmapResponse.DailyTopic> topics = new ArrayList<>();
+            for (int i = 0; i < topicCount; i++) {
+                topics.add(new RoadmapResponse.DailyTopic("t" + i, "Topic " + i, "Summary " + i));
+            }
+            int totalLearnMinutes = 48;
+            SavedRoadmapService.distributeMinutesEvenly(topics, totalLearnMinutes);
+
+            int sum = topics.stream().mapToInt(RoadmapResponse.DailyTopic::getMinutes).sum();
+            assertEquals(totalLearnMinutes, sum, "Sum of topic minutes must exactly equal totalLearnMinutes for " + topicCount + " topics");
+            for (RoadmapResponse.DailyTopic dt : topics) {
+                assertNotNull(dt.getMinutes());
+                assertTrue(dt.getMinutes() > 0);
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("Should distribute uneven totals like 12 minutes over 5 topics exactly (3, 3, 2, 2, 2)")
+    void shouldDistributeUnevenTotals() {
+        List<RoadmapResponse.DailyTopic> topics = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            topics.add(new RoadmapResponse.DailyTopic("t" + i, "Topic " + i, "Summary " + i));
+        }
+        SavedRoadmapService.distributeMinutesEvenly(topics, 12);
+
+        assertEquals(3, topics.get(0).getMinutes());
+        assertEquals(3, topics.get(1).getMinutes());
+        assertEquals(2, topics.get(2).getMinutes());
+        assertEquals(2, topics.get(3).getMinutes());
+        assertEquals(2, topics.get(4).getMinutes());
+
+        int sum = topics.stream().mapToInt(RoadmapResponse.DailyTopic::getMinutes).sum();
+        assertEquals(12, sum);
+    }
+
+    @Test
+    @DisplayName("Subtopics fallback and no topics have null minutes")
+    void shouldHaveNullMinutesForSubtopicsFallback() {
+        String jsonWithSubtopics = """
+            {
+              "phases": [{
+                "phaseNumber": 1,
+                "dailyTasks": [{
+                  "dayNumber": 1,
+                  "title": "Old Task",
+                  "subtopics": ["Subtopic A", "Subtopic B"]
+                }]
+              }]
+            }
+            """;
+        SavedRoadmap roadmap = new SavedRoadmap(testUser, "Old", "Old", SkillLevel.BEGINNER, 10, 2.0, jsonWithSubtopics);
+        roadmap.setId(88L);
+        when(roadmapRepository.findById(88L)).thenReturn(Optional.of(roadmap));
+
+        var plan = roadmapService.getDayPlan(testUser.getEmail(), 88L, 1);
+        assertNotNull(plan);
+        assertEquals(2, plan.getTopics().size());
+        for (var topic : plan.getTopics()) {
+            assertNull(topic.getMinutes(), "Subtopics fallback must have null minutes");
+        }
+    }
+
+    @Test
+    @DisplayName("getDayPlan enforces owner-only access (403 for different user)")
+    void shouldEnforceOwnerOnlyAccess() {
+        when(roadmapRepository.findById(testRoadmap.getId())).thenReturn(Optional.of(testRoadmap));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                roadmapService.getDayPlan("intruder@example.com", testRoadmap.getId(), 1)
+        );
+        assertEquals(org.springframework.http.HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 }
 

@@ -1,39 +1,44 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  Calendar,
-  Clock,
-  TrendingUp,
+  ArrowLeft,
+  ArrowRight,
   RotateCcw,
   Copy,
   Check,
-  Save,
-  ArrowLeft,
-  ArrowRight,
+  Calendar,
   AlertCircle
 } from 'lucide-react';
 import {
-  updateRoadmapProgress,
-  saveRoadmap,
   getDayPlan,
   expandTopic,
   suggestExtraTopics,
   deleteTopicExpansion,
   deleteExtraTopic,
   getDayTopicsAndExpansions,
-  getSavedRoadmapById
+  getSavedRoadmapById,
+  submitTaskFeedback
 } from '../../services/api';
 import { useRouter } from '../../context/RouterContext';
 import { useData } from '../../context/DataContext';
 import { NotFoundView } from '../common/NotFoundView';
-import { formatEnum } from '../../utils/formatters';
 import { getCanonicalTaskId } from '../../utils/studyQueue';
+import {
+  stripPhasePrefix,
+  getNextUnfinishedDay,
+  computePhaseSummaries
+} from '../../utils/dayPlanHelpers';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
-import { StatusText } from '../ui/StatusText';
-import { ProgressBar } from '../ui/ProgressBar';
-import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { PhaseList } from './PhaseList';
-import { DayDetail } from './DayDetail';
+
+import { RoadmapHeader } from './RoadmapHeader';
+import { PhaseDayStrip } from './PhaseDayStrip';
+import { PhaseDayList } from './PhaseDayList';
+import { DayHeader } from './DayHeader';
+import { DayObjectives } from './DayObjectives';
+import { DayTimeline } from './DayTimeline';
+import { PhaseExtrasAccordion } from './PhaseExtrasAccordion';
+import { DayFooter } from './DayFooter';
+import { MobileDaysDrawer } from './MobileDaysDrawer';
 
 export const InteractiveRoadmap = ({
   roadmap: initialRoadmap = null,
@@ -43,11 +48,7 @@ export const InteractiveRoadmap = ({
   onRegenerate,
   onBack,
   onProgressUpdate,
-  isModal = false,
-  // Optional 7C hooks
-  onExpandTopic = null,
-  topicExpansions = {},
-  loadingExpansion = null
+  isModal = false
 }) => {
   const { params, navigate } = useRouter();
   const { toggleTaskCompletion } = useData();
@@ -59,12 +60,26 @@ export const InteractiveRoadmap = ({
   const [serverProgress, setServerProgress] = useState(0);
   const [syncError, setSyncError] = useState(null);
 
-  const [showRegenModal, setShowRegenModal] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [currentSavedId, setCurrentSavedId] = useState(savedRoadmapId);
-  const [cloudSynced, setCloudSynced] = useState(Boolean(savedRoadmapId));
-  const [savingToCloud, setSavingToCloud] = useState(false);
-  const [copied, setCopied] = useState(false);
+
+  // Day plan fetch state & error handling
+  const [dayPlanCache, setDayPlanCache] = useState({});
+  const [loadingPlan, setLoadingPlan] = useState(false);
+  const [planError, setPlanError] = useState(null);
+
+  // Topic Expansions and Extra Topics state
+  const [dayTopicsCache, setDayTopicsCache] = useState({});
+  const [loadingExpansionState, setLoadingExpansionState] = useState(null);
+  const [suggestingExtra, setSuggestingExtra] = useState(false);
+  const [topicError, setTopicError] = useState(null);
+
+  // Topic ticks (Sub-step 9C)
+  const [topicTicks, setTopicTicks] = useState({});
+
+  // Mobile drawer state
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const allDaysButtonRef = useRef(null);
 
   // Fetch authoritative roadmap data from server on mount or when savedRoadmapId changes
   useEffect(() => {
@@ -100,7 +115,6 @@ export const InteractiveRoadmap = ({
           parsed.goalId = data.goalId;
           setActiveRoadmap(parsed);
           setCurrentSavedId(data.id);
-          setCloudSynced(true);
 
           let ids = [];
           if (data.completedTasksJson) {
@@ -168,17 +182,22 @@ export const InteractiveRoadmap = ({
     };
   }, [roadmap]);
 
-  // Local state for completed timeline blocks
-  const blocksStorageKey = currentSavedId ? `ai_roadmap_blocks_${currentSavedId}` : null;
-  const [completedBlocks, setCompletedBlocks] = useState(() => {
-    if (!blocksStorageKey) return {};
-    try {
-      const saved = localStorage.getItem(blocksStorageKey);
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
+  // Compute canonical progress percent
+  const completedTasksCount = useMemo(() => {
+    return allTasks.filter(item => completedTasks[item.id]).length;
+  }, [allTasks, completedTasks]);
+
+  const progressPercent = useMemo(() => {
+    if (totalTasksCount === 0) return 0;
+    return Math.min(100, Math.round((completedTasksCount / totalTasksCount) * 100));
+  }, [completedTasksCount, totalTasksCount]);
+
+  // Next recommended unfinished day number
+  const nextUnfinishedDayNumber = useMemo(() => {
+    return getNextUnfinishedDay(allTasks, completedTasks);
+  }, [allTasks, completedTasks]);
+
+  const isEntireRoadmapCompleted = totalTasksCount > 0 && completedTasksCount === totalTasksCount;
 
   // Day selection state: initialize from URL params or default to 1
   const [selectedDayNumber, setSelectedDayNumber] = useState(() => {
@@ -193,23 +212,22 @@ export const InteractiveRoadmap = ({
   useEffect(() => {
     if (params.day) {
       const parsed = Number(params.day);
-      if (!isNaN(parsed) && parsed >= 1 && parsed <= (roadmap?.targetDays || 365)) {
+      if (!isNaN(parsed)) {
         setSelectedDayNumber(parsed);
       }
     }
-  }, [params.day, roadmap?.targetDays]);
+  }, [params.day]);
 
   // When no day is in URL, select the first incomplete day
   useEffect(() => {
     if (!params.day && allTasks.length > 0) {
-      const firstIncomplete = allTasks.find(t => !completedTasks[t.id]);
-      if (firstIncomplete?.task?.dayNumber) {
-        setSelectedDayNumber(firstIncomplete.task.dayNumber);
+      if (nextUnfinishedDayNumber) {
+        setSelectedDayNumber(nextUnfinishedDayNumber);
       } else {
         setSelectedDayNumber(1);
       }
     }
-  }, [params.day, allTasks, completedTasks]);
+  }, [params.day, allTasks, nextUnfinishedDayNumber]);
 
   // Navigate to selected day
   const handleSelectDay = useCallback((dayNum) => {
@@ -219,70 +237,66 @@ export const InteractiveRoadmap = ({
     }
   }, [currentSavedId, navigate]);
 
-  // Keyboard navigation: ArrowUp/ArrowDown changes day
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (selectedDayNumber > 1) {
-          handleSelectDay(selectedDayNumber - 1);
-        }
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        if (selectedDayNumber < totalTasksCount) {
-          handleSelectDay(selectedDayNumber + 1);
-        }
+  // Find active task item and phase
+  const selectedTaskItem = useMemo(() => {
+    return allTasks.find(t => t.task.dayNumber === selectedDayNumber) || null;
+  }, [allTasks, selectedDayNumber]);
+
+  const selectedPhaseIndex = selectedTaskItem ? selectedTaskItem.phaseIdx : 0;
+  const selectedPhase = useMemo(() => {
+    if (!roadmap?.phases) return null;
+    return roadmap.phases[selectedPhaseIndex] || null;
+  }, [roadmap?.phases, selectedPhaseIndex]);
+
+  // Enriched phase summaries
+  const phaseSummaries = useMemo(() => {
+    return computePhaseSummaries(roadmap?.phases || [], tasksByPhase, completedTasks);
+  }, [roadmap?.phases, tasksByPhase, completedTasks]);
+
+  const handleSelectPhase = useCallback((phaseIdx, targetDay) => {
+    if (targetDay) {
+      handleSelectDay(targetDay);
+    } else {
+      const phase = phaseSummaries[phaseIdx];
+      if (phase?.tasks[0]) {
+        handleSelectDay(phase.tasks[0].task.dayNumber);
       }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedDayNumber, totalTasksCount, handleSelectDay]);
+    }
+  }, [handleSelectDay, phaseSummaries]);
 
-  // Day plan fetch state
-  const [dayPlanCache, setDayPlanCache] = useState({});
-  const [loadingPlan, setLoadingPlan] = useState(false);
-
-  useEffect(() => {
+  // Day plan fetch
+  const fetchDayPlan = useCallback((dayNum) => {
     if (!currentSavedId) return;
-    if (dayPlanCache[selectedDayNumber]) return;
-
-    let isMounted = true;
     setLoadingPlan(true);
+    setPlanError(null);
 
-    getDayPlan(currentSavedId, selectedDayNumber)
+    getDayPlan(currentSavedId, dayNum)
       .then((plan) => {
-        if (isMounted) {
-          setDayPlanCache(prev => ({ ...prev, [selectedDayNumber]: plan }));
-        }
+        setDayPlanCache(prev => ({ ...prev, [dayNum]: plan }));
       })
       .catch((err) => {
-        console.warn(`Could not fetch day plan for day ${selectedDayNumber}:`, err);
+        console.warn(`Could not fetch day plan for day ${dayNum}:`, err);
+        setPlanError('Could not load plan schedule. Click retry.');
       })
       .finally(() => {
-        if (isMounted) setLoadingPlan(false);
+        setLoadingPlan(false);
       });
+  }, [currentSavedId]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [currentSavedId, selectedDayNumber, dayPlanCache]);
+  useEffect(() => {
+    if (currentSavedId && selectedDayNumber && !dayPlanCache[selectedDayNumber]) {
+      fetchDayPlan(selectedDayNumber);
+    }
+  }, [currentSavedId, selectedDayNumber, dayPlanCache, fetchDayPlan]);
 
-  // Topic Expansions and Extra Topics state
-  const [dayTopicsCache, setDayTopicsCache] = useState({});
-  const [loadingExpansionState, setLoadingExpansionState] = useState(null);
-  const [suggestingExtra, setSuggestingExtra] = useState(false);
-  const [topicError, setTopicError] = useState(null);
-
-  // Fetch expansions and extra topics when day or savedId changes
+  // Fetch expansions and extra topics
   useEffect(() => {
     if (!currentSavedId) return;
     if (dayTopicsCache[selectedDayNumber]) return;
 
-    let isMounted = true;
     getDayTopicsAndExpansions(currentSavedId, selectedDayNumber)
       .then((data) => {
-        if (isMounted && data) {
+        if (data) {
           setDayTopicsCache(prev => ({
             ...prev,
             [selectedDayNumber]: data
@@ -292,10 +306,6 @@ export const InteractiveRoadmap = ({
       .catch((err) => {
         console.warn(`Could not fetch topics and expansions for day ${selectedDayNumber}:`, err);
       });
-
-    return () => {
-      isMounted = false;
-    };
   }, [currentSavedId, selectedDayNumber, dayTopicsCache]);
 
   const handleExpandTopic = async (topicTitle, level) => {
@@ -418,27 +428,7 @@ export const InteractiveRoadmap = ({
     }
   };
 
-  // Completed count and canonical progress percentage
-  const completedTasksCount = useMemo(() => {
-    return allTasks.filter(item => completedTasks[item.id]).length;
-  }, [allTasks, completedTasks]);
-
-  const progressPercent = useMemo(() => {
-    if (totalTasksCount === 0) return 0;
-    return Math.min(100, Math.round((completedTasksCount / totalTasksCount) * 100));
-  }, [completedTasksCount, totalTasksCount]);
-
-  // Next recommended action (first uncompleted day task)
-  const nextRecommendedAction = useMemo(() => {
-    for (const item of allTasks) {
-      if (!completedTasks[item.id]) {
-        return item;
-      }
-    }
-    return null;
-  }, [allTasks, completedTasks]);
-
-  // Task completion toggle via idempotent endpoint with optimistic update & rollback
+  // Task completion toggle
   const handleToggleTask = async (taskId) => {
     const currentVal = Boolean(completedTasks[taskId]);
     const nextVal = !currentVal;
@@ -453,7 +443,6 @@ export const InteractiveRoadmap = ({
 
     try {
       const response = await toggleTaskCompletion(currentSavedId, taskId, nextVal);
-      // Synchronize with authoritative server response
       const updatedMap = (response.completedTaskIds || []).reduce((acc, id) => ({ ...acc, [id]: true }), {});
       setCompletedTasks(updatedMap);
       setServerProgress(response.progressPercentage);
@@ -465,7 +454,6 @@ export const InteractiveRoadmap = ({
         onSyncGoalProgress(goal?.id || response.goalId, response.goalProgressPercentage);
       }
     } catch (err) {
-      // Rollback on failure
       setCompletedTasks(prev => ({
         ...prev,
         [taskId]: currentVal
@@ -475,44 +463,13 @@ export const InteractiveRoadmap = ({
     }
   };
 
-  const handleToggleBlock = (blockIdx) => {
-    const key = `${selectedDayNumber}-${blockIdx}`;
-    const nextVal = !completedBlocks[key];
-    const updated = { ...completedBlocks, [key]: nextVal };
-    setCompletedBlocks(updated);
-    if (blocksStorageKey) {
-      try {
-        localStorage.setItem(blocksStorageKey, JSON.stringify(updated));
-      } catch (e) {
-        console.warn('Failed to save block completion', e);
-      }
-    }
-  };
-
-  // Cloud save
-  const handleSaveToCloud = async () => {
-    if (savingToCloud || !roadmap) return;
-    setSavingToCloud(true);
+  // Submit Phase 5 rating for a day
+  const handleRateDayTask = async (rating) => {
+    if (!currentSavedId || !selectedTaskItem) return;
     try {
-      const res = await saveRoadmap({
-        goalId: goal?.id || null,
-        title: roadmap.topic,
-        topic: roadmap.topic,
-        skillLevel: roadmap.skillLevel || 'INTERMEDIATE',
-        targetDays: roadmap.targetDays,
-        hoursPerDay: roadmap.hoursPerDay,
-        roadmapJson: JSON.stringify(roadmap)
-      });
-
-      if (res && res.id) {
-        setCurrentSavedId(res.id);
-        setCloudSynced(true);
-        navigate(`#/roadmaps/${res.id}`);
-      }
+      await submitTaskFeedback(currentSavedId, selectedTaskItem.id, rating);
     } catch (err) {
-      console.error('Failed to save roadmap to backend:', err);
-    } finally {
-      setSavingToCloud(false);
+      console.warn('Failed to submit task feedback:', err);
     }
   };
 
@@ -522,19 +479,7 @@ export const InteractiveRoadmap = ({
     const text = `# ${roadmap.topic} Study Roadmap\nTarget: ${roadmap.targetDays} Days (${roadmap.hoursPerDay}h/day)\n\n${roadmap.overview || ''}\n\n` +
       (roadmap.phases || []).map(p => `## ${p.phaseTitle || p.phase}\n` + (p.dailyTasks || []).map(t => `- Day ${t.dayNumber}: ${t.title} (${t.activityType || 'Study'})`).join('\n')).join('\n\n');
     navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
   };
-
-  // Find active task item and phase
-  const selectedTaskItem = useMemo(() => {
-    return allTasks.find(t => t.task.dayNumber === selectedDayNumber) || allTasks[0] || null;
-  }, [allTasks, selectedDayNumber]);
-
-  const selectedPhase = useMemo(() => {
-    if (!selectedTaskItem || !roadmap?.phases) return null;
-    return roadmap.phases[selectedTaskItem.phaseIdx] || null;
-  }, [roadmap?.phases, selectedTaskItem]);
 
   // Active day's plan from cache or synthesized fallback
   const activeDayPlan = useMemo(() => {
@@ -546,35 +491,39 @@ export const InteractiveRoadmap = ({
     const task = selectedTaskItem.task;
     const dailyMinutes = task.estimatedMinutes || Math.round((roadmap.hoursPerDay || 2) * 60);
 
-    const warmup = 15;
-    const review = 15;
-    const remaining = Math.max(0, dailyMinutes - (warmup + review));
-    const learn = Math.floor(remaining / 2);
-    const practice = remaining - learn;
+    const learn = Math.round(dailyMinutes * 0.40);
+    const practice = Math.round(dailyMinutes * 0.40);
+    const review = dailyMinutes - (learn + practice);
 
     return {
       dayNumber: selectedDayNumber,
-      dailyMinutes,
-      activityType: task.activityType || 'LEARNING',
+      estimatedMinutes: dailyMinutes,
+      activityType: task.activityType || 'STUDY',
       topics: task.topics || (task.subtopics || []).map(st => ({
         title: typeof st === 'string' ? st : st.title,
         summary: typeof st === 'string' ? '' : st.summary
       })),
       blocks: [
-        { kind: 'WARMUP', minutes: warmup, description: 'Review prerequisites and set learning goals.' },
-        { kind: 'LEARN', minutes: learn, description: `Study concepts for ${task.title}.` },
-        { kind: 'PRACTICE', minutes: practice, description: 'Hands-on coding exercises and implementation.' },
-        { kind: 'REVIEW', minutes: review, description: 'Knowledge review and self-test verification.' }
+        { kind: 'STUDY', minutes: learn, title: 'Concept study' },
+        { kind: 'PRACTICE', minutes: practice, title: 'Hands-on practice' },
+        { kind: 'QUIZ', minutes: review, title: 'Check yourself' }
       ]
     };
   }, [dayPlanCache, selectedDayNumber, selectedTaskItem, roadmap]);
 
+  // Next task item for footer
+  const nextTaskItem = useMemo(() => {
+    if (!selectedTaskItem) return null;
+    return allTasks.find(t => t.task.dayNumber === selectedDayNumber + 1) || null;
+  }, [allTasks, selectedDayNumber]);
+
+  // Loading skeleton state
   if (loading) {
     return (
-      <div className="space-y-6 max-w-7xl mx-auto pb-16 animate-pulse">
-        <div className="h-9 bg-slate-200 rounded w-48 mb-4"></div>
-        <div className="h-44 bg-slate-200 rounded-lg w-full mb-6"></div>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="space-y-5 max-w-[1180px] mx-auto pb-16 animate-pulse">
+        <div className="h-10 bg-slate-200 rounded-md w-44"></div>
+        <div className="h-40 bg-slate-200 rounded-lg w-full"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           <div className="lg:col-span-4 h-96 bg-slate-200 rounded-lg"></div>
           <div className="lg:col-span-8 h-96 bg-slate-200 rounded-lg"></div>
         </div>
@@ -590,211 +539,221 @@ export const InteractiveRoadmap = ({
     return null;
   }
 
+  // Unknown day state (e.g. #/roadmaps/1/day/999)
+  const isUnknownDay = selectedDayNumber < 1 || selectedDayNumber > totalTasksCount;
+  if (isUnknownDay) {
+    return (
+      <div className="max-w-[1180px] mx-auto py-12 px-4 space-y-4 text-center">
+        <div className="p-8 rounded-lg border border-line bg-surface space-y-4 max-w-md mx-auto">
+          <AlertCircle className="w-8 h-8 text-danger mx-auto" />
+          <h2 className="text-lg font-semibold text-ink">This day does not exist</h2>
+          <p className="text-[13px] text-muted">
+            Day {selectedDayNumber} is outside the range for this {totalTasksCount}-day roadmap.
+          </p>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => handleSelectDay(nextUnfinishedDayNumber || 1)}
+            className="min-h-[40px] px-4 text-[13px] rounded-md mx-auto"
+          >
+            Go to first unfinished day (Day {nextUnfinishedDayNumber || 1})
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const isCurrentDayDone = Boolean(selectedTaskItem && completedTasks[selectedTaskItem.id]);
+  const dayTopics = activeDayPlan?.topics || selectedTaskItem?.task?.topics || [];
+  const extraTopics = dayTopicsCache[selectedDayNumber]?.extraTopics || [];
+  const expansions = dayTopicsCache[selectedDayNumber]?.expansions || {};
+  const estimatedMins = activeDayPlan?.estimatedMinutes || selectedTaskItem?.task?.estimatedMinutes || 30;
+
   return (
-    <div className={`space-y-6 ${isModal ? 'p-1' : 'max-w-7xl mx-auto pb-16'}`}>
+    <div className={`space-y-5 ${isModal ? 'p-1' : 'max-w-[1180px] mx-auto pb-16'}`}>
       {syncError && (
-        <div className="p-3 bg-red-50 border border-red-200 text-danger text-sm rounded-md flex items-center gap-2">
+        <div className="p-3 bg-red-50 border border-red-200 text-danger text-[13px] rounded-md flex items-center gap-2" aria-live="polite">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{syncError}</span>
         </div>
       )}
 
-      {/* Top Navigation & Action Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        {onBack ? (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onBack}
-            className="gap-1.5 self-start"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Roadmaps</span>
-          </Button>
-        ) : <div />}
+      {/* Top Header */}
+      <RoadmapHeader
+        roadmap={roadmap}
+        progressPercent={progressPercent}
+        completedCount={completedTasksCount}
+        totalCount={totalTasksCount}
+        onBack={onBack}
+        onRegenerate={onRegenerate}
+        regenerating={regenerating}
+        onCopyMarkdown={handleCopyMarkdown}
+      />
 
-        <div className="flex items-center gap-2 self-end">
-          {cloudSynced ? (
-            <StatusText status="success">
-              Saved to database
-            </StatusText>
-          ) : (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleSaveToCloud}
-              disabled={savingToCloud}
-              className="gap-1.5"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>{savingToCloud ? 'Saving...' : 'Save to Cloud'}</span>
-            </Button>
-          )}
+      {/* Phase Day Strip */}
+      <PhaseDayStrip
+        phases={phaseSummaries}
+        selectedPhaseIndex={selectedPhaseIndex}
+        selectedDayNumber={selectedDayNumber}
+        onSelectPhase={handleSelectPhase}
+        onSelectDay={handleSelectDay}
+        completedTasks={completedTasks}
+        progressPercent={progressPercent}
+        completedCount={completedTasksCount}
+        totalCount={totalTasksCount}
+      />
 
-          {onRegenerate && (
+      {/* Mobile "All days" button (opens drawer) */}
+      <div className="flex items-center justify-between lg:hidden pt-1">
+        <Button
+          ref={allDaysButtonRef}
+          variant="secondary"
+          size="sm"
+          onClick={() => setMobileDrawerOpen(true)}
+          className="gap-2 min-h-[40px] px-3.5 text-[13px] rounded-md w-full justify-center"
+          aria-label="Open all days panel"
+        >
+          <Calendar className="w-4 h-4 text-accent" />
+          <span>All days ({completedTasksCount} of {totalTasksCount} done)</span>
+        </Button>
+      </div>
+
+      {/* Two-Column Grid: Left Day List, Right Day Detail (20px gaps) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Left Column (Desktop sticky, hidden on mobile) */}
+        <div className="hidden lg:block lg:col-span-4 xl:col-span-4">
+          <PhaseDayList
+            phases={phaseSummaries}
+            selectedPhaseIndex={selectedPhaseIndex}
+            selectedDayNumber={selectedDayNumber}
+            onSelectPhase={handleSelectPhase}
+            onSelectDay={handleSelectDay}
+            completedTasks={completedTasks}
+            nextUnfinishedDayNumber={nextUnfinishedDayNumber}
+          />
+        </div>
+
+        {/* Right Column: Day Detail */}
+        <div className="lg:col-span-8 xl:col-span-8 space-y-5">
+          <Card className="p-5 sm:p-6 space-y-5">
+            {/* Day Header */}
+            <DayHeader
+              dayNumber={selectedDayNumber}
+              totalDays={totalTasksCount}
+              task={selectedTaskItem?.task}
+              estimatedMinutes={estimatedMins}
+              isCompleted={isCurrentDayDone}
+              onToggleCompleted={() => selectedTaskItem && handleToggleTask(selectedTaskItem.id)}
+              onRateTask={handleRateDayTask}
+            />
+
+            {/* Day Objectives */}
+            <DayObjectives
+              objectives={selectedTaskItem?.task?.learningObjectives || []}
+            />
+
+            {/* Plan Loading / Error States */}
+            {planError && (
+              <div
+                className="p-3 bg-red-50 border border-red-200 text-danger text-[13px] rounded-md flex items-center justify-between gap-2"
+                aria-live="polite"
+              >
+                <span>{planError}</span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => fetchDayPlan(selectedDayNumber)}
+                  className="text-[13px] min-h-[40px] px-3 rounded-md"
+                >
+                  Retry
+                </Button>
+              </div>
+            )}
+
+            {/* Day Timeline */}
+            <DayTimeline
+              blocks={activeDayPlan?.blocks || []}
+              totalMinutes={estimatedMins}
+              topics={dayTopics}
+              extraTopics={extraTopics}
+              practiceTasks={selectedTaskItem?.task?.practiceTasks || []}
+              quizQuestion={selectedTaskItem?.task?.quizQuestion || null}
+              expansions={expansions}
+              loadingExpansion={loadingExpansionState}
+              suggestingExtra={suggestingExtra}
+              onExpandTopic={handleExpandTopic}
+              onDeleteExpansion={handleDeleteExpansion}
+              onSuggestExtraTopics={handleSuggestExtraTopics}
+              onDeleteExtraTopic={handleDeleteExtraTopic}
+              topicTicks={topicTicks}
+              onToggleTopicTick={(topicKey) => {
+                setTopicTicks(prev => ({
+                  ...prev,
+                  [topicKey]: !prev[topicKey]
+                }));
+              }}
+              onMarkDayDone={() => selectedTaskItem && handleToggleTask(selectedTaskItem.id)}
+              isDayDone={isCurrentDayDone}
+              canMutate={Boolean(currentSavedId)}
+              topicError={topicError}
+            />
+
+            {/* Collapsed "More for this phase" accordion */}
+            <PhaseExtrasAccordion phase={selectedPhase} />
+
+            {/* Day Footer */}
+            <DayFooter
+              isCurrentDayDone={isCurrentDayDone}
+              nextTaskItem={nextTaskItem}
+              isEntireRoadmapCompleted={isEntireRoadmapCompleted}
+              onMarkDayDone={() => selectedTaskItem && handleToggleTask(selectedTaskItem.id)}
+              onGoToNextDay={() => nextTaskItem && handleSelectDay(nextTaskItem.task.dayNumber)}
+            />
+          </Card>
+
+          {/* Mobile Previous / Next Day Navigation Buttons */}
+          <div className="flex items-center justify-between gap-3 lg:hidden pt-2">
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => setShowRegenModal(true)}
-              disabled={regenerating}
-              className="gap-1.5 text-danger hover:text-danger"
+              disabled={selectedDayNumber <= 1}
+              onClick={() => handleSelectDay(selectedDayNumber - 1)}
+              className="min-h-[40px] px-3.5 text-[13px] rounded-md gap-1.5 flex-1 justify-center"
+              aria-label="Previous day"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Regenerate</span>
+              <ArrowLeft className="w-4 h-4" />
+              <span>Previous day</span>
             </Button>
-          )}
 
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleCopyMarkdown}
-            className="gap-1.5"
-          >
-            {copied ? <Check className="w-3.5 h-3.5 text-accent" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copied ? 'Copied' : 'Export MD'}</span>
-          </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={selectedDayNumber >= totalTasksCount}
+              onClick={() => handleSelectDay(selectedDayNumber + 1)}
+              className="min-h-[40px] px-3.5 text-[13px] rounded-md gap-1.5 flex-1 justify-center"
+              aria-label="Next day"
+            >
+              <span>Next day</span>
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* ROADMAP OVERVIEW CARD */}
-      <Card className="p-5 sm:p-6 space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-line">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2 text-[13px] text-muted">
-              <span className="font-medium text-ink">
-                {formatEnum(roadmap.skillLevel)}
-              </span>
-              <span>•</span>
-              <span>{roadmap.targetDays} days</span>
-              {goal && (
-                <>
-                  <span>•</span>
-                  <span>Goal: {goal.title}</span>
-                </>
-              )}
-            </div>
-
-            <h1 className="text-xl sm:text-2xl font-semibold text-ink tracking-tight">
-              {roadmap.topic}
-            </h1>
-            {roadmap.overview && (
-              <p className="text-sm text-muted max-w-3xl leading-relaxed">
-                {roadmap.overview}
-              </p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-4 shrink-0 text-sm">
-            <div className="p-3 rounded-md bg-page border border-line text-center min-w-[90px]">
-              <span className="text-[13px] text-muted block">Total hours</span>
-              <span className="text-lg font-semibold text-ink">
-                {roadmap.totalStudyHours || (roadmap.targetDays * (goal?.hoursPerDay || roadmap.hoursPerDay || 2))}h
-              </span>
-            </div>
-            <div className="p-3 rounded-md bg-page border border-line text-center min-w-[90px]">
-              <span className="text-[13px] text-muted block">Daily pace</span>
-              <span className="text-lg font-semibold text-accent">
-                {(goal?.hoursPerDay || roadmap.hoursPerDay || 2)}h/d
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Progress Tracker Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
-          <div className="flex items-center gap-2 font-medium text-ink">
-            <TrendingUp className="w-4 h-4 text-accent" />
-            <span>Completion:</span>
-            <span className="font-semibold text-accent">
-              {progressPercent}% ({completedTasksCount}/{totalTasksCount} tasks)
-            </span>
-          </div>
-
-          <div className="flex-1 max-w-md w-full">
-            <ProgressBar
-              value={progressPercent}
-              ariaLabel="Curriculum progress"
-            />
-          </div>
-        </div>
-
-        {roadmap.feasibilityNote && (
-          <div className="p-3 rounded-md bg-page border border-line text-[13px] text-muted flex items-start gap-2">
-            <Clock className="w-4 h-4 shrink-0 mt-0.5 text-accent" />
-            <span>Pacing advice: {roadmap.feasibilityNote}</span>
-          </div>
-        )}
-      </Card>
-
-      {/* Grid Layout: Phases & Day Tasks */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: PhaseList (Master) */}
-        <div className="lg:col-span-4 xl:col-span-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-ink">
-              Curriculum Schedule
-            </h2>
-            <span className="text-xs font-mono text-muted">
-              {completedTasksCount} of {totalTasksCount} done
-            </span>
-          </div>
-
-          <PhaseList
-            phases={roadmap.phases || []}
-            tasksByPhase={tasksByPhase}
-            selectedDayNumber={selectedDayNumber}
-            onSelectDay={handleSelectDay}
-            completedTasks={completedTasks}
-            onToggleTask={handleToggleTask}
-          />
-        </div>
-
-        {/* Right Column: DayDetail (Detail) */}
-        <div className="lg:col-span-8 xl:col-span-8">
-          <DayDetail
-            dayNumber={selectedDayNumber}
-            totalDays={totalTasksCount}
-            taskItem={selectedTaskItem}
-            isCompleted={Boolean(selectedTaskItem && completedTasks[selectedTaskItem.id])}
-            onToggleCompleted={() => selectedTaskItem && handleToggleTask(selectedTaskItem.id)}
-            dayPlan={activeDayPlan}
-            loadingPlan={loadingPlan}
-            completedBlocks={completedBlocks}
-            onToggleBlock={handleToggleBlock}
-            onExpandTopic={onExpandTopic || handleExpandTopic}
-            onDeleteExpansion={handleDeleteExpansion}
-            onSuggestExtraTopics={handleSuggestExtraTopics}
-            onDeleteExtraTopic={handleDeleteExtraTopic}
-            topicExpansions={dayTopicsCache[selectedDayNumber]?.expansions || topicExpansions || {}}
-            extraTopics={dayTopicsCache[selectedDayNumber]?.extraTopics || []}
-            loadingExpansion={loadingExpansion || loadingExpansionState}
-            suggestingExtra={suggestingExtra}
-            canMutate={Boolean(currentSavedId)}
-            phase={selectedPhase}
-          />
-        </div>
-      </div>
-
-      {/* Confirm Regeneration Dialog */}
-      <ConfirmDialog
-        isOpen={showRegenModal}
-        title="Regenerate Roadmap?"
-        message="Regenerating this roadmap will create a fresh set of curriculum phases and tasks. Your current completion checkboxes will be reset."
-        confirmText="Regenerate"
-        cancelText="Cancel"
-        variant="danger"
-        onConfirm={async () => {
-          setShowRegenModal(false);
-          if (onRegenerate) {
-            setRegenerating(true);
-            try {
-              await onRegenerate();
-            } finally {
-              setRegenerating(false);
-            }
-          }
+      {/* Mobile "All days" drawer */}
+      <MobileDaysDrawer
+        isOpen={mobileDrawerOpen}
+        onClose={() => {
+          setMobileDrawerOpen(false);
+          allDaysButtonRef.current?.focus();
         }}
-        onCancel={() => setShowRegenModal(false)}
+        phases={phaseSummaries}
+        selectedPhaseIndex={selectedPhaseIndex}
+        selectedDayNumber={selectedDayNumber}
+        onSelectPhase={handleSelectPhase}
+        onSelectDay={handleSelectDay}
+        completedTasks={completedTasks}
+        nextUnfinishedDayNumber={nextUnfinishedDayNumber}
       />
     </div>
   );
