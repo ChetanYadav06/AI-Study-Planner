@@ -674,6 +674,7 @@ export const InteractiveRoadmap = ({
             <DayTimeline
               blocks={activeDayPlan?.blocks || []}
               totalMinutes={estimatedMins}
+              loading={loadingPlan}
               topics={dayTopics}
               extraTopics={extraTopics}
               practiceTasks={selectedTaskItem?.task?.practiceTasks || []}

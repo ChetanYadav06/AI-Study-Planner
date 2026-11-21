@@ -8,6 +8,7 @@ import { Button } from '../ui/Button';
 export const DayTimeline = ({
   blocks = [],
   totalMinutes = 0,
+  loading = false,
   topics = [],
   extraTopics = [],
   practiceTasks = [],
@@ -50,8 +51,15 @@ export const DayTimeline = ({
       </div>
 
       {/* Structured Time Blocks */}
-      <div className="space-y-4 pt-1">
-        {timedBlocks.map((block, idx) => {
+      {loading && (!blocks || blocks.length === 0) ? (
+        <div className="space-y-3 pt-1 animate-pulse" aria-live="polite">
+          <div className="h-24 bg-page rounded-lg border border-line" />
+          <div className="h-24 bg-page rounded-lg border border-line" />
+          <div className="h-20 bg-page rounded-lg border border-line" />
+        </div>
+      ) : (
+        <div className="space-y-4 pt-1">
+          {timedBlocks.map((block, idx) => {
           const kind = (block.kind || 'STUDY').toUpperCase();
           const isLearn = kind === 'STUDY' || kind === 'LEARN';
           const isPractice = kind === 'PRACTICE' || kind === 'CODING_PRACTICE' || kind === 'PROJECT';
@@ -261,6 +269,7 @@ export const DayTimeline = ({
           );
         })}
       </div>
+      )}
     </div>
   );
 };
