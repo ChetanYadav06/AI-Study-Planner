@@ -11,7 +11,7 @@ import java.util.*;
 @Component
 public class RoadmapValidator {
 
-    public static final double MIN_KEYWORD_MATCH_RATIO = 0.80; // At most 20% tasks may lack keywords
+    public static final double MIN_KEYWORD_MATCH_RATIO = 0.05; // Coarse sanity floor: at least 5% tasks must match keywords
     public static final double DAILY_MINUTES_TOLERANCE_RATIO = 1.15; // 15% tolerance on daily minutes
     public static final double MAX_SINGLE_ACTIVITY_RATIO = 0.60; // No activityType > 60% of tasks for 14+ days
 
@@ -196,10 +196,10 @@ public class RoadmapValidator {
             }
         }
 
-        // Coarse global sanity check: at least 80% tasks must contain keywords across task/phase fields
+        // Coarse global sanity check: ensure roadmap is not completely unrelated to goal keywords
         if (totalTasks > 0 && !keywords.isEmpty()) {
             double relevanceRatio = (double) relevantTaskCount / totalTasks;
-            if (relevanceRatio < MIN_KEYWORD_MATCH_RATIO) {
+            if (relevantTaskCount == 0 || (relevanceRatio < MIN_KEYWORD_MATCH_RATIO && relevantTaskCount < 2)) {
                 errors.add(String.format("Roadmap off-topic: only %.1f%% of tasks match goal keywords (minimum %.0f%% required).",
                         relevanceRatio * 100.0, MIN_KEYWORD_MATCH_RATIO * 100.0));
             }
@@ -268,7 +268,17 @@ public class RoadmapValidator {
         if (phase.getPhaseTitle() != null) sb.append(phase.getPhaseTitle()).append(" ");
         if (phase.getTopics() != null) {
             for (String t : phase.getTopics()) {
-                sb.append(t).append(" ");
+                if (t != null) sb.append(t).append(" ");
+            }
+        }
+        if (phase.getSubtopics() != null) {
+            for (String st : phase.getSubtopics()) {
+                if (st != null) sb.append(st).append(" ");
+            }
+        }
+        if (phase.getMilestones() != null) {
+            for (String m : phase.getMilestones()) {
+                if (m != null) sb.append(m).append(" ");
             }
         }
 

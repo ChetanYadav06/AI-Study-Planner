@@ -146,6 +146,9 @@ public class RoadmapJobService {
                 } else if (e.getStatus() == HttpStatus.TOO_MANY_REQUESTS) {
                     job.setErrorCode("RATE_LIMITED");
                     job.setMessage("Roadmap generation limit reached (maximum 5 per hour). Please try again later.");
+                } else if (e.getStatus() == HttpStatus.UNPROCESSABLE_ENTITY) {
+                    job.setErrorCode("INVALID_PLAN");
+                    job.setMessage(e.getMessage() != null ? e.getMessage() : "Generated roadmap did not pass validation checks. Please retry.");
                 } else {
                     job.setErrorCode("AI_UNAVAILABLE");
                     job.setMessage("AI service is temporarily unavailable. Please try again later.");

@@ -355,6 +355,32 @@ class RoadmapJobServiceTest {
     }
 
     @Test
+    @DisplayName("Should map unprocessable entity error to INVALID_PLAN errorCode and preserve message")
+    void shouldMapUnprocessableEntityError() throws Exception {
+        when(geminiTestService.askGeminiJson(anyString()))
+                .thenThrow(new RoadmapGenerationException(HttpStatus.UNPROCESSABLE_ENTITY, "Roadmap off-topic: only 0.0% of tasks match goal keywords."));
+
+        RoadmapRequest request = new RoadmapRequest();
+        request.setTopic("Go Basics Programming");
+        request.setDescription("Learn Go syntax and structs");
+        request.setSkillLevel(SkillLevel.BEGINNER);
+        request.setTargetDays(2);
+        request.setHoursPerDay(2.0);
+        String jobId = roadmapJobService.startJob(request, "alice@example.com");
+
+        RoadmapJobService.JobRecord record = roadmapJobService.getJobStore().get(jobId);
+        assertNotNull(record);
+        if (record.getFuture() != null) {
+            record.getFuture().get();
+        }
+
+        RoadmapJobResponse res = roadmapJobService.getJob(jobId, "alice@example.com");
+        assertEquals(RoadmapJobResponse.State.FAILED, res.getState());
+        assertEquals("INVALID_PLAN", res.getErrorCode());
+        assertEquals("Roadmap off-topic: only 0.0% of tasks match goal keywords.", res.getMessage());
+    }
+
+    @Test
     @DisplayName("Progress consistency fixture: 60 tasks with 4 done yields exactly 7% everywhere")
     void shouldCalculateConsistentProgress() {
         // Build 60 canonical task IDs: phase-1-day-1 through phase-6-day-10 (6 phases x 10 days = 60 days)
