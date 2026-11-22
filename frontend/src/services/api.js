@@ -263,4 +263,20 @@ export const sendAssistantChatMessage = async ({ message, topic, action }) => {
   return response.data;
 };
 
+// Document Text Extraction API (PDF, PPT, PPTX, DOC, DOCX, TXT, MD)
+export const extractDocumentText = async (file, onProgress) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post('/notes/extract', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000,
+    onUploadProgress: (progressEvent) => {
+      if (progressEvent.total && onProgress) {
+        onProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+      }
+    }
+  });
+  return response.data;
+};
+
 export default api;

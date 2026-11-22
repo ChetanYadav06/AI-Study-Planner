@@ -211,12 +211,11 @@ export const AiAssistantView = () => {
     setLoadingReply(true);
 
     try {
-      // Augment message with uploaded study notes context if available
-      const notesContext = getStudentNotesContext();
+      // Augment message with relevant uploaded study notes/documents context if available
+      const notesContext = getStudentNotesContext(`${selectedTopic} ${textToSend}`);
       let queryMessage = textToSend;
       if (notesContext && notesContext.trim()) {
-        const trimmedNotes = notesContext.length > 2500 ? notesContext.slice(0, 2500) + '\n...[additional notes truncated]' : notesContext;
-        queryMessage = `[STUDENT'S UPLOADED STUDY NOTES CONTEXT:\n${trimmedNotes}\n]\n\nSTUDENT QUESTION / PROMPT:\n${textToSend}`;
+        queryMessage = `[STUDENT'S UPLOADED STUDY MATERIALS / NOTES CONTEXT:\n${notesContext}\n]\n\nSTUDENT QUESTION / PROMPT:\n${textToSend}`;
       }
 
       const response = await sendAssistantChatMessage({
