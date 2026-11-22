@@ -44,6 +44,9 @@ export const StudentDashboard = ({ onOpenCreateGoal }) => {
   const {
     goals: cachedGoals,
     roadmaps: cachedRoadmaps,
+    activeRoadmap,
+    activeRoadmapStats,
+    setActiveRoadmapId,
     refreshData,
     toggleTaskCompletion
   } = useData();
@@ -107,11 +110,8 @@ export const StudentDashboard = ({ onOpenCreateGoal }) => {
     day: 'numeric'
   }).format(new Date());
 
-  // Primary active roadmap for next recommendation
-  const primaryRoadmap = useMemo(() => {
-    if (!savedRoadmaps || savedRoadmaps.length === 0) return null;
-    return savedRoadmaps.find((r) => (r.progressPercentage || 0) < 100) || savedRoadmaps[0];
-  }, [savedRoadmaps]);
+  // Authoritative active roadmap synchronized across all pages
+  const primaryRoadmap = activeRoadmap || (savedRoadmaps && savedRoadmaps.length > 0 ? (savedRoadmaps.find((r) => (r.progressPercentage || 0) < 100) || savedRoadmaps[0]) : null);
 
   // Parse roadmap tasks & completion
   const { allRoadmapTasks, parsedPlan } = useMemo(() => {
@@ -451,8 +451,9 @@ export const StudentDashboard = ({ onOpenCreateGoal }) => {
                 )
               }
               className="gap-2"
+              aria-label="Continue studying"
             >
-              <span>Continue Learning</span>
+              <span>Continue studying</span>
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>

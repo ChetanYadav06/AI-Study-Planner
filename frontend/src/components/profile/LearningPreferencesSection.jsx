@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useData } from '../../context/DataContext';
 import {
   Video,
   BookOpen,
@@ -180,6 +181,14 @@ export const LearningPreferencesSection = ({
   onSavePreferences,
   isSaving = false
 }) => {
+  const {
+    roadmaps = [],
+    activeRoadmapId,
+    activeRoadmap,
+    activeRoadmapStats,
+    setActiveRoadmapId
+  } = useData();
+
   // Controlled local state
   const [selectedMethods, setSelectedMethods] = useState(() => {
     if (initialProfile?.learningMethods) {
@@ -291,6 +300,37 @@ export const LearningPreferencesSection = ({
             </>
           )}
         </Button>
+      </div>
+
+      {/* ── 0. AUTHORITATIVE ACTIVE ROADMAP ── */}
+      <div className="p-4 rounded-[12px] bg-surface-2 border border-border space-y-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+          <div>
+            <label htmlFor="active-roadmap-select" className="text-sm font-semibold text-text block">
+              Active Roadmap
+            </label>
+            <span className="text-xs text-text-muted">
+              Synchronized across your sidebar, dashboard, and AI study tutor.
+            </span>
+          </div>
+          {activeRoadmap && (
+            <span className="text-xs font-mono font-medium text-accent">
+              {activeRoadmapStats?.percent || 0}% complete ({activeRoadmapStats?.completedHours || 0}h / {activeRoadmapStats?.totalHours || 0}h)
+            </span>
+          )}
+        </div>
+        <select
+          id="active-roadmap-select"
+          value={activeRoadmapId || (activeRoadmap?.id ? String(activeRoadmap.id) : '')}
+          onChange={(e) => setActiveRoadmapId(e.target.value)}
+          className="w-full p-2.5 rounded-[10px] bg-surface-1 border border-border text-text font-medium text-sm focus:border-accent outline-none cursor-pointer"
+        >
+          {roadmaps.map((r) => (
+            <option key={r.id} value={String(r.id)}>
+              {r.topic || r.title} ({r.progressPercentage || 0}%)
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* ── 1. PREFERRED LEARNING FORMAT ── */}

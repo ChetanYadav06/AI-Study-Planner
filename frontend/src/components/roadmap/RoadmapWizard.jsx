@@ -108,6 +108,16 @@ export const RoadmapWizard = ({
   const [newCustomTopic, setNewCustomTopic] = useState('');
   const [diagnosticNote, setDiagnosticNote] = useState(null);
 
+  // Unambiguous target completion date format (e.g., "2 Jan 2027")
+  const projectedCompletionDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + Number(targetDays || 30));
+    const day = d.getDate();
+    const month = d.toLocaleDateString('en-GB', { month: 'short' });
+    const year = d.getFullYear();
+    return `${day} ${month} ${year}`;
+  }, [targetDays]);
+
   // Step 3: Duration & Budget
   const [targetDays, setTargetDays] = useState(initialGoal?.targetDays || 30);
   const [hoursPerDay, setHoursPerDay] = useState(initialGoal?.hoursPerDay || 2.0);
@@ -695,6 +705,17 @@ export const RoadmapWizard = ({
               </div>
             </div>
 
+            {/* Unambiguous Target Completion Date Callout */}
+            <div className="p-3 rounded-lg bg-surface-2 border border-border flex items-center justify-between text-xs">
+              <span className="text-text-muted flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-accent" />
+                <span>Target completion date (unambiguous):</span>
+              </span>
+              <span className="font-semibold text-text font-mono text-[13px]">
+                {projectedCompletionDate} <span className="font-normal text-text-muted">({targetDays} days from today)</span>
+              </span>
+            </div>
+
             <div>
               <label className="block text-xs font-medium text-ink mb-1">
                 Specific Modules, Libraries, or Topics to Cover:
@@ -824,7 +845,7 @@ export const RoadmapWizard = ({
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                 <div className="p-2.5 bg-surface rounded-md border border-line">
                   <span className="text-xs text-muted font-medium block">Duration</span>
                   <span className="text-xs font-semibold text-ink mt-0.5 block">{targetDays} Days</span>
@@ -836,6 +857,10 @@ export const RoadmapWizard = ({
                 <div className="p-2.5 bg-surface rounded-md border border-line">
                   <span className="text-xs text-muted font-medium block">Total Hours</span>
                   <span className="text-xs font-semibold text-ink mt-0.5 block">{Math.round(targetDays * hoursPerDay)} hrs</span>
+                </div>
+                <div className="p-2.5 bg-surface rounded-md border border-line">
+                  <span className="text-xs text-muted font-medium block">Target Finish</span>
+                  <span className="text-xs font-semibold text-accent font-mono mt-0.5 block">{projectedCompletionDate}</span>
                 </div>
                 <div className="p-2.5 bg-surface rounded-md border border-line">
                   <span className="text-xs text-muted font-medium block">Rated Topics</span>

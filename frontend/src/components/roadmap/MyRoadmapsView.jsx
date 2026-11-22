@@ -32,7 +32,9 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
     loading: loadingRoadmaps,
     refreshData,
     removeRoadmap,
-    addRoadmap
+    addRoadmap,
+    activeRoadmapId,
+    activeRoadmap
   } = useData();
 
   // Active viewing state if freshly generated in memory
@@ -216,7 +218,8 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
 
   // Determine which sub-view to render
   const isCreateRoute = route === 'roadmaps-new';
-  const isDetailRoute = route === 'roadmap-detail';
+  const isDetailRoute = route === 'roadmap-detail' || route === 'interactive-roadmap';
+  const effectiveRoadmapId = params.id || activeRoadmapId || (savedRoadmaps.length > 0 ? savedRoadmaps[0].id : null);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-16">
@@ -234,12 +237,12 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
       )}
 
       {/* VIEW: DETAIL (INTERACTIVE ROADMAP) */}
-      {isDetailRoute && (
+      {isDetailRoute && effectiveRoadmapId && (
         <InteractiveRoadmap
-          savedRoadmapId={params.id}
+          savedRoadmapId={effectiveRoadmapId}
           onBack={() => navigate('#/roadmaps')}
           onRegenerate={async () => {
-            const current = savedRoadmaps.find(r => r.id === params.id);
+            const current = savedRoadmaps.find(r => r.id === effectiveRoadmapId);
             if (!current) return;
             const payload = {
               topic: (current.topic || current.title || '').replace(/\s*\(\d+\s*Days?\)$/i, '').trim(),
@@ -249,7 +252,7 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
             };
             const { jobId } = await startRoadmapJob(payload);
             const result = await pollJobUntilComplete(jobId);
-            await replaceRoadmap(params.id, {
+            await replaceRoadmap(effectiveRoadmapId, {
               roadmapJson: JSON.stringify(result),
               title: result.topic,
               targetDays: result.targetDays,
@@ -257,6 +260,24 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
             });
             refreshData(true);
           }}
+        />
+      )}
+
+      {/* Detail route with no roadmaps available */}
+      {isDetailRoute && !effectiveRoadmapId && !loadingRoadmaps && (
+        <EmptyState
+          icon={MapIcon}
+          title="No active roadmap"
+          description="Create your first adaptive learning roadmap to explore interactive topics."
+          action={
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => navigate('#/roadmaps/new')}
+            >
+              Create New Roadmap
+            </Button>
+          }
         />
       )}
 

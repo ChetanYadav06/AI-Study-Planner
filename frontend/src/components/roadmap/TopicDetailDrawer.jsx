@@ -352,15 +352,25 @@ export const TopicDetailDrawer = ({
             ) : <div />}
 
             {nextItem ? (
-              <button
-                type="button"
-                onClick={() => onSelectTopic(nextItem)}
-                className="flex items-center gap-1.5 hover:text-ink truncate max-w-[45%] transition cursor-pointer text-right ml-auto"
-                title={`Next: ${nextItem.task.title}`}
-              >
-                <span className="truncate">Next: {nextItem.task.title}</span>
-                <ArrowRight className="w-3.5 h-3.5 shrink-0" />
-              </button>
+              !isCompleted ? (
+                <div
+                  className="flex items-center gap-1.5 text-text-muted/60 truncate max-w-[45%] text-right ml-auto cursor-not-allowed select-none"
+                  title={`Complete current topic first to unlock: ${nextItem.task.title}`}
+                >
+                  <Lock className="w-3.5 h-3.5 shrink-0 text-text-muted" />
+                  <span className="truncate">Next: {nextItem.task.title}</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onSelectTopic(nextItem)}
+                  className="flex items-center gap-1.5 hover:text-text truncate max-w-[45%] transition cursor-pointer text-right ml-auto"
+                  title={`Next: ${nextItem.task.title}`}
+                >
+                  <span className="truncate">Next: {nextItem.task.title}</span>
+                  <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                </button>
+              )
             ) : <div />}
           </div>
         </div>

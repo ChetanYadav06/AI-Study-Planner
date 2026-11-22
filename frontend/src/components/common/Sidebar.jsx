@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   LayoutDashboard,
   Compass,
@@ -10,6 +10,8 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Check,
   LogOut,
   X,
   Plus
@@ -27,13 +29,15 @@ export const Sidebar = ({
 }) => {
   const { user, isAuthenticated, logout } = useAuth();
   const { route, navigate } = useRouter();
-  const { roadmaps = [] } = useData();
+  const {
+    roadmaps = [],
+    activeRoadmap,
+    activeRoadmapId,
+    activeRoadmapStats,
+    setActiveRoadmapId
+  } = useData();
 
-  // Primary active roadmap (highest progress or first active)
-  const activeRoadmap = useMemo(() => {
-    if (!roadmaps || roadmaps.length === 0) return null;
-    return roadmaps.find((r) => (r.progressPercentage || 0) < 100) || roadmaps[0];
-  }, [roadmaps]);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
 
   // Current active navigation ID based on route
   const currentActiveId = useMemo(() => {
@@ -217,29 +221,93 @@ export const Sidebar = ({
 
       {/* ── BOTTOM: Active Roadmap Snapshot, Settings & Profile ── */}
       <div className="space-y-2 px-1 pt-4 border-t border-border">
-        {/* Active Roadmap Progress Pill */}
+        {/* Active Roadmap Switcher Widget */}
         {!isCollapsed && activeRoadmap && (
-          <button
-            type="button"
-            onClick={() => handleNavClick(`#/roadmaps/${activeRoadmap.id}`)}
-            className="w-full text-left p-2.5 rounded-[10px] bg-surface-2/60 border border-border hover:border-border-strong transition-colors cursor-pointer group"
-          >
-            <div className="flex items-center justify-between text-xs font-medium mb-1.5">
-              <span className="flex items-center gap-1.5 text-text truncate">
-                <span className="w-2 h-2 rounded-full bg-done shrink-0" />
-                <span className="truncate font-semibold">{activeRoadmap.topic || activeRoadmap.title || 'Curriculum'}</span>
-              </span>
-              <span className="text-text-muted font-mono font-medium ml-2 shrink-0">
-                {activeRoadmap.progressPercentage || 0}%
-              </span>
-            </div>
-            <div className="w-full h-1 bg-border rounded-full overflow-hidden">
-              <div
-                className="h-full bg-accent-solid rounded-full transition-all duration-300"
-                style={{ width: `${activeRoadmap.progressPercentage || 0}%` }}
-              />
-            </div>
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setSwitcherOpen(!switcherOpen)}
+              className="w-full text-left p-2.5 rounded-[10px] bg-surface-2 border border-border hover:border-border-strong transition-colors cursor-pointer group"
+              title="Click to switch active roadmap"
+              aria-expanded={switcherOpen}
+            >
+              <div className="flex items-center justify-between text-xs font-medium mb-1.5">
+                <span className="flex items-center gap-1.5 text-text truncate">
+                  <span className="w-2 h-2 rounded-full bg-done shrink-0" />
+                  <span className="truncate font-semibold">{activeRoadmap.topic || activeRoadmap.title || 'Curriculum'}</span>
+                </span>
+                <span className="flex items-center gap-1 text-text-muted font-mono font-medium ml-2 shrink-0">
+                  <span>{activeRoadmapStats?.percent || 0}%</span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-text-muted transition-transform ${switcherOpen ? 'rotate-180' : ''}`} />
+                </span>
+              </div>
+              <div className="w-full h-1 bg-border rounded-full overflow-hidden mb-1">
+                <div
+                  className="h-full bg-accent-solid rounded-full transition-all duration-300"
+                  style={{ width: `${activeRoadmapStats?.percent || 0}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-text-muted">
+                <span>{activeRoadmapStats?.completedHours || 0}h / {activeRoadmapStats?.totalHours || 0}h</span>
+                <span className="text-accent group-hover:underline">Switch path</span>
+              </div>
+            </button>
+
+            {/* Switcher Dropdown Popover */}
+            {switcherOpen && (
+              <div className="absolute bottom-full left-0 right-0 mb-1.5 bg-surface-1 border border-border rounded-[12px] p-2 shadow-xl z-50 space-y-1 max-h-56 overflow-y-auto">
+                <div className="px-2 py-1 text-[11px] font-semibold text-text-muted uppercase tracking-wider flex items-center justify-between">
+                  <span>Your Roadmaps</span>
+                  <span>{roadmaps.length} total</span>
+                </div>
+                {roadmaps.map((r) => {
+                  const isCurrent = String(r.id) === String(activeRoadmapId || activeRoadmap.id);
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveRoadmapId(r.id);
+                        setSwitcherOpen(false);
+                        handleNavClick(`#/roadmaps/${r.id}`);
+                      }}
+                      className={`w-full text-left p-2 rounded-[8px] flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                        isCurrent
+                          ? 'bg-surface-2 text-text font-semibold border border-border'
+                          : 'text-text-muted hover:text-text hover:bg-surface-2/60 border border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        {isCurrent ? (
+                          <Check className="w-3.5 h-3.5 text-accent shrink-0" />
+                        ) : (
+                          <Route className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                        )}
+                        <span className="truncate">{r.topic || r.title}</span>
+                      </div>
+                      <span className="font-mono text-text-muted shrink-0 ml-2">
+                        {r.progressPercentage || 0}%
+                      </span>
+                    </button>
+                  );
+                })}
+
+                <div className="pt-1 border-t border-border mt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSwitcherOpen(false);
+                      handleNavClick('#/roadmaps/new');
+                    }}
+                    className="w-full p-1.5 text-xs text-accent hover:underline flex items-center justify-center gap-1.5 font-medium cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Create new roadmap</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Settings & Profile Nav Link */}

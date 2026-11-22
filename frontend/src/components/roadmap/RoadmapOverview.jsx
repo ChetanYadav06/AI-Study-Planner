@@ -129,13 +129,23 @@ export const RoadmapOverview = ({
           </div>
 
           {/* Overall Progress Gauge Widget */}
-          <div className="lg:w-64 shrink-0 p-4 rounded-xl bg-surface/80 border border-line space-y-2">
+          <div className="lg:w-64 shrink-0 p-4 rounded-xl bg-surface-1 border border-border space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-muted font-semibold uppercase tracking-wider">Overall Progress</span>
-              <span className="text-accent font-mono font-bold text-sm">{progressPercentage}%</span>
+              <span className="text-text-muted font-semibold uppercase tracking-wider">Overall Progress</span>
+              <span className="text-accent font-mono font-bold text-sm">
+                {progressPercentage === 0 ? 'Ready to Start' : `${progressPercentage}%`}
+              </span>
             </div>
-            <ProgressBar value={progressPercentage} height="h-2" />
-            <div className="flex items-center justify-between text-[11px] text-muted font-medium">
+            {progressPercentage === 0 ? (
+              <div className="p-2 rounded-lg bg-surface-2 border border-border text-center">
+                <span className="text-xs text-text-muted font-medium flex items-center justify-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-accent" /> Day 1 Ready to Begin
+                </span>
+              </div>
+            ) : (
+              <ProgressBar value={progressPercentage} height="h-2" />
+            )}
+            <div className="flex items-center justify-between text-[11px] text-text-muted font-medium">
               <span>{completedTopicsCount} of {totalTopics} topics done</span>
               <span>{Math.max(0, totalTopics - completedTopicsCount)} remaining</span>
             </div>

@@ -82,7 +82,7 @@ const AppContent = () => {
             )
           )}
 
-          {(route === 'roadmaps' || route === 'roadmaps-new' || route === 'roadmap-detail') && (
+          {(route === 'roadmaps' || route === 'roadmaps-new' || route === 'roadmap-detail' || route === 'interactive-roadmap') && (
             isAuthenticated ? (
               <MyRoadmapsView />
             ) : (

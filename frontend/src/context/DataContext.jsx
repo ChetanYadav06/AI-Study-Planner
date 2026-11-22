@@ -5,6 +5,7 @@ import { useAuth } from './AuthContext';
 const DataContext = createContext(null);
 
 const CACHE_TTL_MS = 30000; // 30 seconds
+const ACTIVE_ROADMAP_STORAGE_KEY = 'pathwise_active_roadmap_id';
 
 export const DataProvider = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -13,6 +14,27 @@ export const DataProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [lastFetched, setLastFetched] = useState(null);
   const [error, setError] = useState(null);
+
+  // Single Source of Truth for Active Roadmap ID
+  const [activeRoadmapId, setActiveRoadmapIdState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(ACTIVE_ROADMAP_STORAGE_KEY);
+      if (saved) return saved;
+    }
+    return null;
+  });
+
+  const setActiveRoadmapId = useCallback((id) => {
+    const stringId = id != null ? String(id) : null;
+    setActiveRoadmapIdState(stringId);
+    if (typeof window !== 'undefined') {
+      if (stringId) {
+        localStorage.setItem(ACTIVE_ROADMAP_STORAGE_KEY, stringId);
+      } else {
+        localStorage.removeItem(ACTIVE_ROADMAP_STORAGE_KEY);
+      }
+    }
+  }, []);
 
   const refreshData = useCallback(async (force = false) => {
     if (!isAuthenticated) {
@@ -24,7 +46,6 @@ export const DataProvider = ({ children }) => {
 
     const now = Date.now();
     if (!force && lastFetched && (now - lastFetched < CACHE_TTL_MS)) {
-      // Cache is fresh within 30s
       return;
     }
 
@@ -42,16 +63,30 @@ export const DataProvider = ({ children }) => {
         })
       ]);
 
-      setGoals(Array.isArray(goalsRes) ? goalsRes : []);
-      setRoadmaps(Array.isArray(roadmapsRes) ? roadmapsRes : []);
+      const loadedGoals = Array.isArray(goalsRes) ? goalsRes : [];
+      const loadedRoadmaps = Array.isArray(roadmapsRes) ? roadmapsRes : [];
+
+      setGoals(loadedGoals);
+      setRoadmaps(loadedRoadmaps);
       setLastFetched(Date.now());
+
+      // Validate or default activeRoadmapId
+      if (loadedRoadmaps.length > 0) {
+        const savedId = typeof window !== 'undefined' ? localStorage.getItem(ACTIVE_ROADMAP_STORAGE_KEY) : null;
+        const exists = loadedRoadmaps.some((r) => String(r.id) === String(savedId));
+        if (!exists) {
+          // Default to first active roadmap (< 100%) or first available
+          const defaultRoadmap = loadedRoadmaps.find((r) => (r.progressPercentage || 0) < 100) || loadedRoadmaps[0];
+          setActiveRoadmapId(defaultRoadmap.id);
+        }
+      }
     } catch (err) {
       console.error('Failed to refresh data cache:', err);
       setError('Failed to load study data.');
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, lastFetched]);
+  }, [isAuthenticated, lastFetched, setActiveRoadmapId]);
 
   // Initial fetch when authenticated
   useEffect(() => {
@@ -64,16 +99,100 @@ export const DataProvider = ({ children }) => {
     }
   }, [isAuthenticated, refreshData]);
 
+  // Derive activeRoadmap from roadmaps + activeRoadmapId
+  const activeRoadmap = useMemo(() => {
+    if (!roadmaps || roadmaps.length === 0) return null;
+    if (activeRoadmapId) {
+      const match = roadmaps.find((r) => String(r.id) === String(activeRoadmapId));
+      if (match) return match;
+    }
+    // Fallback: first roadmap with incomplete progress or first item
+    return roadmaps.find((r) => (r.progressPercentage || 0) < 100) || roadmaps[0];
+  }, [roadmaps, activeRoadmapId]);
+
+  // Compute unified progress and study hours for the active roadmap
+  const activeRoadmapStats = useMemo(() => {
+    if (!activeRoadmap) {
+      return {
+        percent: 0,
+        totalHours: 0,
+        completedHours: 0,
+        completedTasksCount: 0,
+        totalTasksCount: 0
+      };
+    }
+
+    let completedTasks = [];
+    try {
+      if (activeRoadmap.completedTasksJson) {
+        const parsed = JSON.parse(activeRoadmap.completedTasksJson);
+        completedTasks = Array.isArray(parsed) ? parsed : [];
+      }
+    } catch {
+      completedTasks = [];
+    }
+
+    let totalTasksCount = 0;
+    let estimatedTotalMinutes = 0;
+    let completedMinutes = 0;
+
+    try {
+      if (activeRoadmap.roadmapJson) {
+        const plan = JSON.parse(activeRoadmap.roadmapJson);
+        if (plan.phases) {
+          plan.phases.forEach((phase) => {
+            if (phase.dailyTasks) {
+              phase.dailyTasks.forEach((task) => {
+                totalTasksCount++;
+                const mins = task.estimatedMinutes || (activeRoadmap.hoursPerDay ? activeRoadmap.hoursPerDay * 60 : 60);
+                estimatedTotalMinutes += mins;
+                if (completedTasks.includes(task.taskId || task.dayNumber)) {
+                  completedMinutes += mins;
+                }
+              });
+            }
+          });
+        }
+        if (plan.totalStudyHours && estimatedTotalMinutes === 0) {
+          estimatedTotalMinutes = plan.totalStudyHours * 60;
+        }
+      }
+    } catch {
+      // fallback
+    }
+
+    if (totalTasksCount === 0) {
+      totalTasksCount = activeRoadmap.targetDays || 30;
+    }
+    if (estimatedTotalMinutes === 0) {
+      const dailyHours = activeRoadmap.hoursPerDay || 2;
+      estimatedTotalMinutes = (activeRoadmap.targetDays || 30) * dailyHours * 60;
+    }
+
+    const calculatedPct = totalTasksCount > 0
+      ? Math.min(100, Math.round((completedTasks.length / totalTasksCount) * 100))
+      : (activeRoadmap.progressPercentage || 0);
+
+    const totalHours = Math.round((estimatedTotalMinutes / 60) * 10) / 10;
+    const completedHours = Math.round((completedMinutes > 0 ? (completedMinutes / 60) : (totalHours * calculatedPct / 100)) * 10) / 10;
+
+    return {
+      percent: calculatedPct,
+      totalHours,
+      completedHours,
+      completedTasksCount: completedTasks.length,
+      totalTasksCount
+    };
+  }, [activeRoadmap]);
+
   // Task completion toggle with optimistic update & rollback
   const toggleTaskCompletion = useCallback(async (roadmapId, taskId, completed) => {
     const prevRoadmaps = roadmaps;
     const prevGoals = goals;
 
-    // Target roadmap
     const targetRoadmap = roadmaps.find((r) => r.id === roadmapId);
     const targetGoalId = targetRoadmap?.goalId;
 
-    // Optimistic calculation
     let optimisticRoadmaps = roadmaps;
     let optimisticGoals = goals;
 
@@ -97,7 +216,6 @@ export const DataProvider = ({ children }) => {
         nextCompletedList = currentCompletedList.filter((id) => id !== taskId);
       }
 
-      // Estimate progress
       let totalTasks = 1;
       try {
         if (targetRoadmap.roadmapJson) {
@@ -139,14 +257,12 @@ export const DataProvider = ({ children }) => {
       }
     }
 
-    // Apply optimistic state
     setRoadmaps(optimisticRoadmaps);
     setGoals(optimisticGoals);
 
     try {
       const response = await setTaskCompletion(roadmapId, taskId, completed);
 
-      // Reconcile with authoritative server response
       setRoadmaps((current) =>
         current.map((r) => {
           if (r.id === roadmapId) {
@@ -177,7 +293,6 @@ export const DataProvider = ({ children }) => {
 
       return response;
     } catch (err) {
-      // Rollback on error
       console.error('Task completion update failed, rolling back:', err);
       setRoadmaps(prevRoadmaps);
       setGoals(prevGoals);
@@ -193,7 +308,10 @@ export const DataProvider = ({ children }) => {
 
   const addRoadmap = useCallback((newRoadmap) => {
     setRoadmaps((prev) => [newRoadmap, ...prev.filter((r) => r.id !== newRoadmap.id)]);
-  }, []);
+    if (newRoadmap && newRoadmap.id) {
+      setActiveRoadmapId(newRoadmap.id);
+    }
+  }, [setActiveRoadmapId]);
 
   const updateRoadmap = useCallback((updatedRoadmap) => {
     setRoadmaps((prev) =>
@@ -221,6 +339,10 @@ export const DataProvider = ({ children }) => {
     loading,
     error,
     lastFetched,
+    activeRoadmapId,
+    activeRoadmap,
+    activeRoadmapStats,
+    setActiveRoadmapId,
     refreshData,
     toggleTaskCompletion,
     removeRoadmap,
@@ -235,6 +357,10 @@ export const DataProvider = ({ children }) => {
     loading,
     error,
     lastFetched,
+    activeRoadmapId,
+    activeRoadmap,
+    activeRoadmapStats,
+    setActiveRoadmapId,
     refreshData,
     toggleTaskCompletion,
     removeRoadmap,
@@ -259,3 +385,5 @@ export const useData = () => {
   }
   return context;
 };
+
+export default DataContext;

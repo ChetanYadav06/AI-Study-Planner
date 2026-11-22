@@ -28,15 +28,19 @@ import { Badge } from '../ui/Badge';
 export const AiAssistantView = () => {
   const { user } = useAuth();
   const { query } = useRouter();
-  const { roadmaps = [] } = useData();
+  const { roadmaps = [], activeRoadmap } = useData();
 
   const currentUserId = user?.id || 'guest';
   const storageKey = `ai_study_chat_history_${currentUserId}`;
 
-  // Extract all topics across active roadmaps for the topic selector
+  // Extract all topics, prioritizing the active roadmap first
   const availableTopics = useMemo(() => {
     const list = [];
-    roadmaps.forEach((r) => {
+    const orderedRoadmaps = activeRoadmap
+      ? [activeRoadmap, ...roadmaps.filter((r) => r.id !== activeRoadmap.id)]
+      : roadmaps;
+
+    orderedRoadmaps.forEach((r) => {
       let parsed = r;
       if (r.roadmapJson) {
         try {
@@ -56,12 +60,23 @@ export const AiAssistantView = () => {
       }
     });
     return list;
-  }, [roadmaps]);
+  }, [roadmaps, activeRoadmap]);
 
-  // Active topic filter/context (pre-filled from query ?topic=... if arrived from roadmap)
-  const [selectedTopic, setSelectedTopic] = useState(() => {
-    return query.topic ? decodeURIComponent(query.topic) : (availableTopics[0] || 'General Computer Science');
-  });
+  // Default context prioritizes active roadmap
+  const defaultContext = useMemo(() => {
+    if (query.topic) return decodeURIComponent(query.topic);
+    if (activeRoadmap?.topic || activeRoadmap?.title) return activeRoadmap.topic || activeRoadmap.title;
+    return availableTopics[0] || 'General Computer Science';
+  }, [query.topic, activeRoadmap, availableTopics]);
+
+  // Active topic filter/context
+  const [selectedTopic, setSelectedTopic] = useState(defaultContext);
+
+  useEffect(() => {
+    if (!query.topic && (activeRoadmap?.topic || activeRoadmap?.title)) {
+      setSelectedTopic(activeRoadmap.topic || activeRoadmap.title);
+    }
+  }, [activeRoadmap, query.topic]);
 
   // Conversations history list
   const [conversations, setConversations] = useState(() => {
