@@ -102,6 +102,29 @@ public class SavedRoadmapService {
             roadmap.setGoalId(request.getGoalId());
         }
 
+        // Ensure Goal is linked to this roadmap
+        if (roadmap.getGoalId() == null) {
+            Goal existingGoal = goalRepository.findByUserIdOrderByCreatedAtDesc(user.getId())
+                    .stream()
+                    .filter(g -> g.getTitle().equalsIgnoreCase(request.getTitle().trim()) || g.getTitle().equalsIgnoreCase(request.getTopic().trim()))
+                    .findFirst()
+                    .orElse(null);
+            if (existingGoal != null) {
+                roadmap.setGoalId(existingGoal.getId());
+            } else {
+                Goal newGoal = new Goal(
+                        user,
+                        request.getTitle().trim(),
+                        "Roadmap progression for " + request.getTopic().trim(),
+                        request.getTargetDays(),
+                        request.getHoursPerDay(),
+                        request.getSkillLevel()
+                );
+                Goal savedGoal = goalRepository.save(newGoal);
+                roadmap.setGoalId(savedGoal.getId());
+            }
+        }
+
         syncProgressAndLinkedGoal(roadmap);
 
         SavedRoadmap saved = roadmapRepository.save(roadmap);

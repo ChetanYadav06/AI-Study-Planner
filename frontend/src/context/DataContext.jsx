@@ -311,6 +311,8 @@ export const DataProvider = ({ children }) => {
     if (newRoadmap && newRoadmap.id) {
       setActiveRoadmapId(newRoadmap.id);
     }
+    // Invalidate lastFetched timestamp so future refreshData() always fetches fresh records
+    setLastFetched(null);
   }, [setActiveRoadmapId]);
 
   const updateRoadmap = useCallback((updatedRoadmap) => {

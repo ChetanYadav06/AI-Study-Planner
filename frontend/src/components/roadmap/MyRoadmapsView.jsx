@@ -46,9 +46,9 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
   const [generateError, setGenerateError] = useState(null);
   const pollIntervalRef = useRef(null);
 
-  // Refresh data if older than 30s
+  // Always force-refresh saved roadmaps and goals on mount
   useEffect(() => {
-    refreshData();
+    refreshData(true);
   }, [refreshData]);
 
   // Stop polling on unmount
@@ -170,26 +170,31 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
       const { jobId } = await startRoadmapJob(cleanedPayload);
       const result = await pollJobUntilComplete(jobId);
 
+      setGenerateProgress('Saving your generated roadmap to database...');
+
       let savedRecord = null;
       try {
         savedRecord = await saveRoadmap({
-          goalId: cleanedPayload.goalId,
-          title: result.topic,
-          topic: result.topic,
+          goalId: cleanedPayload.goalId || null,
+          title: result.topic || cleanedPayload.topic,
+          topic: result.topic || cleanedPayload.topic,
           skillLevel: result.skillLevel || cleanedPayload.skillLevel || 'INTERMEDIATE',
-          targetDays: result.targetDays,
-          hoursPerDay: result.hoursPerDay,
-          roadmapJson: JSON.stringify(result)
+          targetDays: result.targetDays || cleanedPayload.targetDays,
+          hoursPerDay: result.hoursPerDay || cleanedPayload.hoursPerDay,
+          roadmapJson: typeof result === 'string' ? result : JSON.stringify(result)
         });
       } catch (saveErr) {
-        console.warn('Could not autosave generated roadmap to backend:', saveErr);
+        console.error('Failed to save generated roadmap to backend:', saveErr);
+        throw new Error(saveErr.response?.data?.message || 'Generated roadmap could not be saved to your account.');
       }
 
       if (savedRecord?.id) {
         addRoadmap(savedRecord);
+        setActiveRoadmapId(savedRecord.id);
+        await refreshData(true);
         navigate(`#/roadmaps/${savedRecord.id}`);
       } else {
-        setInMemoryRoadmap(result);
+        throw new Error('Roadmap was generated, but server failed to return a persistent record.');
       }
     } catch (err) {
       console.error('Roadmap generation failed:', err);
@@ -323,17 +328,18 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
                 const isComplete = (roadmap.progressPercentage || 0) >= 100;
                 const linkedGoal = goals.find(g => g.id === roadmap.goalId);
                 const displayHours = linkedGoal?.hoursPerDay != null ? linkedGoal.hoursPerDay : roadmap.hoursPerDay;
+                const formattedHours = typeof displayHours === 'number' ? displayHours : Number(displayHours) || 2;
 
                 return (
                   <Card
                     key={roadmap.id}
                     onClick={() => navigate(`#/roadmaps/${roadmap.id}`)}
-                    className="p-5 hover:border-slate-300 transition-colors duration-150 cursor-pointer space-y-3"
+                    className="p-5 bg-surface-1 border border-border hover:border-accent/40 rounded-xl transition-all duration-150 cursor-pointer space-y-3 shadow-xs"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="space-y-1 min-w-0">
+                      <div className="space-y-1.5 min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-sm sm:text-base font-semibold text-ink truncate">
+                          <h3 className="text-sm sm:text-base font-semibold text-text truncate">
                             {roadmap.title}
                           </h3>
                           {isComplete ? (
@@ -343,12 +349,12 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
                           )}
                         </div>
 
-                        <p className="text-xs text-muted flex items-center gap-2">
+                        <p className="text-xs text-text-muted flex items-center gap-2 flex-wrap font-medium">
+                          <span>{roadmap.targetDays} Days</span>
+                          <span className="text-border-strong">|</span>
                           <span>{formatEnum(roadmap.skillLevel)}</span>
-                          <span>•</span>
-                          <span>{roadmap.targetDays} days</span>
-                          <span>•</span>
-                          <span>{displayHours}h/day</span>
+                          <span className="text-border-strong">|</span>
+                          <span>{formattedHours} {formattedHours === 1 ? 'Hour' : 'Hours'}/Day</span>
                         </p>
                       </div>
 
@@ -357,7 +363,7 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
                           variant="ghost"
                           size="sm"
                           onClick={(e) => handleDeleteRoadmap(e, roadmap.id)}
-                          className="text-muted hover:text-danger p-2 min-h-[36px] min-w-[36px]"
+                          className="text-text-muted hover:text-danger p-2 min-h-[36px] min-w-[36px]"
                           title="Delete roadmap"
                           aria-label="Delete roadmap"
                         >
@@ -366,10 +372,10 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-line flex items-center justify-between gap-4 text-xs">
+                    <div className="pt-2.5 border-t border-border flex items-center justify-between gap-4 text-xs">
                       <div className="flex-1 max-w-md flex items-center gap-3">
-                        <span className="text-muted shrink-0 font-medium">
-                          {roadmap.progressPercentage || 0}%
+                        <span className="text-text font-semibold shrink-0">
+                          {roadmap.progressPercentage || 0}% Completed
                         </span>
                         <ProgressBar
                           value={roadmap.progressPercentage || 0}
@@ -377,8 +383,8 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
                         />
                       </div>
 
-                      <span className="text-xs font-medium text-accent">
-                        Open roadmap →
+                      <span className="text-xs font-semibold text-accent hover:underline flex items-center gap-1">
+                        Open Roadmap →
                       </span>
                     </div>
                   </Card>

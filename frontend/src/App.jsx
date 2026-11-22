@@ -159,8 +159,12 @@ const AppContent = () => {
       <CreateGoalModal
         isOpen={createGoalModalOpen}
         onClose={() => setCreateGoalModalOpen(false)}
-        onGoalCreated={() => {
-          navigate('#/dashboard');
+        onGoalCreated={(savedRecord) => {
+          if (savedRecord?.id) {
+            navigate(`#/roadmaps/${savedRecord.id}`);
+          } else {
+            navigate('#/roadmaps');
+          }
         }}
       />
     </div>

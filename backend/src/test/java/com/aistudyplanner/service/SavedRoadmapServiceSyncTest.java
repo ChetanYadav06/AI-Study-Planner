@@ -357,5 +357,67 @@ class SavedRoadmapServiceSyncTest {
         );
         assertEquals(org.springframework.http.HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
+
+    @Test
+    @DisplayName("saveRoadmap persists custom 45-day duration and 2.5 hours/day with auto-linked goal")
+    void shouldPersistCustomDurationAndHoursWithAutoLinkedGoal() {
+        when(userRepository.findByEmail(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        when(goalRepository.findByUserIdOrderByCreatedAtDesc(testUser.getId())).thenReturn(List.of());
+
+        Goal createdGoal = new Goal(testUser, "Data Structures and Algorithms", "Roadmap progression for DSA", 45, 2.5, SkillLevel.BEGINNER);
+        createdGoal.setId(555L);
+        when(goalRepository.save(any(Goal.class))).thenReturn(createdGoal);
+
+        when(roadmapRepository.save(any(SavedRoadmap.class))).thenAnswer(invocation -> {
+            SavedRoadmap r = invocation.getArgument(0);
+            r.setId(999L);
+            return r;
+        });
+
+        com.aistudyplanner.dto.SaveRoadmapRequest req = new com.aistudyplanner.dto.SaveRoadmapRequest();
+        req.setTitle("Data Structures and Algorithms");
+        req.setTopic("Data Structures and Algorithms");
+        req.setSkillLevel(SkillLevel.BEGINNER);
+        req.setTargetDays(45);
+        req.setHoursPerDay(2.5);
+        req.setRoadmapJson(sampleRoadmapJson);
+
+        var response = roadmapService.saveRoadmap(testUser.getEmail(), req);
+
+        assertNotNull(response);
+        assertEquals(45, response.getTargetDays());
+        assertEquals(2.5, response.getHoursPerDay());
+        assertEquals(555L, response.getGoalId());
+        assertEquals("Data Structures and Algorithms", response.getTitle());
+    }
+
+    @Test
+    @DisplayName("saveRoadmap respects pre-existing linked goal with custom 75 days and 5.5 hours/day")
+    void shouldRespectPreExistingLinkedGoalWithCustomValues() {
+        when(userRepository.findByEmail(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        when(roadmapRepository.findByGoalIdAndUserEmail(777L, testUser.getEmail())).thenReturn(Optional.empty());
+
+        when(roadmapRepository.save(any(SavedRoadmap.class))).thenAnswer(invocation -> {
+            SavedRoadmap r = invocation.getArgument(0);
+            r.setId(888L);
+            return r;
+        });
+
+        com.aistudyplanner.dto.SaveRoadmapRequest req = new com.aistudyplanner.dto.SaveRoadmapRequest();
+        req.setGoalId(777L);
+        req.setTitle("Full Stack Architecture");
+        req.setTopic("Full Stack Architecture");
+        req.setSkillLevel(SkillLevel.ADVANCED);
+        req.setTargetDays(75);
+        req.setHoursPerDay(5.5);
+        req.setRoadmapJson(sampleRoadmapJson);
+
+        var response = roadmapService.saveRoadmap(testUser.getEmail(), req);
+
+        assertNotNull(response);
+        assertEquals(75, response.getTargetDays());
+        assertEquals(5.5, response.getHoursPerDay());
+        assertEquals(777L, response.getGoalId());
+    }
 }
 
