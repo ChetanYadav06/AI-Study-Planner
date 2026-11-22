@@ -1,212 +1,316 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { ExternalLink, Bookmark, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
-import { getResources, checkResourceLinks } from '../../services/api';
-import { formatEnum } from '../../utils/formatters';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { FileText, Upload, Trash2, File, Clock, Search, X, Sparkles } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { PageHeader } from '../ui/PageHeader';
 import { EmptyState } from '../ui/EmptyState';
 import { Button } from '../ui/Button';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+
+const NOTES_STORAGE_KEY = 'pathwise_student_notes';
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
+const ACCEPTED_TYPES = ['.txt', '.md'];
+const ACCEPTED_MIME = ['text/plain', 'text/markdown'];
+
+const readFileAsText = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Could not read file'));
+    reader.readAsText(file);
+  });
+
+const formatBytes = (bytes) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const formatDate = (iso) => {
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+/** Load notes array from localStorage */
+const loadNotes = () => {
+  try {
+    const raw = localStorage.getItem(NOTES_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+/** Persist notes array to localStorage */
+const saveNotes = (notes) => {
+  try {
+    localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(notes));
+  } catch (e) {
+    console.warn('Could not persist notes:', e);
+  }
+};
+
+/**
+ * Public helper: returns all stored note contents joined for AI context.
+ * Importable by AiAssistantView.
+ */
+export const getStudentNotesContext = () => {
+  const notes = loadNotes();
+  if (notes.length === 0) return '';
+  return notes
+    .map((n) => `--- ${n.name} ---\n${n.content}`)
+    .join('\n\n');
+};
 
 export const SavedResourcesView = () => {
-  const [resources, setResources] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [checking, setChecking] = useState(false);
-  const [filterType, setFilterType] = useState('ALL');
-  const [checkStatusMsg, setCheckStatusMsg] = useState(null);
+  const [notes, setNotes] = useState(loadNotes);
+  const [search, setSearch] = useState('');
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [noteToDelete, setNoteToDelete] = useState(null);
+  const [toastMsg, setToastMsg] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
+  const fileInputRef = useRef(null);
 
-  const loadResources = async () => {
-    try {
-      const data = await getResources();
-      setResources(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.warn('Failed loading resources:', e);
-      setResources([]);
-    } finally {
-      setLoading(false);
-    }
+  // Persist on every change
+  useEffect(() => {
+    saveNotes(notes);
+  }, [notes]);
+
+  const showToast = (msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3500);
   };
 
-  useEffect(() => {
-    loadResources();
+  const addNoteFromFile = useCallback(async (file) => {
+    if (!file) return;
+
+    // Validate type
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    if (!ACCEPTED_TYPES.includes(ext) && !ACCEPTED_MIME.includes(file.type)) {
+      showToast(`Unsupported file type. Use ${ACCEPTED_TYPES.join(', ')}`);
+      return;
+    }
+
+    // Validate size
+    if (file.size > MAX_FILE_SIZE) {
+      showToast(`File too large. Maximum is ${formatBytes(MAX_FILE_SIZE)}.`);
+      return;
+    }
+
+    try {
+      const content = await readFileAsText(file);
+      const newNote = {
+        id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: file.name,
+        size: file.size,
+        content,
+        uploadedAt: new Date().toISOString(),
+      };
+      setNotes((prev) => [newNote, ...prev]);
+      showToast(`"${file.name}" uploaded.`);
+    } catch {
+      showToast('Failed to read file.');
+    }
   }, []);
 
-  // Fallback defaults if no resources exist in roadmaps
-  const defaultResources = [
-    { title: 'Spring Boot 3 Official Reference Documentation', url: 'https://docs.spring.io/spring-boot/index.html', type: 'DOCUMENTATION', relevance: 'Core framework reference, architecture patterns, and production configuration.', reachable: true, statusCode: 200, checkedAt: null },
-    { title: 'React 19 Core Documentation & Hooks Deep Dive', url: 'https://react.dev', type: 'DOCUMENTATION', relevance: 'Modern React patterns, server components, and component lifecycle best practices.', reachable: true, statusCode: 200, checkedAt: null },
-    { title: 'LeetCode Algorithm Patterns Guide', url: 'https://leetcode.com', type: 'PRACTICE', relevance: 'Interactive code sandboxes for arrays, trees, dynamic programming, and complexity.', reachable: true, statusCode: 200, checkedAt: null },
-    { title: 'MDN Web Technology Reference Guide', url: 'https://developer.mozilla.org', type: 'GUIDE', relevance: 'Standards-compliant documentation on JavaScript, CSS, and web APIs.', reachable: true, statusCode: 200, checkedAt: null },
-  ];
-
-  const allDisplayResources = resources.length > 0 ? resources : defaultResources;
-
-  // Filter out unreachable resources from main display
-  const reachableResources = useMemo(() => {
-    return allDisplayResources.filter((r) => r.reachable !== false);
-  }, [allDisplayResources]);
-
-  const unreachableCount = allDisplayResources.length - reachableResources.length;
-
-  // Dynamic filter tabs based only on resource types actually present
-  const filterTabs = useMemo(() => {
-    const presentTypes = new Set();
-    reachableResources.forEach((r) => {
-      if (r.type) presentTypes.add(r.type.toUpperCase());
-    });
-    return ['ALL', ...Array.from(presentTypes).sort()];
-  }, [reachableResources]);
-
-  const filtered = filterType === 'ALL'
-    ? reachableResources
-    : reachableResources.filter((r) => (r.type || 'DOCUMENTATION').toUpperCase() === filterType);
-
-  const handleCheckAllLinks = async () => {
-    const urls = reachableResources
-      .map((r) => r.url)
-      .filter((u) => u && (u.startsWith('http://') || u.startsWith('https://')))
-      .slice(0, 10); // Batch of up to 10
-
-    if (urls.length === 0) return;
-    setChecking(true);
-    setCheckStatusMsg(null);
-    try {
-      await checkResourceLinks(urls);
-      await loadResources();
-      setCheckStatusMsg(`Checked ${urls.length} link${urls.length === 1 ? '' : 's'}.`);
-      setTimeout(() => setCheckStatusMsg(null), 4000);
-    } catch (e) {
-      console.error('Failed checking links:', e);
-      setCheckStatusMsg('Link check failed or rate limit reached.');
-      setTimeout(() => setCheckStatusMsg(null), 4000);
-    } finally {
-      setChecking(false);
-    }
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach(addNoteFromFile);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const files = Array.from(e.dataTransfer.files || []);
+    files.forEach(addNoteFromFile);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => setIsDragOver(false);
+
+  const handleConfirmDelete = () => {
+    if (!noteToDelete) return;
+    setNotes((prev) => prev.filter((n) => n.id !== noteToDelete.id));
+    if (expandedId === noteToDelete.id) setExpandedId(null);
+    showToast(`"${noteToDelete.name}" removed.`);
+    setNoteToDelete(null);
+  };
+
+  const filtered = search.trim()
+    ? notes.filter((n) => n.name.toLowerCase().includes(search.trim().toLowerCase()))
+    : notes;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-16">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <PageHeader
-          title="Resources"
-          subtitle="Curated documentation, guides, and learning links."
-        />
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={handleCheckAllLinks}
-          disabled={checking}
-          icon={RefreshCw}
-        >
-          {checking ? 'Checking...' : 'Check links'}
-        </Button>
-      </div>
-
-      {checkStatusMsg && (
-        <div className="p-3 rounded-md bg-accent-soft border border-accent/20 text-accent text-xs font-medium flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>{checkStatusMsg}</span>
+      {/* Toast */}
+      {toastMsg && (
+        <div className="fixed bottom-6 right-6 z-50 bg-text text-surface-1 text-xs font-medium px-4 py-2.5 rounded-[10px] flex items-center space-x-2 border border-border animate-in fade-in slide-in-from-bottom-2">
+          <Sparkles className="w-3.5 h-3.5 text-accent shrink-0" />
+          <span>{toastMsg}</span>
         </div>
       )}
 
-      {unreachableCount > 0 && (
-        <div className="p-3 rounded-md bg-page border border-line text-xs text-muted flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-muted shrink-0" />
+      {/* Header */}
+      <PageHeader
+        title="My Notes"
+        subtitle="Upload your study notes. The AI tutor uses them to give you personalized answers."
+      />
+
+      {/* AI context info */}
+      {notes.length > 0 && (
+        <div className="p-3 rounded-[10px] bg-accent/10 border border-accent/20 text-xs text-accent font-medium flex items-center gap-2">
+          <Sparkles className="w-4 h-4 shrink-0" />
           <span>
-            {unreachableCount} link{unreachableCount === 1 ? '' : 's'} could not be reached and {unreachableCount === 1 ? 'is' : 'are'} hidden.
+            {notes.length} {notes.length === 1 ? 'note' : 'notes'} available as context for the AI Study Assistant.
           </span>
         </div>
       )}
 
-      {/* Tabs derived strictly from present types */}
-      <div className="flex items-center gap-1 border-b border-line overflow-x-auto">
-        {filterTabs.map((type) => {
-          const isActive = filterType === type;
-          return (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setFilterType(type)}
-              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150 cursor-pointer min-h-[40px] whitespace-nowrap focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
-                isActive
-                  ? 'border-accent text-accent'
-                  : 'border-transparent text-muted hover:text-ink hover:border-line'
-              }`}
-            >
-              {type === 'ALL' ? 'All' : formatEnum(type)}
-            </button>
-          );
-        })}
+      {/* Upload area */}
+      <div
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onClick={() => fileInputRef.current?.click()}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click();
+        }}
+        className={`p-8 rounded-[16px] border-2 border-dashed text-center cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
+          isDragOver
+            ? 'border-accent bg-accent/10'
+            : 'border-border hover:border-accent/50 hover:bg-surface-2/50'
+        }`}
+      >
+        <Upload className={`w-8 h-8 mx-auto mb-3 ${isDragOver ? 'text-accent' : 'text-text-muted'}`} />
+        <p className="text-sm font-semibold text-text">
+          {isDragOver ? 'Drop files here' : 'Click or drag files to upload'}
+        </p>
+        <p className="text-xs text-text-muted mt-1">
+          Accepts {ACCEPTED_TYPES.join(', ')} up to {formatBytes(MAX_FILE_SIZE)}
+        </p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ACCEPTED_TYPES.join(',')}
+          multiple
+          onChange={handleFileSelect}
+          className="hidden"
+          aria-label="Upload notes"
+        />
       </div>
 
-      {/* Resource cards list */}
-      {loading ? (
-        <div className="py-12 text-center text-xs text-muted">
-          Loading learning resources...
+      {/* Search bar (show only when notes exist) */}
+      {notes.length > 0 && (
+        <div className="relative w-full max-w-sm">
+          <Search className="w-3.5 h-3.5 text-text-muted absolute left-3 top-2.5 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search notes..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-8 pr-8 py-2 text-xs rounded-[10px] bg-surface-2 border border-border text-text placeholder:text-text-muted focus:border-accent outline-none transition"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute right-2.5 top-2 text-text-muted hover:text-text cursor-pointer"
+              aria-label="Clear search"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
+      )}
+
+      {/* Notes list */}
+      {notes.length === 0 ? (
+        <EmptyState
+          icon={FileText}
+          title="No notes uploaded yet"
+          description="Upload your study notes so the AI tutor can reference them when answering your questions."
+        />
       ) : filtered.length === 0 ? (
         <EmptyState
-          icon={Bookmark}
-          title="No resources found"
-          description={`No ${filterType.toLowerCase()} resources currently match your filter.`}
+          icon={Search}
+          title="No matching notes"
+          description="Try a different search term."
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filtered.map((res, idx) => {
-            const hasUrl = Boolean(res.url && res.url.trim());
-            const typeLabel = (res.type || 'DOCUMENTATION').toUpperCase();
-
+        <div className="space-y-2">
+          {filtered.map((note) => {
+            const isExpanded = expandedId === note.id;
             return (
               <Card
-                key={idx}
-                className="p-5 flex flex-col justify-between hover:border-slate-300 transition-colors duration-150"
+                key={note.id}
+                className="p-0 overflow-hidden transition-colors hover:border-border-strong"
               >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium text-muted">
-                      {typeLabel}
-                    </span>
-                    {hasUrl && (
-                      <ExternalLink className="w-4 h-4 text-muted shrink-0" aria-hidden="true" />
-                    )}
+                {/* Row header */}
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(isExpanded ? null : note.id)}
+                  className="w-full flex items-center gap-3 p-4 text-left cursor-pointer"
+                >
+                  <div className="w-9 h-9 rounded-[10px] bg-surface-2 border border-border flex items-center justify-center shrink-0">
+                    <File className="w-4 h-4 text-accent" />
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-semibold text-text truncate block">{note.name}</span>
+                    <div className="flex items-center gap-3 text-xs text-text-muted mt-0.5">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {formatDate(note.uploadedAt)}
+                      </span>
+                      <span>{formatBytes(note.size)}</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setNoteToDelete(note);
+                    }}
+                    className="p-2 text-text-muted hover:text-danger rounded-[8px] hover:bg-danger/10 transition-colors cursor-pointer shrink-0 min-h-[36px] min-w-[36px] flex items-center justify-center"
+                    title={`Delete ${note.name}`}
+                    aria-label={`Delete ${note.name}`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </button>
 
-                  <h2 className="text-sm font-semibold text-ink leading-snug">
-                    {res.title}
-                  </h2>
-
-                  {res.relevance && (
-                    <p className="text-xs text-muted leading-relaxed">
-                      {res.relevance}
-                    </p>
-                  )}
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-line flex items-center justify-between text-xs">
-                  {res.checkedAt ? (
-                    <span className="text-muted text-[11px] font-mono">
-                      Checked {res.checkedAt}
-                    </span>
-                  ) : (
-                    <span className="text-muted text-[11px]">Unchecked</span>
-                  )}
-
-                  {hasUrl && (
-                    <a
-                      href={res.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-medium text-accent hover:underline inline-flex items-center gap-1 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 rounded-sm"
-                    >
-                      <span>Open resource</span>
-                      <span aria-hidden="true">↗</span>
-                    </a>
-                  )}
-                </div>
+                {/* Expanded preview */}
+                {isExpanded && (
+                  <div className="border-t border-border p-4 bg-surface-2/40 max-h-64 overflow-y-auto">
+                    <pre className="text-xs text-text-2 whitespace-pre-wrap font-mono leading-relaxed">
+                      {note.content.length > 5000
+                        ? note.content.slice(0, 5000) + '\n\n… (truncated)'
+                        : note.content}
+                    </pre>
+                  </div>
+                )}
               </Card>
             );
           })}
         </div>
       )}
+
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        isOpen={Boolean(noteToDelete)}
+        title="Delete note?"
+        description={`Are you sure you want to remove "${noteToDelete?.name}"? The AI tutor will no longer reference it.`}
+        confirmLabel="Delete"
+        cancelLabel="Keep"
+        isDanger
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setNoteToDelete(null)}
+      />
     </div>
   );
 };

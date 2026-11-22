@@ -20,6 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useRouter } from '../../context/RouterContext';
 import { useData } from '../../context/DataContext';
 import { sendAssistantChatMessage } from '../../services/api';
+import { getStudentNotesContext } from './SavedResourcesView';
 import { SafeMarkdown } from '../roadmap/SafeMarkdown';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
@@ -210,8 +211,16 @@ export const AiAssistantView = () => {
     setLoadingReply(true);
 
     try {
+      // Augment message with uploaded study notes context if available
+      const notesContext = getStudentNotesContext();
+      let queryMessage = textToSend;
+      if (notesContext && notesContext.trim()) {
+        const trimmedNotes = notesContext.length > 2500 ? notesContext.slice(0, 2500) + '\n...[additional notes truncated]' : notesContext;
+        queryMessage = `[STUDENT'S UPLOADED STUDY NOTES CONTEXT:\n${trimmedNotes}\n]\n\nSTUDENT QUESTION / PROMPT:\n${textToSend}`;
+      }
+
       const response = await sendAssistantChatMessage({
-        message: textToSend,
+        message: queryMessage,
         topic: selectedTopic,
         action: actionType
       });
@@ -349,8 +358,14 @@ export const AiAssistantView = () => {
                   Gemini 3.5
                 </Badge>
               </div>
-              <p className="text-xs text-text-muted truncate">
-                Context: <span className="text-accent font-medium">{selectedTopic}</span>
+              <p className="text-xs text-text-muted truncate flex items-center gap-2">
+                <span>Context: <span className="text-accent font-medium">{selectedTopic}</span></span>
+                {getStudentNotesContext() ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-accent font-medium bg-accent/15 px-2 py-0.5 rounded-full border border-accent/20">
+                    <FileText className="w-3 h-3" />
+                    <span>Using your notes</span>
+                  </span>
+                ) : null}
               </p>
             </div>
           </div>

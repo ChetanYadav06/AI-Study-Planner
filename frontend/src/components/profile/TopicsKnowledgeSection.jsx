@@ -307,8 +307,8 @@ export const TopicsKnowledgeSection = ({
                   </span>
                 </div>
 
-                {/* Compact Topic Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {/* Compact Topic List (Dense & Responsive) */}
+                <div className={`grid grid-cols-1 ${catSkills.length > 2 ? 'lg:grid-cols-2' : ''} gap-2 ${catSkills.length > 8 ? 'max-h-[380px] overflow-y-auto pr-1' : ''}`}>
                   {catSkills.map(skill => {
                     const currentLevelMeta = KNOWLEDGE_LEVELS.find(k => k.value === skill.knowledgeLevel) || KNOWLEDGE_LEVELS[3];
                     const isUpdating = updatingId === skill.id;
@@ -316,46 +316,28 @@ export const TopicsKnowledgeSection = ({
                     return (
                       <div
                         key={skill.id}
-                        className="p-3.5 rounded-[12px] bg-surface-1 border border-border hover:border-border-strong transition-colors flex flex-col justify-between group"
+                        className="p-2.5 sm:px-3 rounded-[10px] bg-surface-1 border border-border hover:border-border-strong transition-colors flex items-center justify-between gap-2.5 group"
                       >
-                        {/* Top: Name & Current Badge + Delete */}
-                        <div>
-                          <div className="flex items-start justify-between gap-2">
-                            <span className="text-sm font-semibold text-ink tracking-tight truncate flex-1" title={skill.topicName}>
+                        {/* Topic Name & Status indicator */}
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span
+                            className={`w-2 h-2 rounded-full shrink-0 ${currentLevelMeta.dotClass}`}
+                            title={currentLevelMeta.label}
+                          />
+                          <div className="min-w-0">
+                            <span className="text-xs sm:text-sm font-semibold text-text truncate block" title={skill.topicName}>
                               {skill.topicName}
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => setSkillToDelete(skill)}
-                              className="text-muted hover:text-danger p-1 rounded-sm transition opacity-70 group-hover:opacity-100 cursor-pointer"
-                              title={`Delete ${skill.topicName}`}
-                              aria-label={`Delete ${skill.topicName}`}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-
-                          <div className="mt-1 flex items-center gap-2">
-                            <span
-                              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium border ${currentLevelMeta.badgeClass}`}
-                            >
-                              <span className={`w-1.5 h-1.5 rounded-full ${currentLevelMeta.dotClass}`} />
-                              <span>{currentLevelMeta.label}</span>
+                            <span className="text-[10px] text-text-muted">
+                              {currentLevelMeta.label}
+                              {skill.ratedByUser && ' • Verified'}
                             </span>
-                            {skill.ratedByUser && (
-                              <span className="text-[10px] text-muted/80 tracking-tight">
-                                User verified
-                              </span>
-                            )}
                           </div>
                         </div>
 
-                        {/* Interactive Level Selector Segmented Control */}
-                        <div className="mt-3 pt-2.5 border-t border-line/80">
-                          <span className="text-[10px] uppercase font-semibold text-muted block mb-1.5 tracking-wider">
-                            Set Competency
-                          </span>
-                          <div className="grid grid-cols-4 gap-1 p-0.5 rounded-md bg-page border border-line">
+                        {/* Interactive Segmented Level Control */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="inline-flex p-0.5 rounded-[8px] bg-surface-2 border border-border">
                             {KNOWLEDGE_LEVELS.map(lvl => {
                               const isSelected = skill.knowledgeLevel === lvl.value;
                               return (
@@ -365,10 +347,10 @@ export const TopicsKnowledgeSection = ({
                                   disabled={isUpdating}
                                   onClick={() => handleLevelSelect(skill.id, lvl.value)}
                                   title={`${lvl.label}: ${lvl.description}`}
-                                  className={`py-1 px-1 rounded text-[11px] font-medium transition cursor-pointer text-center truncate ${
+                                  className={`py-1 px-2 rounded-[6px] text-[11px] font-medium transition cursor-pointer text-center ${
                                     isSelected
                                       ? lvl.activeBtnClass
-                                      : 'text-muted hover:text-ink hover:bg-surface/80'
+                                      : 'text-text-muted hover:text-text hover:bg-surface-1/60'
                                   }`}
                                 >
                                   {lvl.shortLabel}
@@ -376,6 +358,16 @@ export const TopicsKnowledgeSection = ({
                               );
                             })}
                           </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setSkillToDelete(skill)}
+                            className="text-text-muted hover:text-danger p-1 rounded-[6px] hover:bg-danger/10 transition opacity-60 group-hover:opacity-100 cursor-pointer min-h-[30px] min-w-[30px] flex items-center justify-center"
+                            title={`Delete ${skill.topicName}`}
+                            aria-label={`Delete ${skill.topicName}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
                     );

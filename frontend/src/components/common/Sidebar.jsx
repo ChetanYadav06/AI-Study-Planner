@@ -103,7 +103,7 @@ export const Sidebar = ({
         },
         {
           id: 'notes-resources',
-          label: 'Notes & Resources',
+          label: 'My Notes',
           icon: BookOpen,
           to: '#/resources'
         },

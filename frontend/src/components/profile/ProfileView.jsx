@@ -7,13 +7,9 @@ import {
   Sparkles,
   Edit3,
   X,
-  Plus,
-  Sun,
-  Moon,
-  Laptop
+  Plus
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
 import { formatEnum } from '../../utils/formatters';
 import {
   getStudentProfile,
@@ -30,7 +26,6 @@ import { LearningPreferencesSection } from './LearningPreferencesSection';
 
 export const ProfileView = () => {
   const { user } = useAuth();
-  const { themeMode, setThemeMode } = useTheme();
 
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -309,58 +304,6 @@ export const ProfileView = () => {
               ? 'Profile fully calibrated. Gemini personalizes explanation depths, exercises, and time allocations to your exact background.'
               : 'Add topics you have already mastered or want to learn, and customize your study pacing below to generate hyper-calibrated roadmaps.'}
           </p>
-        </div>
-      </Card>
-
-      {/* ── SECTION: THEME & APPEARANCE (Dark, Light, System) ── */}
-      <Card className="p-6 sm:p-7 space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-border">
-          <div>
-            <h2 className="text-base font-semibold text-text">Theme & Appearance</h2>
-            <p className="text-xs text-text-muted mt-0.5">
-              Choose your visual theme. System mode synchronizes automatically with your operating system preference in real time.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-          {[
-            { id: 'dark', label: 'Dark', desc: 'Pathwise Midnight dark palette (Default)', icon: Moon },
-            { id: 'light', label: 'Light', desc: 'Crisp, high-contrast daylight theme', icon: Sun },
-            { id: 'system', label: 'System', desc: 'Follows prefers-color-scheme dynamically', icon: Laptop }
-          ].map((opt) => {
-            const Icon = opt.icon;
-            const isSelected = themeMode === opt.id;
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setThemeMode(opt.id)}
-                className={`flex items-start gap-3 p-4 rounded-[12px] border text-left transition-colors cursor-pointer min-h-[44px] ${
-                  isSelected
-                    ? 'bg-surface-2 border-accent ring-1 ring-accent'
-                    : 'bg-surface-1 border-border hover:border-border-strong hover:bg-surface-2/60'
-                }`}
-              >
-                <div className={`p-2 rounded-[8px] shrink-0 ${isSelected ? 'bg-accent/20 text-accent' : 'bg-surface-2 text-text-muted'}`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm font-semibold ${isSelected ? 'text-text' : 'text-text-muted'}`}>
-                      {opt.label}
-                    </span>
-                    {isSelected && (
-                      <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-accent/20 text-accent border border-accent/30">
-                        Active
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-text-muted mt-1 leading-snug">{opt.desc}</p>
-                </div>
-              </button>
-            );
-          })}
         </div>
       </Card>
 
