@@ -18,6 +18,7 @@ import { SavedResourcesView } from './components/views/SavedResourcesView';
 import { AiAssistantView } from './components/views/AiAssistantView';
 import { NotFoundView } from './components/common/NotFoundView';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { FEATURE_VISIBILITY } from './config/features';
 
 const AppContent = () => {
   const { route, navigate } = useRouter();
@@ -90,7 +91,7 @@ const AppContent = () => {
             )
           )}
 
-          {route === 'study-planner' && (
+          {route === 'study-planner' && FEATURE_VISIBILITY.tasksCalendar && (
             isAuthenticated ? (
               <StudyPlannerView
                 onOpenCreateGoal={handleOpenCreateGoal}
@@ -103,7 +104,7 @@ const AppContent = () => {
             )
           )}
 
-          {route === 'active-study' && (
+          {route === 'active-study' && FEATURE_VISIBILITY.tasksCalendar && (
             isAuthenticated ? (
               <ActiveStudyView
                 onNavigateRoadmap={(roadmap) => {
@@ -125,7 +126,7 @@ const AppContent = () => {
 
           {route === 'profile' && <ProfileView />}
 
-          {route === 'resources' && (
+          {route === 'resources' && FEATURE_VISIBILITY.myNotes && (
             isAuthenticated ? (
               <SavedResourcesView />
             ) : (

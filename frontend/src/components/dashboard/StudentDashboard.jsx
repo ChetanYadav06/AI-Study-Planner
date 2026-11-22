@@ -28,6 +28,7 @@ import {
   deleteGoal
 } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { FEATURE_VISIBILITY } from '../../config/features';
 import { useRouter } from '../../context/RouterContext';
 import { useData } from '../../context/DataContext';
 import { Button } from '../ui/Button';
@@ -260,15 +261,17 @@ export const StudentDashboard = ({ onOpenCreateGoal }) => {
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          <Button
-            variant="secondary"
-            size="md"
-            onClick={() => navigate('#/study-planner')}
-            className="gap-2"
-          >
-            <Play className="w-4 h-4 text-accent fill-accent/20" />
-            <span>Focus Session</span>
-          </Button>
+          {FEATURE_VISIBILITY.tasksCalendar && (
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => navigate('#/study-planner')}
+              className="gap-2"
+            >
+              <Play className="w-4 h-4 text-accent fill-accent/20" />
+              <span>Focus Session</span>
+            </Button>
+          )}
 
           <Button
             variant="primary"

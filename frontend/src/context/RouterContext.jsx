@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { FEATURE_VISIBILITY } from '../config/features';
 
 const RouterContext = createContext(null);
 
@@ -63,9 +64,15 @@ export const parseHash = (hashString = '') => {
   }
 
   if (path === '/study-planner') {
+    if (!FEATURE_VISIBILITY.tasksCalendar) {
+      return { route: 'dashboard', params: {}, query, rawPath: '/dashboard' };
+    }
     return { route: 'study-planner', params: {}, query, rawPath: path };
   }
   if (path === '/active-study') {
+    if (!FEATURE_VISIBILITY.tasksCalendar) {
+      return { route: 'dashboard', params: {}, query, rawPath: '/dashboard' };
+    }
     return { route: 'active-study', params: {}, query, rawPath: path };
   }
   if (path === '/progress' || path === '/my-progress') {
@@ -75,6 +82,9 @@ export const parseHash = (hashString = '') => {
     return { route: 'profile', params: {}, query, rawPath: path };
   }
   if (path === '/resources' || path === '/saved-resources') {
+    if (!FEATURE_VISIBILITY.myNotes) {
+      return { route: 'dashboard', params: {}, query, rawPath: '/dashboard' };
+    }
     return { route: 'resources', params: {}, query, rawPath: path };
   }
 

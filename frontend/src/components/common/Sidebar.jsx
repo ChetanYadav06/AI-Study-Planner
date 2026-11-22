@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from '../../context/RouterContext';
 import { useData } from '../../context/DataContext';
+import { FEATURE_VISIBILITY } from '../../config/features';
 
 export const Sidebar = ({
   isCollapsed = false,
@@ -62,7 +63,7 @@ export const Sidebar = ({
     if (setMobileOpen) setMobileOpen(false);
   };
 
-  const navGroups = [
+  const navGroups = useMemo(() => [
     {
       group: 'LEARN',
       items: [
@@ -95,13 +96,13 @@ export const Sidebar = ({
     {
       group: 'PLAN',
       items: [
-        {
+        FEATURE_VISIBILITY.tasksCalendar && {
           id: 'tasks-calendar',
           label: 'Tasks & Calendar',
           icon: CalendarCheck,
           to: '#/study-planner'
         },
-        {
+        FEATURE_VISIBILITY.myNotes && {
           id: 'notes-resources',
           label: 'My Notes',
           icon: BookOpen,
@@ -113,9 +114,9 @@ export const Sidebar = ({
           icon: BarChart3,
           to: '#/progress'
         }
-      ]
+      ].filter(Boolean)
     }
-  ];
+  ].filter((section) => section.items.length > 0), [activeRoadmap]);
 
   const sidebarBody = (
     <div className="flex flex-col justify-between h-full text-text select-none overflow-y-auto overflow-x-hidden">
