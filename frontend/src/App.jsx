@@ -15,6 +15,7 @@ import { StudyPlannerView } from './components/views/StudyPlannerView';
 import { ActiveStudyView } from './components/views/ActiveStudyView';
 import { ProgressView } from './components/views/ProgressView';
 import { SavedResourcesView } from './components/views/SavedResourcesView';
+import { AiAssistantView } from './components/views/AiAssistantView';
 import { NotFoundView } from './components/common/NotFoundView';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 
@@ -127,6 +128,14 @@ const AppContent = () => {
           {route === 'resources' && (
             isAuthenticated ? (
               <SavedResourcesView />
+            ) : (
+              <StudentPortalLanding onOpenAuth={handleOpenAuth} />
+            )
+          )}
+
+          {route === 'ai-assistant' && (
+            isAuthenticated ? (
+              <AiAssistantView />
             ) : (
               <StudentPortalLanding onOpenAuth={handleOpenAuth} />
             )

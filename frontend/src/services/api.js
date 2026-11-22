@@ -257,4 +257,10 @@ export const submitTaskFeedback = async (roadmapId, taskId, rating) => {
   return response.data;
 };
 
+// AI Study Assistant Chatbot API
+export const sendAssistantChatMessage = async ({ message, topic, action }) => {
+  const response = await api.post('/ai/assistant/chat', { message, topic, action }, { timeout: 45000 });
+  return response.data;
+};
+
 export default api;
