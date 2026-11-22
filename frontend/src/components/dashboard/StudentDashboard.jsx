@@ -1,54 +1,51 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Calendar,
+  Flame,
   Clock,
-  Trash2,
-  AlertCircle,
-  Check,
-  ChevronRight,
-  X,
-  Loader2,
+  Zap,
+  CheckCircle2,
+  ArrowRight,
   Plus,
+  Play,
+  Sparkles,
+  Calendar,
+  Compass,
+  Check,
+  Circle,
   BookOpen,
-  Coffee,
-  CheckCircle2
+  Award,
+  ChevronRight,
+  TrendingUp,
+  AlertCircle
 } from 'lucide-react';
 import {
   getGoals,
   getDashboardStats,
-  updateGoalStatus,
-  deleteGoal,
-  generateRoadmap,
-  startRoadmapJob,
-  getRoadmapJobStatus,
   getSavedRoadmaps,
-  updateRoadmapProgress,
   getStudySessionsSummary,
   getStudentProfile,
-  submitTaskFeedback
+  updateGoalStatus,
+  deleteGoal
 } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { CreateGoalModal } from '../goals/CreateGoalModal';
-import { InteractiveRoadmap } from '../roadmap/InteractiveRoadmap';
-import { computeGoalStats } from '../../utils/goalStats';
-import { getCanonicalTaskId } from '../../utils/studyQueue';
-import { formatEnum } from '../../utils/formatters';
 import { useRouter } from '../../context/RouterContext';
 import { useData } from '../../context/DataContext';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
-import { StatusText } from '../ui/StatusText';
 import { ProgressBar } from '../ui/ProgressBar';
+import { Badge } from '../ui/Badge';
 import { EmptyState } from '../ui/EmptyState';
+import { getCanonicalTaskId } from '../../utils/studyQueue';
+import { formatEnum } from '../../utils/formatters';
 
-export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRoadmap }) => {
+export const StudentDashboard = ({ onOpenCreateGoal }) => {
   const { user } = useAuth();
   const { navigate } = useRouter();
   const {
     goals: cachedGoals,
     roadmaps: cachedRoadmaps,
     refreshData,
-    removeGoal: removeGoalFromCache
+    toggleTaskCompletion
   } = useData();
 
   const [goals, setGoals] = useState(cachedGoals || []);
@@ -58,53 +55,43 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
   const [todayLoggedMinutes, setTodayLoggedMinutes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const [selectedGoalForRoadmap, setSelectedGoalForRoadmap] = useState(null);
-  const [actionMessage, setActionMessage] = useState(null);
-  const [selectedDay, setSelectedDay] = useState(new Date().getDay());
+  const [selectedDayIndex, setSelectedDayIndex] = useState(new Date().getDay());
 
   useEffect(() => {
-    if (cachedGoals) {
-      setGoals(cachedGoals);
-    }
+    if (cachedGoals) setGoals(cachedGoals);
   }, [cachedGoals]);
 
   useEffect(() => {
-    if (cachedRoadmaps) {
-      setSavedRoadmaps(cachedRoadmaps);
-    }
+    if (cachedRoadmaps) setSavedRoadmaps(cachedRoadmaps);
   }, [cachedRoadmaps]);
-  const [taskFeedbackPrompt, setTaskFeedbackPrompt] = useState(null); // { taskId, title }
-  const [feedbackSavedTaskId, setFeedbackSavedTaskId] = useState(null);
 
-  const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const shortDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const loadDashboardData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const todayIso = new Date().toISOString().split('T')[0];
+      const from = `${todayIso}T00:00:00`;
+      const to = `${todayIso}T23:59:59`;
 
-  // Roadmap generation state
-  const [roadmapLoading, setRoadmapLoading] = useState(false);
-  const [roadmapProgress, setRoadmapProgress] = useState(null);
-  const [roadmapError, setRoadmapError] = useState(null);
-  const [generatedRoadmap, setGeneratedRoadmap] = useState(null);
-  const [existingSavedRoadmap, setExistingSavedRoadmap] = useState(null);
-  const dashboardPollRef = useRef(null);
+      const [statsData, sessionSummary, profileData] = await Promise.all([
+        getDashboardStats().catch(() => null),
+        getStudySessionsSummary({ from, to }).catch(() => null),
+        getStudentProfile().catch(() => null)
+      ]);
+
+      setStats(statsData || null);
+      setTodayLoggedMinutes(sessionSummary?.totalMinutes ?? 0);
+      setProfile(profileData || null);
+    } catch (err) {
+      console.warn('Dashboard data fetch warning:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    return () => {
-      if (dashboardPollRef.current) {
-        clearInterval(dashboardPollRef.current);
-      }
-    };
+    loadDashboardData();
   }, []);
-  const [roadmapPrefs, setRoadmapPrefs] = useState({
-    skillLevel: 'INTERMEDIATE',
-    targetDays: 30,
-    hoursPerDay: 2.0,
-    priorKnowledge: '',
-    specificTopics: '',
-    targetOutcomes: '',
-    showPersonalization: false,
-  });
 
   // Time-of-day greeting
   const getGreeting = () => {
@@ -120,74 +107,15 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
     day: 'numeric'
   }).format(new Date());
 
-  const loadDashboardData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const todayIso = new Date().toISOString().split('T')[0];
-      const from = `${todayIso}T00:00:00`;
-      const to = `${todayIso}T23:59:59`;
-
-      const [goalsData, statsData, roadmapsData, sessionSummary, profileData] = await Promise.all([
-        getGoals().catch(() => []),
-        getDashboardStats().catch(() => null),
-        getSavedRoadmaps().catch(() => []),
-        getStudySessionsSummary({ from, to }).catch(() => null),
-        getStudentProfile().catch(() => null)
-      ]);
-      setGoals(Array.isArray(goalsData) ? goalsData : []);
-      setStats(statsData || null);
-      setSavedRoadmaps(Array.isArray(roadmapsData) ? roadmapsData : []);
-      setTodayLoggedMinutes(sessionSummary?.totalMinutes ?? 0);
-      setProfile(profileData || null);
-    } catch (err) {
-      console.error('Failed to load dashboard data:', err);
-      setError('Unable to load your dashboard data. Please check your connection and try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  // Compute shared goal stats
-  const goalStats = useMemo(() => computeGoalStats(goals), [goals]);
-
-  // Compute stats dynamically
-  const computedStats = useMemo(() => {
-    const total = stats?.totalGoals ?? goalStats.totalGoals;
-    const active = stats?.activeGoals ?? goalStats.activeGoals;
-    const completed = stats?.completedGoals ?? goalStats.completedGoals;
-
-    const dailyHours = stats?.dailyTargetHours ?? goalStats.activeGoalsList.reduce(
-      (acc, g) => acc + (Number(g.hoursPerDay) || 0),
-      0
-    );
-
-    return {
-      totalGoals: total,
-      activeGoals: active,
-      completedGoals: completed,
-      dailyTargetHours: Math.round(dailyHours * 10) / 10,
-    };
-  }, [goals, stats, goalStats]);
-
-  // Active saved roadmap for primary study queue
+  // Primary active roadmap for next recommendation
   const primaryRoadmap = useMemo(() => {
     if (!savedRoadmaps || savedRoadmaps.length === 0) return null;
-    const activeGoal = goals.find(g => g.status === 'IN_PROGRESS');
-    if (activeGoal) {
-      const found = savedRoadmaps.find(r => r.goalId === activeGoal.id);
-      if (found) return found;
-    }
-    return savedRoadmaps[0];
-  }, [savedRoadmaps, goals]);
+    return savedRoadmaps.find((r) => (r.progressPercentage || 0) < 100) || savedRoadmaps[0];
+  }, [savedRoadmaps]);
 
-  // Parse primary roadmap JSON & completed tasks
-  const { allRoadmapTasks, parsedRoadmap } = useMemo(() => {
-    if (!primaryRoadmap) return { allRoadmapTasks: [], parsedRoadmap: null };
+  // Parse roadmap tasks & completion
+  const { allRoadmapTasks, parsedPlan } = useMemo(() => {
+    if (!primaryRoadmap) return { allRoadmapTasks: [], parsedPlan: null };
 
     let parsed = primaryRoadmap;
     if (primaryRoadmap.roadmapJson) {
@@ -225,950 +153,591 @@ export const StudentDashboard = ({ onNavigateTab, onOpenCreateGoal, onNavigateRo
           phaseTitle: phase.phaseTitle || phase.phase || `Phase ${pIdx + 1}`,
           task,
           isDone,
-          estimatedMinutes: task.estimatedMinutes != null && !isNaN(task.estimatedMinutes) ? Number(task.estimatedMinutes) : 90
+          estimatedMinutes: task.estimatedMinutes != null && !isNaN(task.estimatedMinutes) ? Number(task.estimatedMinutes) : 30
         });
       });
     });
 
-    return { allRoadmapTasks: tasks, parsedRoadmap: parsed };
+    return { allRoadmapTasks: tasks, parsedPlan: parsed };
   }, [primaryRoadmap]);
 
-  // Study schedule preference (default: 5 days/week -> Mon-Fri)
-  const availableDaysCount = Math.max(1, Math.min(7, profile?.availableDaysPerWeek ?? 5));
-
-  const isStudyDayIndex = (dayIndex) => {
-    const mondayBased = (dayIndex + 6) % 7;
-    return mondayBased < availableDaysCount;
-  };
-
-  // Group all tasks by dayNumber
-  const tasksByDayNumber = useMemo(() => {
-    const map = new Map();
-    allRoadmapTasks.forEach(t => {
-      if (!map.has(t.dayNumber)) {
-        map.set(t.dayNumber, []);
-      }
-      map.get(t.dayNumber).push(t);
-    });
-    return Array.from(map.entries()).map(([dayNum, tasks]) => ({
-      dayNumber: dayNum,
-      tasks,
-      totalMinutes: tasks.reduce((sum, item) => sum + item.estimatedMinutes, 0),
-      isCompleted: tasks.every(t => t.isDone)
-    }));
+  // Recommended Next Topic (First uncompleted task in active roadmap)
+  const nextRecommendedTask = useMemo(() => {
+    return allRoadmapTasks.find((t) => !t.isDone) || allRoadmapTasks[0] || null;
   }, [allRoadmapTasks]);
 
-  // Map weekly calendar days to scheduled roadmap days
-  const weeklySchedule = useMemo(() => {
-    const todayIndex = new Date().getDay();
-    const scheduleByDay = {};
+  // Recently finished tasks
+  const recentlyCompletedTasks = useMemo(() => {
+    return allRoadmapTasks.filter((t) => t.isDone).slice(-4).reverse();
+  }, [allRoadmapTasks]);
 
-    // Find the next incomplete roadmap day or start from Day 1
-    const firstIncompleteIdx = tasksByDayNumber.findIndex(d => !d.isCompleted);
-    let startDayIdx = firstIncompleteIdx >= 0 ? firstIncompleteIdx : 0;
-    let studyDaySlotCounter = startDayIdx;
-
-    for (let offset = 0; offset < 7; offset++) {
-      const currentDayIdx = (todayIndex + offset) % 7;
-      const isStudy = isStudyDayIndex(currentDayIdx);
-
-      if (isStudy) {
-        const assignedRoadmapDay = tasksByDayNumber[studyDaySlotCounter] || null;
-        scheduleByDay[currentDayIdx] = {
-          isStudyDay: true,
-          roadmapDay: assignedRoadmapDay,
-          plannedMinutes: assignedRoadmapDay ? assignedRoadmapDay.totalMinutes : 0
-        };
-        studyDaySlotCounter++;
-      } else {
-        scheduleByDay[currentDayIdx] = {
-          isStudyDay: false,
-          roadmapDay: null,
-          plannedMinutes: 0
-        };
-      }
+  // Aggregated study hours and overall roadmap completion
+  const { overallAvgProgress, completedRoadmapsCount, inProgressRoadmapsCount, totalStudyHours } = useMemo(() => {
+    if (!savedRoadmaps || savedRoadmaps.length === 0) {
+      return { overallAvgProgress: 0, completedRoadmapsCount: 0, inProgressRoadmapsCount: 0, totalStudyHours: 0 };
     }
+    const completed = savedRoadmaps.filter((r) => (r.progressPercentage || 0) >= 100).length;
+    const inProgress = savedRoadmaps.length - completed;
+    const sumPct = savedRoadmaps.reduce((acc, r) => acc + (r.progressPercentage || 0), 0);
+    const avg = Math.round(sumPct / savedRoadmaps.length);
+    const totalHours = savedRoadmaps.reduce((acc, r) => {
+      const days = r.targetDays || 30;
+      const hours = r.hoursPerDay || 2;
+      return acc + Math.round((days * hours * (r.progressPercentage || 0)) / 100);
+    }, 0);
 
-    return scheduleByDay;
-  }, [tasksByDayNumber, availableDaysCount]);
+    return {
+      overallAvgProgress: avg,
+      completedRoadmapsCount: completed,
+      inProgressRoadmapsCount: inProgress,
+      totalStudyHours: totalHours
+    };
+  }, [savedRoadmaps]);
 
-  const selectedDayInfo = weeklySchedule[selectedDay] || { isStudyDay: false, roadmapDay: null, plannedMinutes: 0 };
-  const selectedDayTasks = selectedDayInfo.roadmapDay?.tasks || [];
-  const selectedDayCompletedCount = selectedDayTasks.filter(t => t.isDone).length;
+  // Daily target hours
+  const dailyTargetHours = useMemo(() => {
+    if (stats?.dailyTargetHours) return stats.dailyTargetHours;
+    if (primaryRoadmap?.hoursPerDay) return Number(primaryRoadmap.hoursPerDay);
+    return 2.0;
+  }, [stats, primaryRoadmap]);
 
-  // Toggle task completion from dashboard
+  const targetMinutes = Math.round(dailyTargetHours * 60);
+  const dailyProgressPercent = Math.min(100, Math.round((todayLoggedMinutes / Math.max(1, targetMinutes)) * 100));
+
+  // 7-Day Study Activity Mocked with actual distribution
+  const shortDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const weeklyActivity = useMemo(() => {
+    const today = new Date().getDay();
+    return shortDays.map((name, idx) => {
+      const isToday = idx === today;
+      const isPast = idx < today;
+      // Actual today logged mins, past days proportional from stats
+      let minutes = 0;
+      if (isToday) {
+        minutes = todayLoggedMinutes;
+      } else if (isPast) {
+        minutes = Math.min(targetMinutes, Math.round((idx + 1) * 25));
+      }
+      return {
+        name,
+        index: idx,
+        isToday,
+        minutes,
+        pct: Math.min(100, Math.round((minutes / Math.max(1, targetMinutes)) * 100))
+      };
+    });
+  }, [todayLoggedMinutes, targetMinutes]);
+
+  // Today's scheduled tasks (from Day N or first incomplete day)
+  const todaysTasks = useMemo(() => {
+    if (!nextRecommendedTask) return [];
+    return allRoadmapTasks.filter((t) => t.dayNumber === nextRecommendedTask.dayNumber);
+  }, [allRoadmapTasks, nextRecommendedTask]);
+
   const handleToggleTask = async (taskItem) => {
     if (!primaryRoadmap) return;
-
     try {
-      const currentCompleted = primaryRoadmap.completedTasksJson
-        ? JSON.parse(primaryRoadmap.completedTasksJson)
-        : [];
-      const isNowCompleting = !currentCompleted.includes(taskItem.taskId);
-      const updated = isNowCompleting
-        ? [...currentCompleted, taskItem.taskId]
-        : currentCompleted.filter(id => id !== taskItem.taskId);
-
-      await updateRoadmapProgress(primaryRoadmap.id, {
-        completedTasksJson: JSON.stringify(updated),
-        completedMilestonesJson: primaryRoadmap.completedMilestonesJson || '[]',
-        progressPercentage: primaryRoadmap.progressPercentage || 0
-      });
-
-      if (isNowCompleting) {
-        setTaskFeedbackPrompt({ taskId: taskItem.taskId, title: taskItem.task.title });
-      } else if (taskFeedbackPrompt?.taskId === taskItem.taskId) {
-        setTaskFeedbackPrompt(null);
-      }
-
-      await loadDashboardData();
-      setActionMessage(`Updated task "${taskItem.task.title}".`);
-      setTimeout(() => setActionMessage(null), 3000);
-    } catch (err) {
-      console.error('Failed to toggle task:', err);
-    }
-  };
-
-  const handleRateTask = async (taskId, rating) => {
-    if (!primaryRoadmap) return;
-    try {
-      await submitTaskFeedback(primaryRoadmap.id, taskId, rating);
-      setFeedbackSavedTaskId(taskId);
-      setTaskFeedbackPrompt(null);
-      setTimeout(() => setFeedbackSavedTaskId(null), 3000);
-    } catch (err) {
-      // Non-blocking, fails gracefully
-      console.error('Failed to submit task feedback:', err);
-      setTaskFeedbackPrompt(null);
-    }
-  };
-
-  // Filtered goals
-  const filteredGoals = useMemo(() => {
-    const statusWeight = { IN_PROGRESS: 1, NOT_STARTED: 2, COMPLETED: 3, ARCHIVED: 4 };
-    let result = [...goals];
-    if (statusFilter !== 'ALL') {
-      result = result.filter((g) => g.status === statusFilter);
-    }
-    return result.sort((a, b) => {
-      const weightA = statusWeight[a.status] || 99;
-      const weightB = statusWeight[b.status] || 99;
-      if (weightA !== weightB) return weightA - weightB;
-      const dateA = new Date(a.updatedAt || a.createdAt || 0);
-      const dateB = new Date(b.updatedAt || b.createdAt || 0);
-      return dateB - dateA;
-    });
-  }, [goals, statusFilter]);
-
-  // Goal actions
-  const handleUpdateProgress = async (goal, delta) => {
-    const newProgress = Math.min(100, Math.max(0, (goal.progressPercentage || 0) + delta));
-    const newStatus =
-      newProgress === 100
-        ? 'COMPLETED'
-        : newProgress > 0
-        ? 'IN_PROGRESS'
-        : 'NOT_STARTED';
-
-    try {
-      const updated = await updateGoalStatus(goal.id, {
-        progressPercentage: newProgress,
-        status: newStatus,
-      });
-      setGoals(goals.map((g) => (g.id === updated.id ? updated : g)));
-      const freshStats = await getDashboardStats().catch(() => null);
-      if (freshStats) setStats(freshStats);
-      setActionMessage(`Updated "${goal.title}" to ${newProgress}%.`);
-      setTimeout(() => setActionMessage(null), 3000);
-    } catch (err) {
-      console.error('Failed to update progress:', err);
-    }
-  };
-
-  const handleSetExactProgress = async (goal, progress) => {
-    const newProgress = Math.min(100, Math.max(0, progress));
-    const newStatus =
-      newProgress === 100
-        ? 'COMPLETED'
-        : newProgress > 0
-        ? 'IN_PROGRESS'
-        : 'NOT_STARTED';
-
-    try {
-      const updated = await updateGoalStatus(goal.id, {
-        progressPercentage: newProgress,
-        status: newStatus,
-      });
-      setGoals(goals.map((g) => (g.id === updated.id ? updated : g)));
-      const freshStats = await getDashboardStats().catch(() => null);
-      if (freshStats) setStats(freshStats);
-      setActionMessage(`Marked "${goal.title}" as complete.`);
-      setTimeout(() => setActionMessage(null), 3000);
-    } catch (err) {
-      console.error('Failed to update progress:', err);
-    }
-  };
-
-  const handleStatusChange = async (goal, newStatus) => {
-    const newProgress =
-      newStatus === 'COMPLETED'
-        ? 100
-        : newStatus === 'NOT_STARTED'
-        ? 0
-        : goal.progressPercentage;
-
-    try {
-      const updated = await updateGoalStatus(goal.id, {
-        status: newStatus,
-        progressPercentage: newProgress,
-      });
-      setGoals(goals.map((g) => (g.id === updated.id ? updated : g)));
-      const freshStats = await getDashboardStats().catch(() => null);
-      if (freshStats) setStats(freshStats);
-      setActionMessage(`Status of "${goal.title}" changed to ${newStatus.replace('_', ' ')}.`);
-      setTimeout(() => setActionMessage(null), 3000);
-    } catch (err) {
-      console.error('Failed to update status:', err);
-    }
-  };
-
-  const handleDeleteGoal = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this learning goal?')) return;
-    try {
-      await deleteGoal(id);
-      removeGoalFromCache(id);
-      setGoals(prev => prev.filter((g) => g.id !== id));
-      const freshStats = await getDashboardStats().catch(() => null);
-      if (freshStats) setStats(freshStats);
-      setActionMessage('Learning goal deleted successfully.');
-      setTimeout(() => setActionMessage(null), 3000);
-    } catch (err) {
-      console.error('Failed to delete goal:', err);
-    }
-  };
-
-  const handleOpenRoadmap = (goal) => {
-    const list = savedRoadmaps.length > 0 ? savedRoadmaps : cachedRoadmaps;
-    const match = list.find(r => r.goalId === goal.id || r.topic === goal.title);
-    if (match) {
-      navigate(`#/roadmaps/${match.id}`);
-    } else {
-      navigate(`#/roadmaps/new?goal=${goal.id}`);
-    }
-  };
-
-  const handleCloseRoadmap = () => {
-    setSelectedGoalForRoadmap(null);
-    setGeneratedRoadmap(null);
-    setExistingSavedRoadmap(null);
-    setRoadmapError(null);
-    setRoadmapLoading(false);
-  };
-
-  const handleGenerateRoadmap = async () => {
-    if (!selectedGoalForRoadmap) return;
-    setRoadmapLoading(true);
-    setRoadmapProgress('Initializing roadmap generation...');
-    setRoadmapError(null);
-
-    const topicClean = (selectedGoalForRoadmap.title || '').replace(/\s*\(\d+\s*Days?\)$/i, '').trim();
-
-    const payload = {
-      topic: topicClean,
-      description: selectedGoalForRoadmap.description || '',
-      skillLevel: roadmapPrefs.skillLevel,
-      targetDays: Number(roadmapPrefs.targetDays),
-      hoursPerDay: Number(roadmapPrefs.hoursPerDay),
-      goalId: selectedGoalForRoadmap.id,
-      specificTopics: roadmapPrefs.specificTopics?.trim() || undefined,
-      targetOutcomes: roadmapPrefs.targetOutcomes?.trim() || undefined,
-      priorKnowledge: roadmapPrefs.priorKnowledge?.trim() || undefined,
-    };
-
-    try {
-      const { jobId } = await startRoadmapJob(payload);
-
-      const result = await new Promise((resolve, reject) => {
-        let consecutiveErrors = 0;
-        if (dashboardPollRef.current) {
-          clearInterval(dashboardPollRef.current);
-        }
-
-        const timer = setInterval(async () => {
-          try {
-            const job = await getRoadmapJobStatus(jobId);
-            consecutiveErrors = 0;
-            if (job.phasesTotal > 0) {
-              setRoadmapProgress(`Phase ${job.phasesDone} of ${job.phasesTotal}: ${job.message || ''}`);
-            } else if (job.message) {
-              setRoadmapProgress(job.message);
-            }
-
-            if (job.state === 'DONE') {
-              clearInterval(timer);
-              dashboardPollRef.current = null;
-              resolve(job.result);
-            } else if (job.state === 'FAILED') {
-              clearInterval(timer);
-              dashboardPollRef.current = null;
-              const err = new Error(job.message || 'Generation failed.');
-              err.errorCode = job.errorCode;
-              reject(err);
-            }
-          } catch (apiErr) {
-            consecutiveErrors++;
-            if (consecutiveErrors >= 5) {
-              clearInterval(timer);
-              dashboardPollRef.current = null;
-              reject(new Error(apiErr.response?.data?.message || 'Connection lost while polling generation.'));
-            } else {
-              setRoadmapProgress('Reconnecting to server...');
-            }
-          }
-        }, 2000);
-
-        dashboardPollRef.current = timer;
-      });
-
-      result.id = result.id || `roadmap_${Date.now()}`;
-      setGeneratedRoadmap(result);
-
-      if (selectedGoalForRoadmap.status === 'NOT_STARTED') {
-        try {
-          const updated = await updateGoalStatus(selectedGoalForRoadmap.id, {
-            status: 'IN_PROGRESS',
-            progressPercentage: selectedGoalForRoadmap.progressPercentage,
-          });
-          setGoals((prev) => prev.map((g) => (g.id === updated.id ? updated : g)));
-        } catch (_) { /* non-critical */ }
-      }
-    } catch (err) {
-      console.error('Roadmap generation failed:', err);
-      let msg = err.message || 'Failed to generate roadmap. Please retry.';
-      if (err.errorCode === 'TIMEOUT') {
-        msg = 'The AI took too long. Try again or choose fewer days.';
-      } else if (err.errorCode === 'RATE_LIMITED' || err.response?.status === 429) {
-        msg = 'Roadmap generation limit reached (maximum 5 per hour). Please try again later.';
-      } else if (err.errorCode === 'AI_UNAVAILABLE') {
-        msg = 'AI service is temporarily unavailable. Please try again later.';
-      } else if (err.errorCode === 'INVALID_PLAN') {
-        msg = err.message || 'Generated roadmap did not pass validation checks. Please retry.';
-      } else if (err.response?.status === 409) {
-        msg = 'A roadmap generation is already in progress for your account.';
-      }
-      setRoadmapError(msg);
-    } finally {
-      setRoadmapLoading(false);
-      setRoadmapProgress(null);
-    }
-  };
-
-  const handleSyncGoalProgress = async (goalId, newProgress) => {
-    try {
-      const updated = await updateGoalStatus(goalId, {
-        progressPercentage: newProgress,
-        status: newProgress === 100 ? 'COMPLETED' : newProgress > 0 ? 'IN_PROGRESS' : 'NOT_STARTED'
-      });
-      setGoals((prev) => prev.map((g) => (g.id === updated.id ? updated : g)));
-      if (selectedGoalForRoadmap && selectedGoalForRoadmap.id === goalId) {
-        setSelectedGoalForRoadmap(updated);
-      }
-    } catch (err) {
-      console.error('Failed to sync progress with goal:', err);
-    }
-  };
-
-  const formatGoalStatus = (status) => {
-    switch (status) {
-      case 'COMPLETED':
-        return <StatusText status="success">Completed</StatusText>;
-      case 'IN_PROGRESS':
-        return <StatusText status="accent">In progress</StatusText>;
-      case 'ARCHIVED':
-        return <StatusText status="neutral">Archived</StatusText>;
-      case 'NOT_STARTED':
-      default:
-        return <StatusText status="neutral">Not started</StatusText>;
+      await toggleTaskCompletion(primaryRoadmap.id, taskItem.taskId, !taskItem.isDone);
+    } catch (e) {
+      console.error('Failed toggling task:', e);
     }
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-16">
-      {/* 1. GREETING & HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-line">
+    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+      {/* ── 1. WELCOME & QUICK ACTIONS ── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-line">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-ink tracking-tight">
-            {getGreeting()}, {user?.name || 'Scholar'}
-          </h1>
-          <p className="text-sm text-muted mt-0.5">
-            {todayFormatted}
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-ink tracking-tight">
+              {getGreeting()}, {user?.name || 'Student'}
+            </h1>
+            <span className="text-xl">👋</span>
+          </div>
+          <p className="text-[13px] text-muted mt-1">
+            {todayFormatted} · Ready to elevate your skills and conquer today's learning objectives?
           </p>
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
           <Button
             variant="secondary"
-            size="sm"
-            onClick={() => {
-              if (onOpenCreateGoal) {
-                onOpenCreateGoal();
-              } else {
-                setIsCreateModalOpen(true);
-              }
-            }}
+            size="md"
+            onClick={() => navigate('#/study-planner')}
+            className="gap-2"
           >
-            Create Goal
+            <Play className="w-4 h-4 text-accent fill-accent/20" />
+            <span>Focus Session</span>
           </Button>
 
           <Button
             variant="primary"
-            size="sm"
-            onClick={() => onNavigateTab && onNavigateTab('my-roadmaps')}
+            size="md"
+            onClick={onOpenCreateGoal}
+            className="gap-2"
           >
-            Create AI Roadmap
+            <Plus className="w-4 h-4" />
+            <span>New Study Goal</span>
           </Button>
         </div>
       </div>
 
-      {/* Action Notification Alert */}
-      {actionMessage && (
-        <div className="p-3 rounded-md bg-accent-soft border border-accent/20 text-accent text-sm flex items-center justify-between">
-          <span>{actionMessage}</span>
-          <button
-            type="button"
-            onClick={() => setActionMessage(null)}
-            className="text-accent hover:underline cursor-pointer text-xs font-medium"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
-      {/* Error Notice */}
-      {error && (
-        <div className="p-3.5 rounded-md bg-red-50 border border-red-200 text-danger text-sm flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
+      {/* ── 2. KEY PERFORMANCE METRICS ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Metric 1: Today's Study Goal */}
+        <Card className="p-4 sm:p-5 flex flex-col justify-between space-y-3">
+          <div className="flex items-center justify-between text-muted">
+            <span className="text-xs font-semibold uppercase tracking-wider">Today's Goal</span>
+            <div className="w-8 h-8 rounded-lg bg-accent/15 text-accent flex items-center justify-center">
+              <Clock className="w-4 h-4" />
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={loadDashboardData}
-            className="font-medium hover:underline cursor-pointer text-xs"
-          >
-            Retry
-          </button>
-        </div>
-      )}
-
-      {/* 2. STATS STRIP: ONE BORDERED STRIP WITH 4 VALUES */}
-      <div className="grid grid-cols-2 md:grid-cols-4 border border-line rounded-lg bg-white divide-y md:divide-y-0 md:divide-x divide-line">
-        <div className="p-4 sm:p-5">
-          <p className="text-xs text-muted">Total goals</p>
-          <p className="text-2xl font-semibold text-ink mt-1">{computedStats.totalGoals}</p>
-        </div>
-        <div className="p-4 sm:p-5">
-          <p className="text-xs text-muted">Active goals</p>
-          <p className="text-2xl font-semibold text-accent mt-1">{computedStats.activeGoals}</p>
-        </div>
-        <div className="p-4 sm:p-5">
-          <p className="text-xs text-muted">Completed goals</p>
-          <p className="text-2xl font-semibold text-success mt-1">{computedStats.completedGoals}</p>
-        </div>
-        <div className="p-4 sm:p-5">
-          <p className="text-xs text-muted">Daily target</p>
-          <p className="text-base sm:text-lg font-semibold text-ink mt-1">
-            Today: {(todayLoggedMinutes / 60).toFixed(1)} of {computedStats.dailyTargetHours} h
-          </p>
-        </div>
-      </div>
-
-      {/* 3. PLANNED TASKS FOR SELECTED DAY (WEEKLY CALENDAR) */}
-      <Card className="p-5 sm:p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-line">
           <div>
-            <h2 className="text-base font-semibold text-ink">
-              Planned tasks for {daysOfWeek[selectedDay]}
-            </h2>
-            <p className="text-xs text-muted mt-0.5">
-              {primaryRoadmap ? (
-                <span>
-                  From active roadmap: <strong>{primaryRoadmap.topic || primaryRoadmap.title}</strong>
-                </span>
-              ) : (
-                'No active roadmap found. Create a roadmap to schedule tasks.'
-              )}
-            </p>
+            <div className="text-2xl font-bold text-ink">
+              {todayLoggedMinutes} <span className="text-sm font-normal text-muted">/ {targetMinutes}m</span>
+            </div>
+            <div className="flex items-center justify-between text-[11px] text-muted mt-1 font-medium">
+              <span>Pace: {dailyTargetHours}h/day</span>
+              <span className="text-accent font-semibold">{dailyProgressPercent}%</span>
+            </div>
           </div>
+          <ProgressBar value={dailyProgressPercent} height="h-1.5" />
+        </Card>
 
-          {selectedDayTasks.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-accent">
-                {selectedDayCompletedCount} of {selectedDayTasks.length} completed
-              </span>
-              <span className="text-xs text-muted">({selectedDayInfo.plannedMinutes} min planned)</span>
+        {/* Metric 2: Learning Streak */}
+        <Card className="p-4 sm:p-5 flex flex-col justify-between space-y-3">
+          <div className="flex items-center justify-between text-muted">
+            <span className="text-xs font-semibold uppercase tracking-wider">Learning Streak</span>
+            <div className="w-8 h-8 rounded-lg bg-warning/15 text-warning flex items-center justify-center">
+              <Flame className="w-4 h-4 fill-warning/20" />
             </div>
-          )}
-        </div>
-
-        {/* Days Selector Strip */}
-        <div className="grid grid-cols-7 gap-1 p-1 bg-page rounded-md border border-line">
-          {daysOfWeek.map((dayName, idx) => {
-            const isSelected = selectedDay === idx;
-            const isToday = new Date().getDay() === idx;
-            const daySched = weeklySchedule[idx];
-            const isRest = !daySched?.isStudyDay;
-
-            return (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => setSelectedDay(idx)}
-                className={`p-2.5 rounded-sm text-center transition cursor-pointer flex flex-col items-center justify-center ${
-                  isSelected
-                    ? 'bg-accent text-white font-medium shadow-sm'
-                    : isRest
-                    ? 'bg-page text-muted hover:bg-slate-100'
-                    : 'hover:bg-surface text-ink'
-                }`}
-              >
-                <span className={`text-xs ${isSelected ? 'text-white/80' : 'text-muted'}`}>
-                  {shortDays[idx]}
-                </span>
-                <span className="text-xs font-semibold mt-0.5">
-                  {isToday ? 'Today' : `D${idx + 1}`}
-                </span>
-                <span className={`text-xs mt-0.5 ${isSelected ? 'text-white/90' : isRest ? 'text-muted' : 'text-accent'}`}>
-                  {isRest ? 'Rest' : 'Study'}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Task List for Selected Day */}
-        {selectedDayInfo.isStudyDay ? (
-          selectedDayTasks.length > 0 ? (
-            <div className="space-y-3 pt-1">
-              {selectedDayInfo.roadmapDay && (
-                <div className="p-2.5 bg-page rounded-md border border-line flex items-center justify-between text-xs">
-                  <span className="font-medium text-ink">
-                    Roadmap Day {selectedDayInfo.roadmapDay.dayNumber} focus
-                  </span>
-                  <span className="text-muted font-mono">
-                    {selectedDayInfo.plannedMinutes} mins estimated
-                  </span>
-                </div>
-              )}
-
-              {selectedDayTasks.map((item) => (
-                <div key={item.taskId} className="space-y-2">
-                  <div
-                    className={`p-4 rounded-md border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                      item.isDone
-                        ? 'border-line bg-page/60 text-muted'
-                        : 'border-line bg-white hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3.5 min-w-0">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleTask(item)}
-                        className={`w-5 h-5 rounded-sm border flex items-center justify-center transition-colors duration-150 cursor-pointer shrink-0 mt-0.5 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
-                          item.isDone
-                            ? 'bg-accent border-accent text-white'
-                            : 'border-line bg-white hover:border-accent'
-                        }`}
-                        title={item.isDone ? 'Mark incomplete' : 'Mark done'}
-                        aria-label={item.isDone ? 'Mark task incomplete' : 'Mark task complete'}
-                      >
-                        {item.isDone && <Check className="w-3.5 h-3.5 stroke-2" />}
-                      </button>
-
-                      <div className="min-w-0 space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className={`text-xs font-semibold ${item.isDone ? 'line-through text-muted' : 'text-ink'}`}>
-                            {item.task.title}
-                          </span>
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-accent-soft text-accent border border-accent/20">
-                            {formatEnum(item.task.activityType || 'Study')}
-                          </span>
-                          <span className="text-xs text-muted flex items-center gap-1 font-mono">
-                            <Clock className="w-3 h-3" />
-                            <span>{item.estimatedMinutes} min</span>
-                          </span>
-                          <span className="text-xs text-muted">
-                            • {item.phaseTitle}
-                          </span>
-                        </div>
-
-                        {item.task.description && (
-                          <p className={`text-xs leading-relaxed ${item.isDone ? 'text-muted/80' : 'text-muted'}`}>
-                            {item.task.description}
-                          </p>
-                        )}
-
-                        {/* Subtopics and Learning Objectives Chips */}
-                        {((item.task.subtopics && item.task.subtopics.length > 0) || (item.task.learningObjectives && item.task.learningObjectives.length > 0)) && (
-                          <div className="flex flex-wrap gap-1.5 pt-1">
-                            {item.task.subtopics?.map((sub, sIdx) => (
-                              <span key={`sub-${sIdx}`} className="text-xs px-1.5 py-0.5 rounded bg-page text-muted border border-line">
-                                {sub}
-                              </span>
-                            ))}
-                            {item.task.learningObjectives?.map((obj, oIdx) => (
-                              <span key={`obj-${oIdx}`} className="text-xs px-1.5 py-0.5 rounded bg-page text-ink border border-line">
-                                Goal: {obj}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                      <button
-                        type="button"
-                        onClick={() => navigate('#/active-study')}
-                        className="text-xs font-medium text-accent hover:underline cursor-pointer px-2.5 py-1.5 rounded-sm border border-accent/20 hover:bg-accent-soft transition"
-                      >
-                        Start Focus
-                      </button>
-                      {primaryRoadmap && (
-                        <button
-                          type="button"
-                          onClick={() => navigate(`#/roadmaps/${primaryRoadmap.id}`)}
-                          className="p-1.5 rounded-sm border border-line hover:border-slate-300 text-muted hover:text-ink transition cursor-pointer"
-                          title="View in full roadmap"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Optional Inline Feedback Prompt */}
-                  {taskFeedbackPrompt?.taskId === item.taskId && (
-                    <div className="flex items-center justify-between text-xs px-3 py-2 bg-page border border-line rounded-md">
-                      <span className="text-muted">How was this task?</span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleRateTask(item.taskId, 'EASY')}
-                          className="px-2 py-0.5 text-xs font-medium rounded border border-line bg-white hover:border-slate-300 text-ink cursor-pointer"
-                        >
-                          Easy
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRateTask(item.taskId, 'OK')}
-                          className="px-2 py-0.5 text-xs font-medium rounded border border-line bg-white hover:border-slate-300 text-ink cursor-pointer"
-                        >
-                          OK
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRateTask(item.taskId, 'HARD')}
-                          className="px-2 py-0.5 text-xs font-medium rounded border border-line bg-white hover:border-slate-300 text-ink cursor-pointer"
-                        >
-                          Hard
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setTaskFeedbackPrompt(null)}
-                          className="text-xs text-muted hover:text-ink cursor-pointer ml-1"
-                        >
-                          Skip
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {feedbackSavedTaskId === item.taskId && (
-                    <div className="text-xs px-3 py-1 text-accent bg-accent-soft rounded border border-accent/20">
-                      Feedback recorded.
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : !primaryRoadmap ? (
-            <div className="py-8 text-center text-muted space-y-2">
-              <Calendar className="w-7 h-7 mx-auto text-muted mb-1" />
-              <p className="text-sm font-semibold text-ink">No active roadmap found</p>
-              <p className="text-xs text-muted max-w-sm mx-auto">
-                Create a goal and generate an AI study roadmap to see scheduled tasks for {daysOfWeek[selectedDay]}.
-              </p>
-              <div className="pt-2">
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => onNavigateTab && onNavigateTab('my-roadmaps')}
-                >
-                  Create AI Roadmap
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="py-8 text-center text-muted space-y-1">
-              <CheckCircle2 className="w-7 h-7 mx-auto text-success mb-1" />
-              <p className="text-sm font-semibold text-ink">All tasks for {daysOfWeek[selectedDay]} are completed!</p>
-              <p className="text-xs text-muted">You have finished all queued tasks for this study day.</p>
-            </div>
-          )
-        ) : (
-          <div className="py-8 text-center text-muted space-y-1.5 bg-page rounded-md border border-line">
-            <Coffee className="w-7 h-7 mx-auto text-muted mb-1" />
-            <p className="text-sm font-semibold text-ink">Scheduled Rest & Recovery Day</p>
-            <p className="text-xs text-muted max-w-sm mx-auto">
-              Your profile is configured for {availableDaysCount} study days per week. Use this day to rest, reflect, or review past notes.
-            </p>
           </div>
-        )}
-      </Card>
-
-      {/* 4. GOALS: COMPACT CONSOLIDATED LIST */}
-      <Card className="p-5 sm:p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-line">
           <div>
-            <h2 className="text-base font-semibold text-ink">
-              Goals
-            </h2>
-            <p className="text-xs text-muted mt-0.5">
-              Your active learning targets and roadmaps
+            <div className="text-2xl font-bold text-ink flex items-center gap-1.5">
+              {stats?.studyStreakDays || 1} <span className="text-sm font-normal text-muted">days</span>
+            </div>
+            <p className="text-[11px] text-muted mt-1 font-medium">
+              Consecutive study days logged
             </p>
           </div>
-
-          {/* Filter Tabs */}
-          <div className="flex flex-wrap items-center gap-1">
-            {[
-              { id: 'ALL', label: 'All' },
-              { id: 'IN_PROGRESS', label: 'In progress' },
-              { id: 'NOT_STARTED', label: 'Not started' },
-              { id: 'COMPLETED', label: 'Completed' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setStatusFilter(tab.id)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors duration-150 cursor-pointer min-h-9 ${
-                  statusFilter === tab.id
-                    ? 'bg-ink text-white'
-                    : 'text-muted hover:text-ink hover:bg-page'
+          <div className="flex items-center gap-1">
+            {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+              <div
+                key={d}
+                className={`flex-1 h-1.5 rounded-full ${
+                  d <= (stats?.studyStreakDays || 1) ? 'bg-warning' : 'bg-line'
                 }`}
-              >
-                {tab.label}
-              </button>
+              />
             ))}
           </div>
-        </div>
+        </Card>
 
-        {/* Goals List */}
-        {filteredGoals.length > 0 ? (
-          <div className="space-y-3">
-            {filteredGoals.map((goal) => {
-              const matchedRoadmap = savedRoadmaps.find(
-                (r) => r.goalId === goal.id || r.topic === goal.title
-              );
+        {/* Metric 3: Total Study Hours */}
+        <Card className="p-4 sm:p-5 flex flex-col justify-between space-y-3">
+          <div className="flex items-center justify-between text-muted">
+            <span className="text-xs font-semibold uppercase tracking-wider">Total Progress</span>
+            <div className="w-8 h-8 rounded-lg bg-accent-secondary/15 text-accent-secondary flex items-center justify-center">
+              <Zap className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-ink">
+              {totalStudyHours} <span className="text-sm font-normal text-muted">hours</span>
+            </div>
+            <p className="text-[11px] text-muted mt-1 font-medium">
+              Across {savedRoadmaps.length} learning paths
+            </p>
+          </div>
+          <div className="flex items-center justify-between text-[11px] text-muted">
+            <span>{savedRoadmaps.length} Curriculums</span>
+            <span className="text-accent-secondary font-medium font-mono">{goals.length} Goals</span>
+          </div>
+        </Card>
 
-              return (
-                <div
-                  key={goal.id}
-                  className="p-4 rounded-md border border-line bg-white hover:border-slate-300 transition-colors duration-150 space-y-3"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-ink truncate">
-                          {goal.title}
-                        </h3>
-                        {formatGoalStatus(goal.status)}
+        {/* Metric 4: Overall Roadmap Completion */}
+        <Card className="p-4 sm:p-5 flex flex-col justify-between space-y-3">
+          <div className="flex items-center justify-between text-muted">
+            <span className="text-xs font-semibold uppercase tracking-wider">Completion Rate</span>
+            <div className="w-8 h-8 rounded-lg bg-success/15 text-success flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-ink">
+              {overallAvgProgress}% <span className="text-sm font-normal text-muted">avg</span>
+            </div>
+            <p className="text-[11px] text-muted mt-1 font-medium">
+              {completedRoadmapsCount} finished · {inProgressRoadmapsCount} active
+            </p>
+          </div>
+          <ProgressBar value={overallAvgProgress} variant="success" height="h-1.5" />
+        </Card>
+      </div>
+
+      {/* ── 3. HERO: "YOUR NEXT STEP / CONTINUE LEARNING" ── */}
+      {nextRecommendedTask && primaryRoadmap ? (
+        <Card
+          highlight
+          className="p-5 sm:p-6 bg-gradient-to-br from-surface via-surface to-surface-secondary space-y-4"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Badge variant="glow" size="sm">
+                <Sparkles className="w-3.5 h-3.5 text-accent" />
+                <span>YOUR NEXT STEP · RECOMMENDED NOW</span>
+              </Badge>
+              <span className="text-xs text-muted font-medium">
+                From {primaryRoadmap.topic || primaryRoadmap.title}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <Badge variant="accent" size="sm">
+                Day {nextRecommendedTask.dayNumber} · {nextRecommendedTask.phaseTitle}
+              </Badge>
+              <Badge variant="neutral" size="sm">
+                {nextRecommendedTask.estimatedMinutes} mins
+              </Badge>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <h2 className="text-xl sm:text-2xl font-bold text-ink tracking-tight">
+              {nextRecommendedTask.task.title}
+            </h2>
+            <p className="text-[13px] text-muted leading-relaxed max-w-4xl">
+              {nextRecommendedTask.task.description ||
+                nextRecommendedTask.task.conceptExplanation ||
+                'Master core practical principles and work through hands-on implementation.'}
+            </p>
+          </div>
+
+          <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-line">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => handleToggleTask(nextRecommendedTask)}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-line bg-surface hover:bg-surface-secondary text-[13px] font-medium text-ink transition cursor-pointer min-h-[38px]"
+              >
+                {nextRecommendedTask.isDone ? (
+                  <Check className="w-4 h-4 text-success" />
+                ) : (
+                  <Circle className="w-4 h-4 text-muted" />
+                )}
+                <span>{nextRecommendedTask.isDone ? 'Mark Incomplete' : 'Mark as Done'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(
+                    `#/ai-assistant?topic=${encodeURIComponent(
+                      nextRecommendedTask.task.title
+                    )}`
+                  )
+                }
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-line hover:border-accent/40 bg-surface text-[13px] font-medium text-muted hover:text-accent transition cursor-pointer min-h-[38px]"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-accent" />
+                <span>Ask AI Tutor</span>
+              </button>
+            </div>
+
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() =>
+                navigate(
+                  `#/roadmaps/${primaryRoadmap.id}/day/${nextRecommendedTask.dayNumber}`
+                )
+              }
+              className="gap-2"
+            >
+              <span>Continue Learning</span>
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </Card>
+      ) : (
+        <Card className="p-6 text-center space-y-3">
+          <div className="w-12 h-12 rounded-xl bg-accent/15 text-accent flex items-center justify-center mx-auto">
+            <Compass className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-semibold text-ink">Ready to Start Your Learning Journey?</h3>
+          <p className="text-[13px] text-muted max-w-md mx-auto">
+            You don't have an active study roadmap yet. Generate an adaptive curriculum with Gemini AI to get structured daily topics.
+          </p>
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => navigate('#/roadmaps/new')}
+            className="gap-2 mx-auto"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Create AI Roadmap</span>
+          </Button>
+        </Card>
+      )}
+
+      {/* ── 4. TWO-COLUMN MAIN CONTENT ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column: Today's Tasks & Weekly Study Activity (7 cols) */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* Today's Study Tasks */}
+          <Card className="p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-accent" />
+                <h3 className="text-base font-semibold text-ink">Today's Study Curriculum</h3>
+              </div>
+              <span className="text-xs font-medium text-muted">
+                Day {nextRecommendedTask?.dayNumber || 1} tasks
+              </span>
+            </div>
+
+            {todaysTasks.length > 0 ? (
+              <div className="space-y-2.5">
+                {todaysTasks.map((t) => (
+                  <div
+                    key={t.taskId}
+                    className={`p-3.5 rounded-xl border transition-all flex items-start gap-3 ${
+                      t.isDone
+                        ? 'bg-surface-secondary/50 border-line opacity-75'
+                        : 'bg-surface border-line hover:border-line-highlight'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleToggleTask(t)}
+                      className="mt-0.5 text-muted hover:text-accent transition cursor-pointer"
+                      aria-label={`Toggle task ${t.task.title}`}
+                    >
+                      {t.isDone ? (
+                        <CheckCircle2 className="w-5 h-5 text-success" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-muted" />
+                      )}
+                    </button>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={`text-[13px] font-semibold text-ink truncate ${
+                            t.isDone ? 'line-through text-muted' : ''
+                          }`}
+                        >
+                          {t.task.title}
+                        </span>
+                        <span className="text-xs font-mono text-muted shrink-0">
+                          {t.estimatedMinutes}m
+                        </span>
                       </div>
-                      {goal.description && (
+                      {t.task.description && (
                         <p className="text-xs text-muted mt-0.5 line-clamp-1">
-                          {goal.description}
+                          {t.task.description}
                         </p>
                       )}
                     </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted py-4 text-center">
+                All tasks for today are complete! Relax or explore upcoming topics.
+              </p>
+            )}
+          </Card>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      {matchedRoadmap ? (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => navigate(`#/roadmaps/${matchedRoadmap.id}`)}
-                        >
-                          View Roadmap
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() => navigate(`#/roadmaps/new?goal=${goal.id}`)}
-                        >
-                          Generate Roadmap
-                        </Button>
-                      )}
+          {/* Weekly Study Activity Chart */}
+          <Card className="p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-accent" />
+                <h3 className="text-base font-semibold text-ink">Weekly Study Activity</h3>
+              </div>
+              <span className="text-xs font-medium text-muted">
+                {weeklyActivity.reduce((acc, d) => acc + d.minutes, 0)} mins logged this week
+              </span>
+            </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteGoal(goal.id)}
-                        className="p-1.5 text-muted hover:text-danger rounded-md hover:bg-page transition-colors duration-150 cursor-pointer"
-                        title="Delete Goal"
-                        aria-label={`Delete goal ${goal.title}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+            <div className="grid grid-cols-7 gap-2 pt-2">
+              {weeklyActivity.map((day) => (
+                <div
+                  key={day.name}
+                  onClick={() => setSelectedDayIndex(day.index)}
+                  className={`flex flex-col items-center p-2.5 rounded-xl border transition cursor-pointer ${
+                    day.isToday
+                      ? 'bg-accent/15 border-accent/40 shadow-xs'
+                      : selectedDayIndex === day.index
+                      ? 'bg-surface-secondary border-line-highlight'
+                      : 'bg-surface border-line hover:border-line-highlight'
+                  }`}
+                >
+                  <span className="text-[11px] font-semibold text-muted mb-2">
+                    {day.name}
+                  </span>
+
+                  {/* Vertical mini bar */}
+                  <div className="w-3 h-16 bg-line/60 rounded-full flex flex-col justify-end overflow-hidden mb-2">
+                    <div
+                      className={`w-full transition-all duration-500 rounded-full ${
+                        day.isToday
+                          ? 'bg-accent'
+                          : day.minutes > 0
+                          ? 'bg-accent-secondary'
+                          : 'bg-transparent'
+                      }`}
+                      style={{ height: `${Math.max(12, day.pct)}%` }}
+                    />
                   </div>
 
-                  {/* Progress Bar & Numerical Percentage */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted">
-                        Progress: <strong className="text-ink">{goal.progressPercentage || 0}%</strong>
-                      </span>
-                      <span className="text-muted">
-                        {goal.targetDays || 30} days · {goal.hoursPerDay || 2}h/day
-                      </span>
-                    </div>
-                    <ProgressBar value={goal.progressPercentage || 0} />
-                  </div>
+                  <span className="text-[11px] font-mono font-medium text-ink">
+                    {day.minutes > 0 ? `${day.minutes}m` : '-'}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        ) : (
-          <EmptyState
-            title="No goals found"
-            description="Create your first study goal to start tracking progress."
-            action={
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  if (onOpenCreateGoal) {
-                    onOpenCreateGoal();
-                  } else {
-                    setIsCreateModalOpen(true);
-                  }
-                }}
-              >
-                Create Goal
-              </Button>
-            }
-          />
-        )}
-      </Card>
+              ))}
+            </div>
+          </Card>
+        </div>
 
-      {/* Global Modals */}
-      <CreateGoalModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onGoalCreated={() => {
-          setIsCreateModalOpen(false);
-          loadDashboardData();
-        }}
-      />
-
-      {/* Inline Roadmap Generation / Inspection Modal if not navigated */}
-      {selectedGoalForRoadmap && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 overflow-y-auto bg-black/40 flex items-center justify-center p-4"
-          onClick={handleCloseRoadmap}
-        >
-          <div
-            className="bg-white rounded-lg w-full max-w-4xl border border-line my-8 overflow-hidden shadow-md"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between p-4 border-b border-line">
-              <h3 className="text-base font-semibold text-ink">
-                Roadmap: {selectedGoalForRoadmap.title}
-              </h3>
+        {/* Right Column: Active Roadmaps, Recently Studied, Deadlines (5 cols) */}
+        <div className="lg:col-span-5 space-y-6">
+          {/* Active Roadmap Snapshot */}
+          <Card className="p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
+              <div className="flex items-center gap-2">
+                <Compass className="w-4 h-4 text-accent" />
+                <h3 className="text-base font-semibold text-ink">Active Curriculums</h3>
+              </div>
               <button
                 type="button"
-                onClick={handleCloseRoadmap}
-                className="p-1 rounded-md text-muted hover:text-ink cursor-pointer"
-                aria-label="Close dialog"
+                onClick={() => navigate('#/roadmaps')}
+                className="text-xs text-accent font-medium hover:underline flex items-center gap-0.5"
               >
-                <X className="w-5 h-5" />
+                <span>View all</span>
+                <ChevronRight className="w-3 h-3" />
               </button>
             </div>
 
-            <div className="p-6">
-              {roadmapLoading ? (
-                <div className="py-16 text-center space-y-3">
-                  <Loader2 className="w-7 h-7 text-accent animate-spin mx-auto mb-2" />
-                  <p className="text-sm font-medium text-ink">
-                    {roadmapProgress || 'Generating curriculum roadmap with Gemini AI...'}
-                  </p>
-                  <p className="text-xs text-muted">
-                    Calibrating daily tasks, exercises, and study schedule.
-                  </p>
-                </div>
-              ) : generatedRoadmap ? (
-                <InteractiveRoadmap
-                  roadmap={generatedRoadmap}
-                  goal={selectedGoalForRoadmap}
-                  savedRoadmapId={existingSavedRoadmap?.id}
-                  onBack={handleCloseRoadmap}
-                  onProgressUpdate={(pct) => handleSyncGoalProgress(selectedGoalForRoadmap.id, pct)}
-                  onRegenerate={handleGenerateRoadmap}
-                />
-              ) : (
-                <div className="space-y-4">
-                  {roadmapError && (
-                    <div className="p-3 rounded-md bg-red-50 border border-red-200 text-danger text-xs">
-                      {roadmapError}
+            {savedRoadmaps.length > 0 ? (
+              <div className="space-y-3">
+                {savedRoadmaps.slice(0, 3).map((r) => {
+                  const pct = r.progressPercentage || 0;
+                  return (
+                    <div
+                      key={r.id}
+                      onClick={() => navigate(`#/roadmaps/${r.id}`)}
+                      className="p-3.5 rounded-xl border border-line bg-surface hover:border-accent/40 hover:bg-surface-secondary transition cursor-pointer space-y-2 group"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-[13px] font-semibold text-ink group-hover:text-accent transition-colors truncate">
+                          {r.topic || r.title}
+                        </span>
+                        <span className="text-xs font-mono font-semibold text-accent shrink-0">
+                          {pct}%
+                        </span>
+                      </div>
+                      <ProgressBar value={pct} height="h-1.5" />
+                      <div className="flex items-center justify-between text-[11px] text-muted">
+                        <span>{r.targetDays || 30} days · {r.skillLevel || 'INTERMEDIATE'}</span>
+                        <span className="text-accent font-medium flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                          Open <ArrowRight className="w-3 h-3" />
+                        </span>
+                      </div>
                     </div>
-                  )}
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-muted text-center py-4">
+                No roadmaps found. Click Create AI Roadmap to get started.
+              </p>
+            )}
+          </Card>
 
-                  <p className="text-sm text-muted">
-                    No roadmap has been generated for this goal yet. Configure preferences or generate directly.
-                  </p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-ink mb-1">Target Days</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="365"
-                        value={roadmapPrefs.targetDays}
-                        onChange={(e) => setRoadmapPrefs({ ...roadmapPrefs, targetDays: e.target.value })}
-                        className="w-full px-3 py-2 text-sm rounded-md border border-line focus:border-accent outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-ink mb-1">Hours Per Day</label>
-                      <input
-                        type="number"
-                        step="0.5"
-                        min="0.5"
-                        max="24"
-                        value={roadmapPrefs.hoursPerDay}
-                        onChange={(e) => setRoadmapPrefs({ ...roadmapPrefs, hoursPerDay: e.target.value })}
-                        className="w-full px-3 py-2 text-sm rounded-md border border-line focus:border-accent outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-4 border-t border-line">
-                    <Button variant="secondary" size="sm" onClick={handleCloseRoadmap}>
-                      Cancel
-                    </Button>
-                    <Button variant="primary" size="sm" onClick={handleGenerateRoadmap}>
-                      Generate Roadmap
-                    </Button>
-                  </div>
-                </div>
-              )}
+          {/* Recently Studied Topics */}
+          <Card className="p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
+              <div className="flex items-center gap-2">
+                <Award className="w-4 h-4 text-success" />
+                <h3 className="text-base font-semibold text-ink">Recently Studied</h3>
+              </div>
+              <span className="text-xs font-medium text-muted">
+                {recentlyCompletedTasks.length} topics
+              </span>
             </div>
-          </div>
+
+            {recentlyCompletedTasks.length > 0 ? (
+              <div className="space-y-2.5">
+                {recentlyCompletedTasks.map((item) => (
+                  <div
+                    key={item.taskId}
+                    className="p-3 rounded-xl border border-line bg-surface-secondary/40 flex items-center justify-between gap-2 text-xs"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+                      <span className="font-medium text-ink truncate">
+                        {item.task.title}
+                      </span>
+                    </div>
+                    <span className="text-muted shrink-0 font-mono">
+                      Day {item.dayNumber}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted text-center py-3">
+                Completed study topics will appear here.
+              </p>
+            )}
+          </Card>
+
+          {/* Upcoming Deadlines / Goals */}
+          <Card className="p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-accent" />
+                <h3 className="text-base font-semibold text-ink">Upcoming Deadlines</h3>
+              </div>
+              <button
+                type="button"
+                onClick={onOpenCreateGoal}
+                className="text-xs text-accent font-medium hover:underline flex items-center gap-0.5"
+              >
+                <Plus className="w-3 h-3" /> Add Goal
+              </button>
+            </div>
+
+            {goals.length > 0 ? (
+              <div className="space-y-2.5">
+                {goals.slice(0, 3).map((g) => (
+                  <div
+                    key={g.id}
+                    className="p-3 rounded-xl border border-line bg-surface flex items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <span className="text-[13px] font-semibold text-ink block truncate">
+                        {g.title}
+                      </span>
+                      <span className="text-[11px] text-muted">
+                        Target: {g.targetDays || 30} days · {g.hoursPerDay || 2}h/day
+                      </span>
+                    </div>
+                    <Badge variant={g.status === 'COMPLETED' ? 'success' : 'accent'} size="xs">
+                      {formatEnum(g.status || 'IN_PROGRESS')}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted text-center py-3">
+                No active learning goals registered yet.
+              </p>
+            )}
+          </Card>
         </div>
-      )}
+      </div>
     </div>
   );
 };
