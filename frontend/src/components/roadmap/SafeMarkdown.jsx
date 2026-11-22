@@ -227,7 +227,7 @@ const CodeBlock = ({ code, language }) => {
 
   return (
     <div className="relative my-3 rounded-md border border-line bg-page overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-1.5 bg-surface border-b border-line text-[12px] text-muted">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-surface border-b border-line text-[13px] text-muted">
         <span className="font-mono uppercase">{language || 'code'}</span>
         <button
           type="button"

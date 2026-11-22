@@ -84,7 +84,7 @@ export const PhaseDayStrip = ({
                 <span className="font-semibold text-[13px] truncate text-ink">
                   {phase.cleanTitle}
                 </span>
-                <span className="text-[12px] text-muted shrink-0">
+                <span className="text-[13px] text-muted shrink-0">
                   {phase.completedDays}/{phase.totalDays}
                 </span>
               </div>

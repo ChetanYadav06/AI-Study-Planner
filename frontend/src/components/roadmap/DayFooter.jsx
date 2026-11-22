@@ -20,7 +20,7 @@ export const DayFooter = ({
           </div>
         ) : nextTaskItem ? (
           <div className="space-y-0.5 truncate">
-            <span className="text-[12px] font-medium text-muted block uppercase tracking-wide">
+            <span className="text-[13px] font-medium text-muted block">
               Up next
             </span>
             <p className="text-[13px] font-medium text-ink truncate">

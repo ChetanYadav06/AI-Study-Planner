@@ -43,7 +43,7 @@ export const PhaseExtrasAccordion = ({ phase }) => {
                 <Award className="w-4 h-4 text-accent" />
                 <span>Phase Assessment: {phase.assessment.title || 'Mastery Evaluation'}</span>
                 {phase.assessment.type && (
-                  <span className="text-[11px] font-medium px-2 py-0.5 rounded border border-line bg-page text-muted">
+                  <span className="text-[13px] font-medium px-2 py-0.5 rounded border border-line bg-page text-muted">
                     {formatEnum(phase.assessment.type)}
                   </span>
                 )}
@@ -54,7 +54,7 @@ export const PhaseExtrasAccordion = ({ phase }) => {
                 </p>
               )}
               {phase.assessment.passingCriteria && (
-                <div className="text-[12px] text-muted bg-page p-2.5 rounded border border-line">
+                <div className="text-[13px] text-muted bg-page p-2.5 rounded border border-line">
                   <span className="font-semibold text-ink">Passing criteria: </span>
                   <span>{phase.assessment.passingCriteria}</span>
                 </div>
@@ -80,13 +80,13 @@ export const PhaseExtrasAccordion = ({ phase }) => {
                         {ex.title || `Exercise ${idx + 1}`}
                       </span>
                       {ex.difficulty && (
-                        <span className="text-[11px] font-medium px-1.5 py-0.2 rounded border border-line bg-surface text-muted">
+                        <span className="text-[13px] font-medium px-1.5 py-0.2 rounded border border-line bg-surface text-muted">
                           {formatEnum(ex.difficulty)}
                         </span>
                       )}
                     </div>
                     {ex.instructions && (
-                      <p className="text-muted leading-relaxed text-[12px]">
+                      <p className="text-muted leading-relaxed text-[13px]">
                         {ex.instructions}
                       </p>
                     )}
@@ -116,8 +116,8 @@ export const PhaseExtrasAccordion = ({ phase }) => {
                       <span className="font-medium block truncate text-ink">
                         {res.title || res.name}
                       </span>
-                      <span className="text-[11px] text-muted block uppercase">
-                        {res.type || 'Resource'}
+                      <span className="text-[13px] text-muted block">
+                        {formatEnum(res.type || 'Resource')}
                       </span>
                     </div>
                     <ExternalLink className="w-3.5 h-3.5 text-muted shrink-0" />

@@ -88,13 +88,13 @@ export const TopicCard = ({
               </span>
 
               {minutes != null && (
-                <span className="text-[12px] font-medium px-2 py-0.5 rounded border border-line bg-page text-muted">
+                <span className="text-[13px] font-medium px-2 py-0.5 rounded border border-line bg-page text-muted">
                   {minutes} min
                 </span>
               )}
 
               {isExtra && (
-                <span className="text-[11px] font-medium px-1.5 py-0.2 rounded border border-line bg-page text-accent">
+                <span className="text-[13px] font-medium px-1.5 py-0.2 rounded border border-line bg-page text-accent">
                   Optional
                 </span>
               )}
