@@ -22,14 +22,12 @@ import {
 } from '../../services/api';
 import { Button, Card, ProgressBar } from '../ui';
 import { TopicsKnowledgeSection, KNOWLEDGE_LEVELS } from './TopicsKnowledgeSection';
-import { LearningPreferencesSection } from './LearningPreferencesSection';
 
 export const ProfileView = () => {
   const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
-  const [savingPreferences, setSavingPreferences] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
   const [profile, setProfile] = useState(null);
@@ -118,28 +116,6 @@ export const ProfileView = () => {
     }
   };
 
-  // Save Learning Preferences section
-  const handleSavePreferences = async (preferencesData) => {
-    setSavingPreferences(true);
-    try {
-      const payload = {
-        careerGoal: profile?.careerGoal || editCareerGoal,
-        educationLevel: profile?.educationLevel || editEducationLevel,
-        academicBackground: profile?.academicBackground || editAcademicBackground,
-        experienceLevel: profile?.experienceLevel || editExperienceLevel,
-        ...preferencesData
-      };
-
-      const updated = await updateStudentProfile(payload);
-      setProfile(updated);
-      showToast('Learning preferences saved and synchronized with Gemini.');
-    } catch (err) {
-      console.error('Failed to update learning preferences:', err);
-      showToast('Error saving preferences.');
-    } finally {
-      setSavingPreferences(false);
-    }
-  };
 
   // Topic Knowledge handlers
   const handleAddSkill = async (e) => {
@@ -313,13 +289,6 @@ export const ProfileView = () => {
         onUpdateLevel={handleUpdateLevel}
         onDeleteSkill={handleDeleteSkill}
         onOpenAddModal={() => setIsSkillModalOpen(true)}
-      />
-
-      {/* ── SECTION 2: LEARNING PREFERENCES ── */}
-      <LearningPreferencesSection
-        initialProfile={profile}
-        onSavePreferences={handleSavePreferences}
-        isSaving={savingPreferences}
       />
 
       {/* ── MODAL: EDIT BACKGROUND ── */}

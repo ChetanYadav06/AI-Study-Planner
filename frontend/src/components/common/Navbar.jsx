@@ -28,11 +28,11 @@ export const Navbar = ({ onOpenAuth, onNavigateProfile, onToggleMobileMenu }) =>
     'study-planner': 'Tasks & Calendar',
     'active-study': 'Active Study & Pomodoro',
     'progress': 'Progress Analytics',
-    'resources': 'Notes & Resources',
+    'resources': 'My Notes',
     'profile': 'Settings & Profile'
   };
 
-  const currentTitle = routeTitles[route] || 'Pathwise';
+  const currentTitle = routeTitles[route] || 'AI Study Planner';
 
   return (
     <header className="sticky top-0 z-30 bg-surface-1/90 backdrop-blur-md border-b border-border h-[var(--header-h,3.5rem)] select-none">
@@ -50,7 +50,7 @@ export const Navbar = ({ onOpenAuth, onNavigateProfile, onToggleMobileMenu }) =>
           </button>
 
           <div className="flex items-center gap-2 min-w-0 text-sm">
-            <span className="text-text-muted hidden sm:inline">Pathwise</span>
+            <span className="text-text-muted hidden sm:inline">AI Study Planner</span>
             <ChevronRight className="w-3.5 h-3.5 text-text-muted/60 hidden sm:inline" />
             <span className="font-semibold text-text truncate">
               {currentTitle}

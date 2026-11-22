@@ -7,13 +7,18 @@ import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 const NOTES_STORAGE_KEY = 'pathwise_student_notes';
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
+const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15 MB
 const ACCEPTED_TYPES = ['.txt', '.md'];
 const ACCEPTED_MIME = ['text/plain', 'text/markdown'];
 
-const readFileAsText = (file) =>
+const readFileAsText = (file, onProgress) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
+    reader.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
     reader.onload = () => resolve(reader.result);
     reader.onerror = () => reject(new Error('Could not read file'));
     reader.readAsText(file);
@@ -68,6 +73,7 @@ export const SavedResourcesView = () => {
   const [noteToDelete, setNoteToDelete] = useState(null);
   const [toastMsg, setToastMsg] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(null);
   const fileInputRef = useRef(null);
 
   // Persist on every change
@@ -92,12 +98,13 @@ export const SavedResourcesView = () => {
 
     // Validate size
     if (file.size > MAX_FILE_SIZE) {
-      showToast(`File too large. Maximum is ${formatBytes(MAX_FILE_SIZE)}.`);
+      showToast(`File "${file.name}" exceeds the 15 MB limit (${formatBytes(file.size)}). Upload rejected.`);
       return;
     }
 
     try {
-      const content = await readFileAsText(file);
+      setUploadProgress(10);
+      const content = await readFileAsText(file, (pct) => setUploadProgress(pct));
       const newNote = {
         id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         name: file.name,
@@ -106,9 +113,11 @@ export const SavedResourcesView = () => {
         uploadedAt: new Date().toISOString(),
       };
       setNotes((prev) => [newNote, ...prev]);
-      showToast(`"${file.name}" uploaded.`);
+      showToast(`"${file.name}" uploaded successfully.`);
     } catch {
-      showToast('Failed to read file.');
+      showToast(`Failed to read "${file.name}".`);
+    } finally {
+      setTimeout(() => setUploadProgress(null), 800);
     }
   }, []);
 
@@ -171,6 +180,21 @@ export const SavedResourcesView = () => {
       )}
 
       {/* Upload area */}
+      {uploadProgress !== null && (
+        <div className="p-3 rounded-[10px] bg-surface-2 border border-border text-xs text-text space-y-1.5 animate-in fade-in">
+          <div className="flex justify-between font-medium">
+            <span>Reading & processing note...</span>
+            <span className="font-mono text-accent">{uploadProgress}%</span>
+          </div>
+          <div className="w-full h-1.5 bg-surface-1 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-accent-solid rounded-full transition-all duration-150"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       <div
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -192,7 +216,7 @@ export const SavedResourcesView = () => {
           {isDragOver ? 'Drop files here' : 'Click or drag files to upload'}
         </p>
         <p className="text-xs text-text-muted mt-1">
-          Accepts {ACCEPTED_TYPES.join(', ')} up to {formatBytes(MAX_FILE_SIZE)}
+          Accepts .txt, .md up to 15 MB
         </p>
         <input
           ref={fileInputRef}

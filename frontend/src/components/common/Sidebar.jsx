@@ -132,7 +132,7 @@ export const Sidebar = ({
             </div>
             {!isCollapsed && (
               <span className="font-bold text-base text-text tracking-tight">
-                Pathwise
+                AI Study Planner
               </span>
             )}
           </div>
