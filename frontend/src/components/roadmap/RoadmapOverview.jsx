@@ -23,6 +23,7 @@ export const RoadmapOverview = ({
   totalTopics = 0,
   completedTopicsCount = 0,
   progressPercentage = 0,
+  currentPhaseTitle = null,
   onBack,
   onRegenerate,
   regenerating = false,
@@ -37,6 +38,7 @@ export const RoadmapOverview = ({
   const hoursPerDay = roadmap.hoursPerDay || 2;
   const minutesPerDay = Math.round(hoursPerDay * 60);
   const totalStudyHours = roadmap.totalStudyHours || Math.round(targetDays * hoursPerDay);
+  const remainingHours = Math.max(0, Math.round((totalStudyHours * (1 - (progressPercentage / 100))) * 10) / 10);
 
   const handleExport = () => {
     if (onCopyMarkdown) {
@@ -153,44 +155,54 @@ export const RoadmapOverview = ({
         </div>
 
         {/* Multi-Stat Snapshot Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-line text-xs">
-          <div className="p-3 rounded-lg bg-surface-secondary/60 border border-line flex items-center gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-4 border-t border-border text-xs">
+          <div className="p-3 rounded-lg bg-surface-1 border border-border flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-accent/15 text-accent flex items-center justify-center shrink-0">
               <Layers className="w-4 h-4" />
             </div>
-            <div>
-              <span className="text-[11px] text-muted font-medium block">Total Modules</span>
-              <span className="text-[13px] font-bold text-ink">{totalModules} Modules</span>
+            <div className="min-w-0">
+              <span className="text-[11px] text-text-muted font-medium block">Current Phase</span>
+              <span className="text-[13px] font-bold text-text truncate block">{currentPhaseTitle || `Phase 1 of ${totalModules}`}</span>
             </div>
           </div>
 
-          <div className="p-3 rounded-lg bg-surface-secondary/60 border border-line flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-accent-secondary/15 text-accent-secondary flex items-center justify-center shrink-0">
+          <div className="p-3 rounded-lg bg-surface-1 border border-border flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-info/15 text-info flex items-center justify-center shrink-0">
               <BookOpen className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-[11px] text-muted font-medium block">Total Topics</span>
-              <span className="text-[13px] font-bold text-ink">{totalTopics} Study Days</span>
+              <span className="text-[11px] text-text-muted font-medium block">Target Plan</span>
+              <span className="text-[13px] font-bold text-text">{targetDays} Days</span>
             </div>
           </div>
 
-          <div className="p-3 rounded-lg bg-surface-secondary/60 border border-line flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-success/15 text-success flex items-center justify-center shrink-0">
+          <div className="p-3 rounded-lg bg-surface-1 border border-border flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-done/15 text-done flex items-center justify-center shrink-0">
+              <Check className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-[11px] text-text-muted font-medium block">Completed Topics</span>
+              <span className="text-[13px] font-bold text-text">{completedTopicsCount} / {totalTopics} Done</span>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-lg bg-surface-1 border border-border flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-warning/15 text-warning flex items-center justify-center shrink-0">
               <Clock className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-[11px] text-muted font-medium block">Est. Total Time</span>
-              <span className="text-[13px] font-bold text-ink">{totalStudyHours} Hours</span>
+              <span className="text-[11px] text-text-muted font-medium block">Est. Total Time</span>
+              <span className="text-[13px] font-bold text-text">{totalStudyHours}h ({minutesPerDay}m/d)</span>
             </div>
           </div>
 
-          <div className="p-3 rounded-lg bg-surface-secondary/60 border border-line flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-warning/15 text-warning flex items-center justify-center shrink-0">
+          <div className="p-3 rounded-lg bg-surface-1 border border-border flex items-center gap-2.5 col-span-2 sm:col-span-1">
+            <div className="w-8 h-8 rounded-lg bg-next/15 text-next flex items-center justify-center shrink-0">
               <Target className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-[11px] text-muted font-medium block">Daily Target</span>
-              <span className="text-[13px] font-bold text-ink">{minutesPerDay}m / day</span>
+              <span className="text-[11px] text-text-muted font-medium block">Remaining Time</span>
+              <span className="text-[13px] font-bold text-text">{remainingHours} Hours Left</span>
             </div>
           </div>
         </div>

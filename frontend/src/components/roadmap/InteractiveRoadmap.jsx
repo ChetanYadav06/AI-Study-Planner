@@ -3,7 +3,9 @@ import {
   Compass,
   Zap,
   Target,
-  AlertCircle
+  AlertCircle,
+  Route,
+  ListTree
 } from 'lucide-react';
 import {
   getSavedRoadmapById,
@@ -15,8 +17,9 @@ import { NotFoundView } from '../common/NotFoundView';
 import { getCanonicalTaskId } from '../../utils/studyQueue';
 import { RoadmapOverview } from './RoadmapOverview';
 import { NextStepHero } from './NextStepHero';
-import { LearningPathModule } from './LearningPathModule';
-import { TopicDetailDrawer } from './TopicDetailDrawer';
+import { RoadmapJourneyCanvas } from './RoadmapJourneyCanvas';
+import { CurriculumTreeView } from './CurriculumTreeView';
+import { FullPageDayView } from './FullPageDayView';
 
 export const InteractiveRoadmap = ({
   roadmap: initialRoadmap = null,
@@ -45,18 +48,14 @@ export const InteractiveRoadmap = ({
   // Choice mode: 'path' (Follow the path) | 'quick-win' (Quick win) | 'interview' (Interview prep)
   const [choiceMode, setChoiceMode] = useState('path');
 
-  // Drawer detail state
-  const [selectedTaskItem, setSelectedTaskItem] = useState(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  // View mode: 'visual' (Node-based Subway Canvas) | 'tree' (Curriculum Tree)
+  const [viewMode, setViewMode] = useState('visual');
 
   // Expansions state for AI deep dives
   const [expansionsCache, setExpansionsCache] = useState({});
   const [loadingExpansion, setLoadingExpansion] = useState(null);
 
-  // Auto-scroll ref flag
-  const hasAutoScrolled = useRef(false);
-
-  // Keep single source of truth: synchronize active roadmap ID in data context
+  // Synchronize active roadmap ID in data context
   useEffect(() => {
     if (effectiveId && setActiveRoadmapId) {
       setActiveRoadmapId(effectiveId);
@@ -155,7 +154,7 @@ export const InteractiveRoadmap = ({
           phaseIdx: pIdx,
           phaseTitle: phase.phaseTitle || phase.phase || `Phase ${pIdx + 1}`,
           task,
-          estimatedMinutes: task.estimatedMinutes || 30,
+          estimatedMinutes: task.estimatedMinutes || 60,
           sequenceIndex: flatList.length
         };
         flatList.push(item);
@@ -184,7 +183,7 @@ export const InteractiveRoadmap = ({
     return Math.min(100, Math.round((completedTopicsCount / totalTopicsCount) * 100));
   }, [completedTopicsCount, totalTopicsCount, serverProgress]);
 
-  // Choice Modes (B4): Determine the "Up next" / Recommended Topic based on active mode
+  // Choice Modes: Determine the "Up next" / Recommended Topic based on active mode
   const nextRecommendedTask = useMemo(() => {
     if (allSequentialTasks.length === 0) return null;
 
@@ -204,7 +203,7 @@ export const InteractiveRoadmap = ({
     // Mode 2: Quick Win (shortest uncompleted topic among all unlocked topics)
     if (choiceMode === 'quick-win') {
       const sortedByDuration = [...unlockedUncompleted].sort(
-        (a, b) => (a.estimatedMinutes || 30) - (b.estimatedMinutes || 30)
+        (a, b) => (a.estimatedMinutes || 60) - (b.estimatedMinutes || 60)
       );
       return sortedByDuration[0];
     }
@@ -233,38 +232,20 @@ export const InteractiveRoadmap = ({
     return allSequentialTasks.slice(currentIdx + 1, currentIdx + 3);
   }, [nextRecommendedTask, allSequentialTasks]);
 
-  // Auto-scroll to module containing the "Up next" topic on page load (B3)
-  useEffect(() => {
-    if (!loading && nextRecommendedTask && !hasAutoScrolled.current) {
-      const targetElement = document.getElementById(`module-section-${nextRecommendedTask.phaseIdx}`);
-      if (targetElement) {
-        hasAutoScrolled.current = true;
-        setTimeout(() => {
-          targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 150);
-      }
+  // Current learning phase title
+  const currentPhaseTitle = useMemo(() => {
+    if (nextRecommendedTask) {
+      return nextRecommendedTask.phaseTitle;
     }
-  }, [loading, nextRecommendedTask]);
+    return modules[0]?.phase?.phaseTitle || 'Phase 1';
+  }, [nextRecommendedTask, modules]);
 
-  // If URL has day parameter (e.g. #/roadmaps/123/day/4), open drawer for that task
-  useEffect(() => {
-    if (params.day && allSequentialTasks.length > 0) {
-      const targetDay = Number(params.day);
-      const match = allSequentialTasks.find((t) => t.dayNumber === targetDay);
-      if (match) {
-        setSelectedTaskItem(match);
-        setIsDrawerOpen(true);
-      }
-    }
-  }, [params.day, allSequentialTasks]);
-
-  // Toggle task completion with instant prerequisite unlocking (B3)
+  // Toggle task completion with instant prerequisite unlocking
   const handleToggleTask = async (taskId, newCompleted) => {
     setSyncError(null);
     const targetRoadmapId = currentSavedId || effectiveId;
 
     if (!targetRoadmapId) {
-      // In-memory fallback
       setCompletedTasks((prev) => {
         const next = { ...prev };
         if (newCompleted) next[taskId] = true;
@@ -289,40 +270,8 @@ export const InteractiveRoadmap = ({
     }
   };
 
-  // Expand topic via AI Deep Dive
-  const handleExpandTopic = async (topicTitle, level = 1) => {
-    const targetRoadmapId = currentSavedId || effectiveId;
-    if (!targetRoadmapId) return;
-
-    const cacheKey = `${topicTitle}_${level}`;
-    setLoadingExpansion(cacheKey);
-
-    try {
-      const dayNum = selectedTaskItem ? selectedTaskItem.dayNumber : 1;
-      const res = await expandTopic(targetRoadmapId, dayNum, {
-        topicTitle,
-        level,
-        roadmapContext: roadmap?.topic || roadmap?.title || ''
-      });
-
-      setExpansionsCache((prev) => ({
-        ...prev,
-        [topicTitle]: {
-          ...(prev[topicTitle] || {}),
-          [level]: res.markdownContent || res.content || ''
-        }
-      }));
-    } catch (e) {
-      console.error('Failed to expand topic:', e);
-    } finally {
-      setLoadingExpansion(null);
-    }
-  };
-
-  // Open drawer for a specific topic
-  const handleSelectTopic = (taskItem) => {
-    setSelectedTaskItem(taskItem);
-    setIsDrawerOpen(true);
+  // Navigate to dedicated day view
+  const handleSelectDay = (taskItem) => {
     if (taskItem?.dayNumber) {
       navigate(`#/roadmaps/${currentSavedId || effectiveId || 1}/day/${taskItem.dayNumber}`);
     }
@@ -364,11 +313,23 @@ export const InteractiveRoadmap = ({
     return null;
   }
 
-  // Prev / Next item for drawer
-  const currentIdx = selectedTaskItem ? selectedTaskItem.sequenceIndex : -1;
-  const prevTaskItem = currentIdx > 0 ? allSequentialTasks[currentIdx - 1] : null;
-  const nextTaskItem = currentIdx >= 0 && currentIdx < allSequentialTasks.length - 1 ? allSequentialTasks[currentIdx + 1] : null;
+  // ── PART 2: DEDICATED FULL-PAGE DAY LEARNING VIEW ──
+  // If URL has day parameter (e.g. #/roadmaps/123/day/4), render FullPageDayView directly!
+  if (params.day) {
+    return (
+      <FullPageDayView
+        roadmap={roadmap}
+        roadmapId={currentSavedId || effectiveId || 1}
+        dayNumber={Number(params.day)}
+        allSequentialTasks={allSequentialTasks}
+        completedTasks={completedTasks}
+        onToggleComplete={handleToggleTask}
+        onBackToJourney={() => navigate(`#/roadmaps/${currentSavedId || effectiveId || 1}`)}
+      />
+    );
+  }
 
+  // ── PART 1: VISUAL ROADMAP OVERVIEW ──
   return (
     <div className={`space-y-6 ${isModal ? 'p-1' : 'max-w-6xl mx-auto pb-20'}`}>
       {/* Authoritative Sync Error Banner */}
@@ -379,79 +340,110 @@ export const InteractiveRoadmap = ({
         </div>
       )}
 
-      {/* ── 1. ROADMAP OVERVIEW HEADER ── */}
+      {/* ── 1. MAIN ROADMAP INTERFACE HEADER ── */}
       <RoadmapOverview
         roadmap={roadmap}
         totalModules={modules.length}
         totalTopics={totalTopicsCount}
         completedTopicsCount={completedTopicsCount}
         progressPercentage={progressPercent}
+        currentPhaseTitle={currentPhaseTitle}
         onBack={onBack}
         onRegenerate={onRegenerate}
         regenerating={regenerating}
         onCopyMarkdown={handleCopyMarkdown}
       />
 
-      {/* ── 2. CHOICE MODES CONTROLS (B4) ── */}
-      <div className="p-4 rounded-xl bg-surface-1 border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="space-y-0.5">
-          <span className="text-xs font-semibold text-text-muted uppercase tracking-wider block">
-            Adaptive Learning Mode
-          </span>
-          <p className="text-xs text-text-muted">
-            {choiceMode === 'path' && 'Following linear prerequisites from foundational principles to advanced application.'}
-            {choiceMode === 'quick-win' && 'Highlighting the fastest uncompleted topics among all unlocked concepts.'}
-            {choiceMode === 'interview' && 'Prioritizing algorithms, system design, and core interview fundamentals.'}
-          </p>
+      {/* ── 2. CONTROLS: ADAPTIVE LEARNING MODE & DUAL VIEW TOGGLE ── */}
+      <div className="p-4 rounded-xl bg-surface-1 border border-border flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        {/* Adaptive Learning Mode */}
+        <div className="space-y-2 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider block">
+              Adaptive Learning Mode
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setChoiceMode('path')}
+              className={`px-3 py-1.5 rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5 min-h-[34px] ${
+                choiceMode === 'path'
+                  ? 'bg-accent-solid text-white font-semibold shadow-xs'
+                  : 'bg-surface-2 text-text-muted hover:text-text border border-border'
+              }`}
+              title="Linear sequential progression through prerequisites"
+            >
+              <Compass className="w-3.5 h-3.5" />
+              <span>Follow the path</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setChoiceMode('quick-win')}
+              className={`px-3 py-1.5 rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5 min-h-[34px] ${
+                choiceMode === 'quick-win'
+                  ? 'bg-accent-solid text-white font-semibold shadow-xs'
+                  : 'bg-surface-2 text-text-muted hover:text-text border border-border'
+              }`}
+              title="Fastest available topics to maintain momentum"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>Quick win</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setChoiceMode('interview')}
+              className={`px-3 py-1.5 rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5 min-h-[34px] ${
+                choiceMode === 'interview'
+                  ? 'bg-accent-solid text-white font-semibold shadow-xs'
+                  : 'bg-surface-2 text-text-muted hover:text-text border border-border'
+              }`}
+              title="Prioritizes core technical interview and assessment topics"
+            >
+              <Target className="w-3.5 h-3.5" />
+              <span>Interview prep</span>
+            </button>
+          </div>
         </div>
 
-        {/* 3 Mode Toggle Pills */}
-        <div className="flex items-center gap-1.5 p-1 rounded-lg bg-surface-2 border border-border shrink-0">
-          <button
-            type="button"
-            onClick={() => setChoiceMode('path')}
-            className={`px-3 py-1.5 rounded-md text-xs transition cursor-pointer flex items-center gap-1.5 min-h-[36px] ${
-              choiceMode === 'path'
-                ? 'bg-accent-solid text-white font-semibold shadow-xs'
-                : 'text-text-muted hover:text-text'
-            }`}
-            title="Linear sequential progression through prerequisites"
-          >
-            <Compass className="w-3.5 h-3.5" />
-            <span>Follow the path</span>
-          </button>
+        {/* Dual View Toggle: Visual Journey vs Curriculum Tree */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 shrink-0 border-t lg:border-t-0 lg:border-l border-border pt-3 lg:pt-0 lg:pl-4">
+          <span className="text-xs font-semibold text-text-muted uppercase tracking-wider block">
+            View Style:
+          </span>
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-surface-2 border border-border">
+            <button
+              type="button"
+              onClick={() => setViewMode('visual')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer min-h-[32px] ${
+                viewMode === 'visual'
+                  ? 'bg-accent-solid text-white shadow-xs'
+                  : 'text-text-muted hover:text-text'
+              }`}
+            >
+              <Route className="w-3.5 h-3.5" />
+              <span>Visual Journey</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setChoiceMode('quick-win')}
-            className={`px-3 py-1.5 rounded-md text-xs transition cursor-pointer flex items-center gap-1.5 min-h-[36px] ${
-              choiceMode === 'quick-win'
-                ? 'bg-accent-solid text-white font-semibold shadow-xs'
-                : 'text-text-muted hover:text-text'
-            }`}
-            title="Fastest available topics to maintain momentum"
-          >
-            <Zap className="w-3.5 h-3.5" />
-            <span>Quick win</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setChoiceMode('interview')}
-            className={`px-3 py-1.5 rounded-md text-xs transition cursor-pointer flex items-center gap-1.5 min-h-[36px] ${
-              choiceMode === 'interview'
-                ? 'bg-accent-solid text-white font-semibold shadow-xs'
-                : 'text-text-muted hover:text-text'
-            }`}
-            title="Prioritizes core technical interview and assessment topics"
-          >
-            <Target className="w-3.5 h-3.5" />
-            <span>Interview prep</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('tree')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer min-h-[32px] ${
+                viewMode === 'tree'
+                  ? 'bg-accent-solid text-white shadow-xs'
+                  : 'text-text-muted hover:text-text'
+              }`}
+            >
+              <ListTree className="w-3.5 h-3.5" />
+              <span>Curriculum Tree</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* ── 3. "DO THIS NEXT" PROMINENT HERO (B2 & B5) ── */}
+      {/* ── 3. "DO THIS NEXT" PROMINENT HERO ── */}
       {nextRecommendedTask && (
         <NextStepHero
           task={nextRecommendedTask.task}
@@ -475,7 +467,7 @@ export const InteractiveRoadmap = ({
           dailyPaceHours={roadmap.hoursPerDay || 2}
           upcomingTasks={upcomingInSequence}
           isZeroProgress={completedTopicsCount === 0}
-          onStartLearning={() => handleSelectTopic(nextRecommendedTask)}
+          onStartLearning={() => handleSelectDay(nextRecommendedTask)}
           onToggleCompleted={() =>
             handleToggleTask(
               nextRecommendedTask.taskId,
@@ -492,57 +484,27 @@ export const InteractiveRoadmap = ({
         />
       )}
 
-      {/* ── 4. INTERACTIVE LEARNING PATH (MODULE BY MODULE) (B3) ── */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between pb-1">
-          <div>
-            <h2 className="text-xl font-bold text-text tracking-tight">
-              Curriculum Modules & Learning Sequence
-            </h2>
-            <p className="text-xs text-text-muted mt-0.5">
-              Completed modules collapse automatically. Exactly 4 visible topic states: Done, Up next, Ready, and Locked.
-            </p>
-          </div>
-          <span className="text-xs font-mono text-text-muted font-medium">
-            {completedTopicsCount} / {totalTopicsCount} Done
-          </span>
-        </div>
-
-        {modules.map(({ phase, phaseIndex, tasks }) => (
-          <LearningPathModule
-            key={phaseIndex}
-            id={`module-section-${phaseIndex}`}
-            phase={phase}
-            phaseIndex={phaseIndex}
-            tasks={tasks}
-            completedTasks={completedTasks}
-            currentRecommendedTaskId={nextRecommendedTask?.taskId || null}
-            allSequentialTasks={allSequentialTasks}
-            onSelectTopic={handleSelectTopic}
-            onToggleComplete={handleToggleTask}
-          />
-        ))}
-      </div>
-
-      {/* ── 5. RIGHT-SIDE TOPIC DETAIL DRAWER ── */}
-      <TopicDetailDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => {
-          setIsDrawerOpen(false);
-          setSelectedTaskItem(null);
-        }}
-        taskItem={selectedTaskItem}
-        isCompleted={Boolean(selectedTaskItem && completedTasks[selectedTaskItem.taskId])}
-        prerequisiteItem={prevTaskItem}
-        prevItem={prevTaskItem}
-        nextItem={nextTaskItem}
-        onToggleComplete={handleToggleTask}
-        onSelectTopic={handleSelectTopic}
-        roadmapId={currentSavedId || effectiveId}
-        onExpandTopic={handleExpandTopic}
-        expansions={expansionsCache}
-        loadingExpansion={loadingExpansion}
-      />
+      {/* ── 4. ROADMAP DISPLAY: VISUAL JOURNEY CANVAS OR CURRICULUM TREE ── */}
+      {viewMode === 'visual' ? (
+        <RoadmapJourneyCanvas
+          modules={modules}
+          allSequentialTasks={allSequentialTasks}
+          completedTasks={completedTasks}
+          currentRecommendedTaskId={nextRecommendedTask?.taskId || null}
+          roadmapId={currentSavedId || effectiveId || 1}
+          roadmapTitle={roadmap.topic || roadmap.title}
+          onSelectDay={handleSelectDay}
+        />
+      ) : (
+        <CurriculumTreeView
+          modules={modules}
+          allSequentialTasks={allSequentialTasks}
+          completedTasks={completedTasks}
+          currentRecommendedTaskId={nextRecommendedTask?.taskId || null}
+          roadmapId={currentSavedId || effectiveId || 1}
+          onToggleComplete={handleToggleTask}
+        />
+      )}
     </div>
   );
 };
