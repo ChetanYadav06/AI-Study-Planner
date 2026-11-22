@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { RouterProvider, useRouter } from './context/RouterContext';
 import { DataProvider } from './context/DataContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { Navbar } from './components/common/Navbar';
 import { Sidebar } from './components/common/Sidebar';
 import { StudentPortalLanding } from './components/dashboard/StudentPortalLanding';
@@ -159,13 +160,15 @@ const AppContent = () => {
 export const App = () => {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <RouterProvider>
-          <DataProvider>
-            <AppContent />
-          </DataProvider>
-        </RouterProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <RouterProvider>
+            <DataProvider>
+              <AppContent />
+            </DataProvider>
+          </RouterProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 };

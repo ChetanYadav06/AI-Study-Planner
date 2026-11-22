@@ -26,8 +26,14 @@ export const parseHash = (hashString = '') => {
   if (path === '/roadmaps') {
     return { route: 'roadmaps', params: {}, query, rawPath: path };
   }
+  if (path === '/interactive-roadmap') {
+    return { route: 'interactive-roadmap', params: {}, query, rawPath: path };
+  }
   if (path === '/roadmaps/new') {
     return { route: 'roadmaps-new', params: {}, query, rawPath: path };
+  }
+  if (path === '/ai-assistant' || path === '/assistant') {
+    return { route: 'ai-assistant', params: {}, query, rawPath: path };
   }
 
   const roadmapDayMatch = path.match(/^\/roadmaps\/(\d+)\/day\/(\d+)$/);

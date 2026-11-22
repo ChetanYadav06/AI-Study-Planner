@@ -1,134 +1,143 @@
 import React, { useState, useMemo } from 'react';
 import {
   LayoutDashboard,
-  Map,
-  Calendar,
-  Zap,
-  TrendingUp,
-  User,
-  Bookmark,
-  Search,
-  X,
+  Compass,
+  Route,
+  Sparkles,
+  CalendarCheck,
+  BookOpen,
+  BarChart3,
+  Settings,
   ChevronLeft,
   ChevronRight,
-  SlidersHorizontal,
-  Settings,
   LogOut,
-  BookOpen
+  BrainCircuit,
+  ArrowRight,
+  X,
+  UserCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from '../../context/RouterContext';
-import { SettingsModal } from './SettingsModal';
+import { useData } from '../../context/DataContext';
 
 export const Sidebar = ({
-  activeTab,
-  setActiveTab,
-  onOpenAuth,
-  onOpenCreateGoal,
-  isCollapsed,
+  isCollapsed = false,
   setIsCollapsed,
-  mobileOpen,
-  setMobileOpen
+  mobileOpen = false,
+  setMobileOpen,
+  onOpenAuth
 }) => {
-  const { isAuthenticated, logout } = useAuth();
-  const { route, navigate } = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [customizeOpen, setCustomizeOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
+  const { route, params, navigate } = useRouter();
+  const { roadmaps = [] } = useData();
 
-  // Active item mapped from URL route
+  // Find the primary active roadmap (highest progress or first active)
+  const activeRoadmap = useMemo(() => {
+    if (!roadmaps || roadmaps.length === 0) return null;
+    return roadmaps.find((r) => (r.progressPercentage || 0) < 100) || roadmaps[0];
+  }, [roadmaps]);
+
+  // Current active navigation ID based on route
   const currentActiveId = useMemo(() => {
     if (route === 'dashboard') return 'dashboard';
-    if (route === 'roadmaps' || route === 'roadmaps-new' || route === 'roadmap-detail') return 'my-roadmaps';
-    if (route === 'study-planner') return 'study-planner';
-    if (route === 'active-study') return 'active-study';
-    if (route === 'progress') return 'my-progress';
-    if (route === 'profile') return 'profile';
-    if (route === 'resources') return 'saved-resources';
-    return activeTab || 'dashboard';
-  }, [route, activeTab]);
+    if (route === 'roadmaps' || route === 'roadmaps-new') return 'my-roadmaps';
+    if (route === 'roadmap-detail' || route === 'interactive-roadmap') return 'interactive-roadmap';
+    if (route === 'ai-assistant') return 'ai-assistant';
+    if (route === 'study-planner' || route === 'active-study') return 'tasks-calendar';
+    if (route === 'resources') return 'notes-resources';
+    if (route === 'progress') return 'progress-analytics';
+    if (route === 'profile') return 'settings-profile';
+    return 'dashboard';
+  }, [route]);
 
-  // Customization preferences for non-core sidebar items
-  const [hiddenItems, setHiddenItems] = useState(() => {
-    try {
-      const saved = localStorage.getItem('ai_study_planner_hidden_nav');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const toggleItemVisibility = (itemId) => {
-    setHiddenItems(prev => {
-      const updated = prev.includes(itemId)
-        ? prev.filter(id => id !== itemId)
-        : [...prev, itemId];
-      localStorage.setItem('ai_study_planner_hidden_nav', JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, core: true },
-    { id: 'my-roadmaps', label: 'My Roadmaps', icon: Map, core: true },
-    { id: 'study-planner', label: 'Study Planner', icon: Calendar, core: false },
-    { id: 'active-study', label: 'Active Study', icon: Zap, core: false },
-    { id: 'my-progress', label: 'My Progress', icon: TrendingUp, core: false },
-    { id: 'profile', label: 'Learning Profile', icon: User, core: true },
-    { id: 'saved-resources', label: 'Saved Resources', icon: Bookmark, core: false },
-  ];
-
-  // Filter items by search & user visibility preferences
-  const visibleNavItems = navItems.filter(item => {
-    if (hiddenItems.includes(item.id)) return false;
-    if (!searchQuery.trim()) return true;
-    return item.label.toLowerCase().includes(searchQuery.toLowerCase().trim());
-  });
-
-  const handleNavClick = (itemId) => {
-    if (!isAuthenticated && itemId !== 'dashboard') {
-      onOpenAuth('login');
+  const handleNavClick = (targetRoute) => {
+    if (!isAuthenticated && targetRoute !== '#/dashboard') {
+      if (onOpenAuth) onOpenAuth('login');
       return;
     }
-    const routeMap = {
-      'dashboard': '#/dashboard',
-      'my-roadmaps': '#/roadmaps',
-      'study-planner': '#/study-planner',
-      'active-study': '#/active-study',
-      'my-progress': '#/progress',
-      'profile': '#/profile',
-      'saved-resources': '#/resources'
-    };
-    if (routeMap[itemId]) {
-      navigate(routeMap[itemId]);
-    }
-    if (setActiveTab) setActiveTab(itemId);
+    navigate(targetRoute);
     if (setMobileOpen) setMobileOpen(false);
   };
 
-  const sidebarContent = (
-    <aside
-      className={`bg-white border-r border-line flex flex-col justify-between select-none h-full overflow-y-auto ${
-        isCollapsed ? 'w-[64px] p-2.5' : 'w-[250px] p-4'
-      }`}
-    >
-      {/* ── TOP SECTION: Brand, Collapse Toggle, Search, Nav ── */}
-      <div className="space-y-4 flex-1 flex flex-col min-h-0">
-        {/* Brand Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-line">
-          <div
-            onClick={() => handleNavClick('dashboard')}
-            className="flex items-center gap-2.5 cursor-pointer truncate"
-          >
-            <div className="w-8 h-8 rounded-md bg-accent-soft border border-accent/20 flex items-center justify-center text-accent shrink-0">
-              <BookOpen className="w-4 h-4" />
-            </div>
+  const navGroups = [
+    {
+      group: 'LEARN',
+      items: [
+        {
+          id: 'dashboard',
+          label: 'Dashboard',
+          icon: LayoutDashboard,
+          to: '#/dashboard'
+        },
+        {
+          id: 'my-roadmaps',
+          label: 'My Roadmaps',
+          icon: Compass,
+          to: '#/roadmaps'
+        },
+        {
+          id: 'interactive-roadmap',
+          label: 'Interactive Roadmap',
+          icon: Route,
+          to: activeRoadmap ? `#/roadmaps/${activeRoadmap.id}` : '#/roadmaps',
+          badge: activeRoadmap ? `${activeRoadmap.progressPercentage || 0}%` : null
+        },
+        {
+          id: 'ai-assistant',
+          label: 'AI Study Assistant',
+          icon: Sparkles,
+          to: '#/ai-assistant',
+          glow: true
+        }
+      ]
+    },
+    {
+      group: 'PLAN',
+      items: [
+        {
+          id: 'tasks-calendar',
+          label: 'Tasks & Calendar',
+          icon: CalendarCheck,
+          to: '#/study-planner'
+        },
+        {
+          id: 'notes-resources',
+          label: 'Notes & Resources',
+          icon: BookOpen,
+          to: '#/resources'
+        },
+        {
+          id: 'progress-analytics',
+          label: 'Progress Analytics',
+          icon: BarChart3,
+          to: '#/progress'
+        }
+      ]
+    }
+  ];
 
+  const sidebarBody = (
+    <div className="flex flex-col justify-between h-full text-ink select-none overflow-y-auto overflow-x-hidden">
+      {/* ── TOP: Brand & Navigation ── */}
+      <div className="space-y-6">
+        {/* Brand Header */}
+        <div className="flex items-center justify-between px-3 py-3 border-b border-line">
+          <div
+            onClick={() => handleNavClick('#/dashboard')}
+            className="flex items-center gap-3 cursor-pointer group"
+          >
+            <div className="w-9 h-9 rounded-xl gradient-btn flex items-center justify-center text-white shadow-md shadow-accent/30 shrink-0 group-hover:scale-105 transition-transform">
+              <BrainCircuit className="w-5 h-5" />
+            </div>
             {!isCollapsed && (
-              <div className="truncate">
-                <span className="text-sm font-semibold text-ink block leading-tight">
+              <div className="flex flex-col min-w-0">
+                <span className="font-bold text-[14px] text-ink tracking-tight flex items-center gap-1.5 truncate">
                   AI Study Planner
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-accent/20 text-accent border border-accent/30 font-mono">
+                    AI
+                  </span>
                 </span>
+                <span className="text-[11px] text-muted">Smart EdTech SaaS</span>
               </div>
             )}
           </div>
@@ -136,200 +145,190 @@ export const Sidebar = ({
           {/* Desktop Collapse Toggle */}
           <button
             type="button"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden md:flex p-1.5 rounded-md text-muted hover:text-ink hover:bg-page transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+            onClick={() => setIsCollapsed && setIsCollapsed(!isCollapsed)}
+            className="hidden md:flex items-center justify-center w-7 h-7 rounded-lg text-muted hover:text-ink hover:bg-surface border border-transparent hover:border-line transition cursor-pointer"
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-label="Toggle sidebar collapse"
           >
             {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
-        </div>
 
-        {/* Search Field */}
-        {!isCollapsed ? (
-          <div className="relative">
-            <Search className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search navigation..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-7 py-2 rounded-md bg-page border border-line text-sm text-ink placeholder-muted focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 transition-colors duration-150"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-ink p-0.5 cursor-pointer"
-                aria-label="Clear search"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setIsCollapsed(false)}
-            className="w-full py-2 rounded-md bg-page border border-line flex items-center justify-center text-muted hover:text-ink transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
-            title="Search navigation"
-            aria-label="Expand sidebar to search"
-          >
-            <Search className="w-4 h-4" />
-          </button>
-        )}
-
-        {/* Navigation Items */}
-        <div className="flex-1 overflow-y-auto space-y-1">
-          <nav className="space-y-1">
-            {visibleNavItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = currentActiveId === item.id;
-
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => handleNavClick(item.id)}
-                  title={item.label}
-                  className={`w-full flex items-center ${
-                    isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'
-                  } rounded-md text-sm transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
-                    isActive
-                      ? 'bg-accent-soft text-accent font-medium'
-                      : 'text-muted hover:text-ink hover:bg-page'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-accent' : 'text-muted'}`} />
-
-                  {!isCollapsed && (
-                    <span className="ml-3 truncate">
-                      {item.label}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-      </div>
-
-      {/* ── BOTTOM SECTION: Customization, Settings, Logout ── */}
-      <div className="pt-3 border-t border-line space-y-2 shrink-0">
-        {/* Customize Sidebar */}
-        {!isCollapsed ? (
-          <div>
+          {/* Mobile Close Button */}
+          {mobileOpen && (
             <button
               type="button"
-              onClick={() => setCustomizeOpen(!customizeOpen)}
-              className="w-full flex items-center justify-between px-2 py-1.5 rounded-md text-xs text-muted hover:text-ink hover:bg-page transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+              onClick={() => setMobileOpen(false)}
+              className="md:hidden flex items-center justify-center w-8 h-8 rounded-lg text-muted hover:text-ink hover:bg-surface cursor-pointer"
+              aria-label="Close sidebar"
             >
-              <span className="flex items-center gap-1.5">
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span>Customize sidebar</span>
-              </span>
-              <span>{hiddenItems.length > 0 ? `${hiddenItems.length} hidden` : ''}</span>
-            </button>
-
-            {customizeOpen && (
-              <div className="p-3 my-2 rounded-md bg-page border border-line text-xs space-y-2">
-                <p className="font-medium text-ink">
-                  Navigation modules
-                </p>
-                {navItems.filter(i => !i.core).map(item => {
-                  const isVisible = !hiddenItems.includes(item.id);
-                  return (
-                    <label
-                      key={item.id}
-                      className="flex items-center justify-between py-1 text-muted hover:text-ink cursor-pointer"
-                    >
-                      <span>{item.label}</span>
-                      <input
-                        type="checkbox"
-                        checked={isVisible}
-                        onChange={() => toggleItemVisibility(item.id)}
-                        className="w-3.5 h-3.5 accent-accent rounded cursor-pointer"
-                      />
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex justify-center">
-            <button
-              type="button"
-              onClick={() => setIsCollapsed(false)}
-              className="p-2 text-muted hover:text-ink hover:bg-page rounded-md transition-colors duration-150 cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
-              title="Customize sidebar"
-              aria-label="Expand sidebar to customize"
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* Settings & Logout Controls */}
-        <div className="space-y-1">
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            className={`w-full flex items-center ${
-              isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'
-            } rounded-md text-sm text-muted hover:text-ink hover:bg-page transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2`}
-            title="Settings"
-            aria-label="Settings"
-          >
-            <Settings className="w-4 h-4 shrink-0" />
-            {!isCollapsed && <span className="ml-3">Settings</span>}
-          </button>
-
-          {isAuthenticated && (
-            <button
-              type="button"
-              onClick={logout}
-              className={`w-full flex items-center ${
-                isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'
-              } rounded-md text-sm text-muted hover:text-danger hover:bg-red-50 transition-colors duration-150 cursor-pointer min-h-[40px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2`}
-              title="Sign Out"
-              aria-label="Sign Out"
-            >
-              <LogOut className="w-4 h-4 shrink-0" />
-              {!isCollapsed && <span className="ml-3">Sign Out</span>}
+              <X className="w-5 h-5" />
             </button>
           )}
         </div>
+
+        {/* Navigation Sections */}
+        <div className="space-y-5 px-2">
+          {navGroups.map((section) => (
+            <div key={section.group} className="space-y-1">
+              {!isCollapsed && (
+                <div className="px-3 py-1 text-[11px] font-semibold text-muted/70 uppercase tracking-wider">
+                  {section.group}
+                </div>
+              )}
+
+              <div className="space-y-1">
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = currentActiveId === item.id;
+
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleNavClick(item.to)}
+                      title={isCollapsed ? item.label : undefined}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 cursor-pointer min-h-[42px] ${
+                        isActive
+                          ? 'bg-accent/15 text-white border border-accent/40 shadow-xs shadow-accent/20 font-semibold'
+                          : 'text-muted hover:text-ink hover:bg-surface/80 border border-transparent'
+                      } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                    >
+                      <div className="relative shrink-0">
+                        <Icon className={`w-4 h-4 ${isActive ? 'text-accent' : 'text-muted group-hover:text-ink'}`} />
+                        {item.glow && (
+                          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-accent animate-pulse" />
+                        )}
+                      </div>
+
+                      {!isCollapsed && (
+                        <div className="flex-1 flex items-center justify-between min-w-0">
+                          <span className="truncate">{item.label}</span>
+                          {item.badge && (
+                            <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-accent/20 text-accent border border-accent/30 shrink-0">
+                              {item.badge}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Settings Modal */}
-      <SettingsModal
-        isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-      />
-    </aside>
+      {/* ── BOTTOM: Active Roadmap Snapshot & Student Profile ── */}
+      <div className="space-y-3 p-2 pt-4 border-t border-line">
+        {/* Active Roadmap Progress Snapshot (if available and not collapsed) */}
+        {!isCollapsed && activeRoadmap && (
+          <div
+            onClick={() => handleNavClick(`#/roadmaps/${activeRoadmap.id}`)}
+            className="p-3 rounded-xl bg-surface-secondary border border-line hover:border-accent/40 transition cursor-pointer group"
+          >
+            <div className="flex items-center justify-between text-xs text-muted font-medium mb-1.5">
+              <span className="text-[11px] uppercase tracking-wider text-accent font-semibold flex items-center gap-1">
+                <Route className="w-3 h-3" /> Active Path
+              </span>
+              <span className="text-accent font-mono font-semibold">
+                {activeRoadmap.progressPercentage || 0}%
+              </span>
+            </div>
+            <p className="text-[13px] font-semibold text-ink truncate mb-2 group-hover:text-accent transition-colors">
+              {activeRoadmap.topic || activeRoadmap.title}
+            </p>
+            <div className="w-full h-1.5 bg-line rounded-full overflow-hidden mb-2">
+              <div
+                className="h-full bg-gradient-to-r from-accent to-accent-secondary rounded-full transition-all duration-300"
+                style={{ width: `${activeRoadmap.progressPercentage || 0}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between text-[11px] text-muted">
+              <span>{activeRoadmap.targetDays || 30} days total</span>
+              <span className="inline-flex items-center gap-1 text-accent font-medium group-hover:translate-x-0.5 transition-transform">
+                Continue <ArrowRight className="w-3 h-3" />
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Settings & Profile Nav Link */}
+        <button
+          type="button"
+          onClick={() => handleNavClick('#/profile')}
+          title={isCollapsed ? 'Settings & Profile' : undefined}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition cursor-pointer min-h-[42px] ${
+            currentActiveId === 'settings-profile'
+              ? 'bg-accent/15 text-white border border-accent/40 font-semibold'
+              : 'text-muted hover:text-ink hover:bg-surface border border-transparent'
+          } ${isCollapsed ? 'justify-center px-0' : ''}`}
+        >
+          <Settings className={`w-4 h-4 shrink-0 ${currentActiveId === 'settings-profile' ? 'text-accent' : 'text-muted'}`} />
+          {!isCollapsed && <span className="truncate">Settings & Profile</span>}
+        </button>
+
+        {/* Student Profile & Quick Logout */}
+        {isAuthenticated && user && (
+          <div className={`flex items-center justify-between p-2 rounded-xl bg-surface/60 border border-line ${isCollapsed ? 'justify-center' : ''}`}>
+            <div
+              onClick={() => handleNavClick('#/profile')}
+              className="flex items-center gap-2.5 min-w-0 cursor-pointer flex-1"
+            >
+              <div className="w-8 h-8 rounded-full gradient-btn text-white text-xs font-semibold flex items-center justify-center shrink-0 shadow-sm shadow-accent/20">
+                {user.name ? user.name.charAt(0).toUpperCase() : 'S'}
+              </div>
+              {!isCollapsed && (
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[13px] font-semibold text-ink truncate leading-tight">
+                    {user.name || 'Student'}
+                  </span>
+                  <span className="text-[11px] text-muted truncate leading-tight">
+                    {user.email}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {!isCollapsed && (
+              <button
+                type="button"
+                onClick={logout}
+                className="p-1.5 text-muted hover:text-danger rounded-lg hover:bg-danger/10 transition cursor-pointer shrink-0"
+                title="Sign Out"
+                aria-label="Sign out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 
   return (
     <>
-      {/* Desktop Full-Height Panel */}
-      <div className="hidden md:block sticky top-0 h-screen shrink-0 z-30">
-        {sidebarContent}
-      </div>
+      {/* Desktop Sidebar */}
+      <aside
+        className={`hidden md:flex flex-col shrink-0 bg-sidebar border-r border-line transition-all duration-300 h-screen sticky top-0 z-30 ${
+          isCollapsed ? 'w-[72px] p-2' : 'w-[264px] p-3'
+        }`}
+      >
+        {sidebarBody}
+      </aside>
 
-      {/* Mobile Drawer Slide-Over */}
+      {/* Mobile Backdrop & Drawer */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
-          {/* Backdrop overlay */}
+        <div
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex md:hidden"
+          onClick={() => setMobileOpen(false)}
+        >
           <div
-            className="fixed inset-0 bg-black/40 transition-opacity duration-150"
-            onClick={() => setMobileOpen(false)}
-            aria-hidden="true"
-          />
-
-          {/* Drawer container: flush to left edge, full height, never clipped by header */}
-          <div className="relative w-[250px] max-w-[80vw] h-full z-50 bg-white">
-            {sidebarContent}
+            className="w-[280px] max-w-[85vw] h-full bg-sidebar border-r border-line p-3 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {sidebarBody}
           </div>
         </div>
       )}
