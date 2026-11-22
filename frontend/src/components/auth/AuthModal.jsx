@@ -88,11 +88,11 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-lg border border-line max-w-md w-full shadow-md overflow-hidden"
+        className="bg-surface-1 rounded-[16px] border border-border max-w-md w-full overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 border-b border-line flex items-center justify-between">
+        <div className="p-5 border-b border-border flex items-center justify-between">
           <div>
             <h2 id="auth-modal-title" className="text-base font-semibold text-ink">
               {mode === 'login' ? 'Sign in' : 'Create account'}

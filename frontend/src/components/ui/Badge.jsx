@@ -1,8 +1,10 @@
 import React from 'react';
 
 /**
- * Premium SaaS Badge primitive
- * Variants: accent, success, warning, danger, neutral
+ * Pathwise Theme Badge Primitive
+ * - Radius: 999px (pill)
+ * - Variants: accent, done, next, danger, info, neutral
+ * - Rule: Status is never shown by color alone (always pair with label text or icon)
  */
 export const Badge = ({
   children,
@@ -13,20 +15,21 @@ export const Badge = ({
   ...props
 }) => {
   const sizeClasses = {
-    xs: 'text-[11px] px-2 py-0.5 gap-1',
-    sm: 'text-xs px-2.5 py-1 gap-1.5',
-    md: 'text-[13px] px-3 py-1 gap-1.5',
-  }[size] || 'text-xs px-2.5 py-1 gap-1.5';
+    xs: 'text-xs px-2.5 py-0.5 gap-1.5',
+    sm: 'text-xs px-3 py-1 gap-1.5',
+    md: 'text-sm px-3.5 py-1 gap-2',
+  }[size] || 'text-xs px-3 py-1 gap-1.5';
 
   const variantClasses = {
     accent: 'bg-accent/15 text-accent border border-accent/30',
-    accentSecondary: 'bg-accent-secondary/15 text-accent-secondary border border-accent-secondary/30',
-    success: 'bg-success/15 text-success border border-success/30',
-    warning: 'bg-warning/15 text-warning border border-warning/30',
+    done: 'bg-done/15 text-done border border-done/30',
+    success: 'bg-done/15 text-done border border-done/30',
+    next: 'bg-next/15 text-next border border-next/30',
+    warning: 'bg-next/15 text-next border border-next/30',
     danger: 'bg-danger/15 text-danger border border-danger/30',
-    neutral: 'bg-surface-secondary text-muted border border-line',
-    glow: 'bg-accent/20 text-ink border border-accent/50 badge-glow font-medium',
-  }[variant] || 'bg-surface-secondary text-muted border border-line';
+    info: 'bg-info/15 text-info border border-info/30',
+    neutral: 'bg-surface-2 text-text-muted border border-border',
+  }[variant] || 'bg-surface-2 text-text-muted border border-border';
 
   return (
     <span

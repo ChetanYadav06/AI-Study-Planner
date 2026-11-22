@@ -1,9 +1,10 @@
 import React from 'react';
 
 /**
- * Premium SaaS Card primitive
- * Flat 1px border, 14-16px radius, subtle dark purple/slate line.
- * Variants: default (#141725), secondary (#191D2D), highlighted/gradient
+ * Pathwise Theme Card Primitive
+ * - Radius: 16px (card)
+ * - Variants: default (surface-1), secondary (surface-2)
+ * - Border: 1px solid var(--border)
  */
 export const Card = ({
   children,
@@ -14,16 +15,16 @@ export const Card = ({
   ...props
 }) => {
   const variantClass = variant === 'secondary'
-    ? 'bg-surface-secondary'
-    : 'bg-surface';
+    ? 'bg-surface-2'
+    : 'bg-surface-1';
 
-  const highlightClass = highlight
-    ? 'gradient-card-border'
-    : 'border border-line hover:border-line-highlight/80';
+  const borderClass = highlight
+    ? 'border border-accent/40'
+    : 'border border-border hover:border-border-strong';
 
   return (
     <Component
-      className={`${variantClass} ${highlightClass} rounded-xl transition-all duration-200 shadow-sm ${className}`}
+      className={`${variantClass} ${borderClass} rounded-[16px] transition-colors duration-150 ${className}`}
       {...props}
     >
       {children}

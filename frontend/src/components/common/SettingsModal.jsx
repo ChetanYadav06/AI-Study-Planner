@@ -17,11 +17,11 @@ export const SettingsModal = ({ isOpen, onClose }) => {
       onClick={onClose}
     >
       <div
-        className="bg-surface rounded-lg max-w-md w-full shadow-md border border-line overflow-hidden"
+        className="bg-surface-1 rounded-[16px] max-w-md w-full border border-border overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-line">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div>
             <h2 id="settings-modal-title" className="text-base font-semibold text-ink">
               Settings

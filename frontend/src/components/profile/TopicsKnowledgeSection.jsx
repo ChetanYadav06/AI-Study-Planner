@@ -22,36 +22,36 @@ export const KNOWLEDGE_LEVELS = [
     label: 'Mastered',
     shortLabel: 'Mastered',
     description: 'Deep understanding, can implement and optimize effortlessly',
-    badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    dotClass: 'bg-emerald-500',
-    activeBtnClass: 'bg-emerald-600 text-white shadow-xs'
+    badgeClass: 'bg-done/15 text-done border-done/30',
+    dotClass: 'bg-done',
+    activeBtnClass: 'bg-done text-white'
   },
   {
     value: 'INTERMEDIATE',
     label: 'Intermediate',
     shortLabel: 'Familiar',
     description: 'Good working knowledge, can solve realistic tasks with occasional lookup',
-    badgeClass: 'bg-teal-50 text-teal-700 border-teal-200',
-    dotClass: 'bg-teal-500',
-    activeBtnClass: 'bg-teal-600 text-white shadow-xs'
+    badgeClass: 'bg-accent/15 text-accent border-accent/30',
+    dotClass: 'bg-accent',
+    activeBtnClass: 'bg-accent-solid text-white'
   },
   {
     value: 'BEGINNER',
     label: 'Beginner',
     shortLabel: 'Beginner',
     description: 'Basic conceptual awareness, actively learning fundamentals',
-    badgeClass: 'bg-amber-50 text-amber-700 border-amber-200',
-    dotClass: 'bg-amber-500',
-    activeBtnClass: 'bg-amber-600 text-white shadow-xs'
+    badgeClass: 'bg-next/15 text-next border-next/30',
+    dotClass: 'bg-next',
+    activeBtnClass: 'bg-next text-white'
   },
   {
     value: 'NOT_LEARNED',
     label: 'Not Learned',
     shortLabel: 'New',
     description: 'Unfamiliar topic, requires introductory theory and scaffolding',
-    badgeClass: 'bg-page text-muted border-line',
-    dotClass: 'bg-slate-400',
-    activeBtnClass: 'bg-slate-700 text-white shadow-xs'
+    badgeClass: 'bg-surface-2 text-text-muted border-border',
+    dotClass: 'bg-text-muted',
+    activeBtnClass: 'bg-surface-2 text-text border border-border'
   }
 ];
 
@@ -228,14 +228,14 @@ export const TopicsKnowledgeSection = ({
                 onClick={() => setActiveFilter(f.id)}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition cursor-pointer shrink-0 border ${
                   isActive
-                    ? 'bg-ink text-surface border-ink shadow-xs'
-                    : 'bg-page text-muted hover:text-ink hover:bg-surface border-line'
+                    ? 'bg-accent-solid text-white border-accent-solid'
+                    : 'bg-surface-2 text-text-muted hover:text-text border-border'
                 }`}
               >
                 <span>{f.label}</span>
                 <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                    isActive ? 'bg-white/20 text-surface' : 'bg-surface text-muted border border-line'
+                  className={`text-[11px] px-1.5 py-0.2 rounded-full font-mono ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-surface-1 text-text-muted border border-border'
                   }`}
                 >
                   {f.count}
@@ -316,7 +316,7 @@ export const TopicsKnowledgeSection = ({
                     return (
                       <div
                         key={skill.id}
-                        className="p-3.5 rounded-lg bg-surface border border-line hover:border-slate-300 transition-all duration-150 flex flex-col justify-between shadow-2xs group"
+                        className="p-3.5 rounded-[12px] bg-surface-1 border border-border hover:border-border-strong transition-colors flex flex-col justify-between group"
                       >
                         {/* Top: Name & Current Badge + Delete */}
                         <div>

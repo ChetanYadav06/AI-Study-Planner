@@ -101,11 +101,11 @@ export const RoadmapOverview = ({
       </div>
 
       {/* Hero Overview Card */}
-      <Card className="p-5 sm:p-6 space-y-4 bg-gradient-to-br from-surface via-surface to-surface-secondary">
+      <Card className="p-5 sm:p-6 space-y-4 bg-surface-2 border border-border">
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
           <div className="space-y-2 flex-1 min-w-0">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <Badge variant="glow" size="sm">
+              <Badge variant="accent" size="sm">
                 <Sparkles className="w-3.5 h-3.5 text-accent" />
                 <span>AI CURRICULUM</span>
               </Badge>

@@ -82,7 +82,7 @@ export const TopicDetailDrawer = ({
       />
 
       {/* Slide-out Drawer Panel */}
-      <div className="relative w-full sm:w-[520px] md:w-[600px] h-full bg-surface border-l border-line shadow-2xl flex flex-col z-10 select-none">
+      <div className="relative w-full sm:w-[520px] md:w-[600px] h-full bg-surface-1 border-l border-border flex flex-col z-10 select-none">
         {/* ── DRAWER HEADER ── */}
         <div className="p-5 sm:p-6 border-b border-line bg-surface-secondary/70 flex items-center justify-between gap-3 shrink-0">
           <div className="space-y-1 min-w-0">

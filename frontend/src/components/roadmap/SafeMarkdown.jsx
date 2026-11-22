@@ -226,20 +226,20 @@ const CodeBlock = ({ code, language }) => {
   };
 
   return (
-    <div className="relative my-3 rounded-md border border-line bg-page overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-1.5 bg-surface border-b border-line text-[13px] text-muted">
-        <span className="font-mono uppercase">{language || 'code'}</span>
+    <div className="relative my-3 rounded-[10px] border border-border bg-surface-2 overflow-hidden">
+      <div className="flex items-center justify-between px-3.5 py-2 bg-surface-1 border-b border-border text-xs text-text-muted">
+        <span className="font-mono uppercase font-semibold">{language || 'code'}</span>
         <button
           type="button"
           onClick={handleCopy}
-          className="flex items-center gap-1 text-muted hover:text-accent font-medium cursor-pointer"
+          className="flex items-center gap-1.5 text-text-muted hover:text-accent font-medium cursor-pointer"
           aria-label="Copy code to clipboard"
         >
-          {copied ? <Check className="w-3.5 h-3.5 text-accent" /> : <Copy className="w-3.5 h-3.5" />}
+          {copied ? <Check className="w-3.5 h-3.5 text-done" /> : <Copy className="w-3.5 h-3.5" />}
           <span>{copied ? 'Copied' : 'Copy'}</span>
         </button>
       </div>
-      <pre className="p-3 text-[13px] font-mono text-ink overflow-x-auto leading-relaxed whitespace-pre">
+      <pre className="p-3.5 text-xs font-mono text-text overflow-x-auto leading-relaxed whitespace-pre">
         <code>{code}</code>
       </pre>
     </div>

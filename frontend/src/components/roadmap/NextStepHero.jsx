@@ -33,12 +33,11 @@ export const NextStepHero = ({
 
   return (
     <Card
-      highlight
-      className="p-5 sm:p-6 bg-gradient-to-br from-surface via-surface to-surface-secondary space-y-4 border-accent/40 shadow-lg shadow-accent/5"
+      className="p-5 sm:p-6 bg-surface-2 border border-border space-y-4"
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="glow" size="sm">
+          <Badge variant="accent" size="sm">
             <Sparkles className="w-3.5 h-3.5 text-accent" />
             <span>YOUR NEXT STEP</span>
           </Badge>
@@ -123,7 +122,7 @@ export const NextStepHero = ({
           variant="primary"
           size="md"
           onClick={onStartLearning}
-          className="gap-2 shadow-md shadow-accent/25"
+          className="gap-2"
         >
           <span>{isCompleted ? 'Review Topic' : 'Start Learning'}</span>
           <ArrowRight className="w-4 h-4" />

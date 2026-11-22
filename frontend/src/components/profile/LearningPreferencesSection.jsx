@@ -321,7 +321,7 @@ export const LearningPreferencesSection = ({
                 onClick={() => handleToggleMethod(opt.id)}
                 className={`p-3.5 rounded-lg border text-left transition-all duration-150 cursor-pointer flex flex-col justify-between group ${
                   isSelected
-                    ? 'border-accent bg-accent-soft/70 shadow-2xs ring-1 ring-accent'
+                    ? 'border-accent bg-accent/15 ring-1 ring-accent'
                     : 'border-line bg-surface hover:border-slate-300 hover:bg-page/50'
                 }`}
               >
@@ -390,7 +390,7 @@ export const LearningPreferencesSection = ({
                 onClick={() => handleApplyPace(pace)}
                 className={`p-4 rounded-lg border text-left transition-all duration-150 cursor-pointer flex flex-col justify-between ${
                   isSelected
-                    ? 'border-accent bg-accent-soft/70 shadow-2xs ring-1 ring-accent'
+                    ? 'border-accent bg-accent/15 ring-1 ring-accent'
                     : 'border-line bg-surface hover:border-slate-300 hover:bg-page/50'
                 }`}
               >
@@ -528,7 +528,7 @@ export const LearningPreferencesSection = ({
                 }}
                 className={`p-3.5 rounded-lg border text-left transition-all duration-150 cursor-pointer flex items-start gap-3.5 group ${
                   isSelected
-                    ? 'border-accent bg-accent-soft/70 shadow-2xs ring-1 ring-accent'
+                    ? 'border-accent bg-accent/15 ring-1 ring-accent'
                     : 'border-line bg-surface hover:border-slate-300 hover:bg-page/50'
                 }`}
               >
@@ -582,7 +582,7 @@ export const LearningPreferencesSection = ({
                 }}
                 className={`p-3.5 rounded-lg border text-left transition-all duration-150 cursor-pointer flex items-start gap-3.5 group ${
                   isSelected
-                    ? 'border-accent bg-accent-soft/70 shadow-2xs ring-1 ring-accent'
+                    ? 'border-accent bg-accent/15 ring-1 ring-accent'
                     : 'border-line bg-surface hover:border-slate-300 hover:bg-page/50'
                 }`}
               >
@@ -635,7 +635,7 @@ export const LearningPreferencesSection = ({
                 }}
                 className={`p-3.5 rounded-lg border text-left transition-all duration-150 cursor-pointer flex flex-col justify-between ${
                   isSelected
-                    ? 'border-accent bg-accent-soft/70 shadow-2xs ring-1 ring-accent'
+                    ? 'border-accent bg-accent/15 ring-1 ring-accent'
                     : 'border-line bg-surface hover:border-slate-300 hover:bg-page/50'
                 }`}
               >

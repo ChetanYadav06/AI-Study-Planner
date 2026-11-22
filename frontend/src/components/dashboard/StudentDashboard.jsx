@@ -377,12 +377,11 @@ export const StudentDashboard = ({ onOpenCreateGoal }) => {
       {/* ── 3. HERO: "YOUR NEXT STEP / CONTINUE LEARNING" ── */}
       {nextRecommendedTask && primaryRoadmap ? (
         <Card
-          highlight
-          className="p-5 sm:p-6 bg-gradient-to-br from-surface via-surface to-surface-secondary space-y-4"
+          className="p-5 sm:p-6 bg-surface-2 border border-border space-y-4"
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Badge variant="glow" size="sm">
+              <Badge variant="accent" size="sm">
                 <Sparkles className="w-3.5 h-3.5 text-accent" />
                 <span>YOUR NEXT STEP · RECOMMENDED NOW</span>
               </Badge>
@@ -567,7 +566,7 @@ export const StudentDashboard = ({ onOpenCreateGoal }) => {
                   onClick={() => setSelectedDayIndex(day.index)}
                   className={`flex flex-col items-center p-2.5 rounded-xl border transition cursor-pointer ${
                     day.isToday
-                      ? 'bg-accent/15 border-accent/40 shadow-xs'
+                      ? 'bg-accent/15 border-accent/40'
                       : selectedDayIndex === day.index
                       ? 'bg-surface-secondary border-line-highlight'
                       : 'bg-surface border-line hover:border-line-highlight'

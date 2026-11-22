@@ -51,7 +51,7 @@ const AppContent = () => {
   };
 
   return (
-    <div className="h-screen bg-page flex flex-col md:flex-row text-ink overflow-hidden">
+    <div className="h-screen bg-bg flex flex-col md:flex-row text-text overflow-hidden">
       {/* Sidebar: Desktop Flush Left / Mobile Drawer */}
       <Sidebar
         onOpenAuth={handleOpenAuth}

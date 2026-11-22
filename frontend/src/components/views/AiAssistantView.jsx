@@ -318,23 +318,23 @@ export const AiAssistantView = () => {
       </div>
 
       {/* ── RIGHT: MAIN CHAT INTERFACE ── */}
-      <Card className="flex-1 flex flex-col justify-between overflow-hidden border border-line bg-surface shadow-md">
+      <Card className="flex-1 flex flex-col justify-between overflow-hidden border border-border bg-surface-1">
         {/* Chat Window Header */}
-        <div className="p-4 sm:p-5 border-b border-line bg-surface-secondary/70 flex items-center justify-between gap-3 shrink-0">
+        <div className="p-4 sm:p-5 border-b border-border bg-surface-2/60 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl gradient-btn flex items-center justify-center text-white shadow-sm shadow-accent/25 shrink-0">
+            <div className="w-9 h-9 rounded-[10px] bg-accent-solid flex items-center justify-center text-white shrink-0">
               <Bot className="w-5 h-5" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="text-sm sm:text-base font-bold text-ink truncate">
+                <h3 className="text-sm sm:text-base font-bold text-text truncate">
                   AI Study Tutor
                 </h3>
-                <Badge variant="glow" size="xs">
+                <Badge variant="accent" size="xs">
                   Gemini 3.5
                 </Badge>
               </div>
-              <p className="text-[11px] text-muted truncate">
+              <p className="text-xs text-text-muted truncate">
                 Context: <span className="text-accent font-medium">{selectedTopic}</span>
               </p>
             </div>
@@ -361,8 +361,8 @@ export const AiAssistantView = () => {
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
                     isUser
-                      ? 'bg-accent text-white shadow-sm shadow-accent/30'
-                      : 'bg-surface-secondary text-accent border border-line'
+                      ? 'bg-accent-solid text-white'
+                      : 'bg-surface-2 text-accent border border-border'
                   }`}
                 >
                   {isUser ? (user?.name ? user.name.charAt(0).toUpperCase() : 'U') : <Sparkles className="w-4 h-4 text-accent" />}
@@ -370,9 +370,9 @@ export const AiAssistantView = () => {
 
                 {/* Message Bubble */}
                 <div
-                  className={`p-4 rounded-2xl text-[13px] leading-relaxed space-y-2 select-text ${
+                  className={`p-4 rounded-[14px] text-sm leading-relaxed space-y-2 select-text ${
                     isUser
-                      ? 'bg-accent/20 border border-accent/40 text-ink rounded-tr-xs max-w-lg'
+                      ? 'bg-accent-solid text-white rounded-tr-xs max-w-lg'
                       : 'bg-surface-secondary/80 border border-line text-ink rounded-tl-xs flex-1'
                   }`}
                 >
@@ -413,7 +413,7 @@ export const AiAssistantView = () => {
                   key={chip.label}
                   type="button"
                   onClick={() => handleSendMessage(chip.prompt, chip.action)}
-                  className="px-2.5 py-1 rounded-full bg-surface border border-line hover:border-accent/40 text-[11px] font-medium text-muted hover:text-ink transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
+                  className="px-3 py-1 rounded-full bg-surface-2 border border-border hover:border-accent text-xs font-medium text-text-muted hover:text-text transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
                 >
                   <ChipIcon className="w-3 h-3 text-accent" />
                   <span>{chip.label}</span>
@@ -436,7 +436,7 @@ export const AiAssistantView = () => {
               onChange={(e) => setInputMessage(e.target.value)}
               placeholder={`Ask anything about ${selectedTopic}... (Enter to send)`}
               disabled={loadingReply}
-              className="flex-1 p-3 text-[13px] rounded-xl bg-surface border border-line text-ink placeholder:text-muted/70 focus:border-accent outline-none font-medium transition shadow-xs"
+              className="flex-1 p-3 text-sm rounded-[10px] bg-surface-2 border border-border text-text placeholder:text-text-muted/70 focus:border-accent outline-none font-medium transition-colors"
             />
 
             <Button

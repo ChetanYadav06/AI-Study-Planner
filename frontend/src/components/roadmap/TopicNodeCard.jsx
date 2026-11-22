@@ -41,11 +41,11 @@ export const TopicNodeCard = ({
 
   // Visual card styles based on 4 distinct states
   const cardStyles = {
-    completed: 'bg-surface/50 border-line hover:border-success/40',
-    current: 'bg-gradient-to-r from-accent/15 via-surface to-accent-secondary/10 border-accent/60 ring-1 ring-accent/30 shadow-md shadow-accent/10',
-    available: 'bg-surface border-line hover:border-accent/40 hover:bg-surface-secondary',
-    locked: 'bg-surface/25 border-line/60 opacity-60 cursor-not-allowed'
-  }[state] || 'bg-surface border-line';
+    completed: 'bg-surface-1 border-border hover:border-border-strong',
+    current: 'bg-surface-2 border-accent ring-1 ring-accent',
+    available: 'bg-surface-1 border-border hover:border-border-strong hover:bg-surface-2',
+    locked: 'bg-surface-1/40 border-border opacity-50 cursor-not-allowed'
+  }[state] || 'bg-surface-1 border-border';
 
   const isCurrent = state === 'current';
   const isCompleted = state === 'completed';

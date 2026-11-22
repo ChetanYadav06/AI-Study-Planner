@@ -32,19 +32,19 @@ export class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-page flex items-center justify-center p-4 text-ink">
-          <div className="max-w-md w-full bg-white rounded-lg border border-line p-6 shadow-sm text-center space-y-4">
-            <div className="w-12 h-12 rounded-full bg-red-50 text-danger mx-auto flex items-center justify-center">
+        <div className="min-h-screen bg-bg flex items-center justify-center p-4 text-text">
+          <div className="max-w-md w-full bg-surface-1 rounded-[16px] border border-border p-6 text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-danger/10 text-danger mx-auto flex items-center justify-center">
               <AlertCircle className="w-6 h-6" />
             </div>
             <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-ink">Something went wrong</h2>
-              <p className="text-sm text-muted">
+              <h2 className="text-lg font-semibold text-text">Something went wrong</h2>
+              <p className="text-sm text-text-muted">
                 The application encountered an unexpected error while rendering this view.
               </p>
             </div>
             {this.state.error?.message && (
-              <div className="p-3 bg-slate-50 border border-line rounded text-xs font-mono text-left text-muted break-all">
+              <div className="p-3 bg-surface-2 border border-border rounded text-xs font-mono text-left text-text-muted break-all">
                 {this.state.error.message}
               </div>
             )}

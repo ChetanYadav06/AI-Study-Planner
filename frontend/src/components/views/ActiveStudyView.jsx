@@ -453,21 +453,21 @@ export const ActiveStudyView = ({ onNavigateRoadmap }) => {
                       <button
                         type="button"
                         onClick={() => handleRateTask('EASY')}
-                        className="px-2 py-0.5 rounded border border-line bg-white hover:border-slate-300 text-ink cursor-pointer"
+                        className="px-2.5 py-1 rounded-[6px] border border-border bg-surface-2 hover:border-border-strong text-text cursor-pointer"
                       >
                         Easy
                       </button>
                       <button
                         type="button"
                         onClick={() => handleRateTask('OK')}
-                        className="px-2 py-0.5 rounded border border-line bg-white hover:border-slate-300 text-ink cursor-pointer"
+                        className="px-2.5 py-1 rounded-[6px] border border-border bg-surface-2 hover:border-border-strong text-text cursor-pointer"
                       >
                         OK
                       </button>
                       <button
                         type="button"
                         onClick={() => handleRateTask('HARD')}
-                        className="px-2 py-0.5 rounded border border-line bg-white hover:border-slate-300 text-ink cursor-pointer"
+                        className="px-2.5 py-1 rounded-[6px] border border-border bg-surface-2 hover:border-border-strong text-text cursor-pointer"
                       >
                         Hard
                       </button>

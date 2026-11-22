@@ -216,7 +216,7 @@ export const ProgressView = () => {
 
           <div className="space-y-2.5">
             {overview.needsAttention.map((item, idx) => (
-              <div key={idx} className="p-3 rounded-md bg-white border border-amber-200 text-xs space-y-1">
+              <div key={idx} className="p-3 rounded-[10px] bg-surface-2 border border-next/30 text-xs space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-ink">{item.title}</span>
                   <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-amber-100 text-amber-800">
