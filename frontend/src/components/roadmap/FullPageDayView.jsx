@@ -509,11 +509,11 @@ export const FullPageDayView = ({
                     <div className="p-6 space-y-6 border-t border-border">
                       {/* 1. Concept Explanation (Intro, Core Concepts, Mechanisms) */}
                       <div className="space-y-3">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-accent flex items-center gap-1.5">
-                          <BookOpen className="w-4 h-4" />
-                          <span>Concept Explanation</span>
+                        <h4 className="text-[15px] sm:text-[16px] font-bold text-text flex items-center gap-2">
+                          <BookOpen className="w-4 h-4 text-accent" />
+                          <span>Core Concepts</span>
                         </h4>
-                        <div className="p-5 rounded-xl bg-surface-2/60 border border-border text-sm leading-relaxed text-text space-y-4">
+                        <div className="p-5 sm:p-6 rounded-xl bg-surface-2/60 border border-border text-[14px] sm:text-[15px] leading-relaxed text-text space-y-4">
                           <SafeMarkdown content={topicItem.explanation} />
                         </div>
                       </div>
@@ -522,8 +522,8 @@ export const FullPageDayView = ({
                       {hasCode && (
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-accent flex items-center gap-1.5">
-                              <Code className="w-4 h-4" />
+                            <h4 className="text-[15px] sm:text-[16px] font-bold text-text flex items-center gap-2">
+                              <Code className="w-4 h-4 text-accent" />
                               <span>Practical Example</span>
                             </h4>
                             <button
@@ -547,7 +547,7 @@ export const FullPageDayView = ({
 
                           {/* Code Description */}
                           {topicItem.codeExample.description && (
-                            <p className="text-xs text-text-muted leading-relaxed">
+                            <p className="text-[14px] text-text-muted leading-relaxed">
                               {topicItem.codeExample.description}
                             </p>
                           )}
@@ -571,19 +571,19 @@ export const FullPageDayView = ({
                       {/* 3. Practice Tasks & Assessment */}
                       {(conceptualQuestions.length > 0 || handsOnDrills.length > 0) && (
                         <div className="space-y-3">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-accent flex items-center gap-1.5">
-                            <Zap className="w-4 h-4" />
+                          <h4 className="text-[15px] sm:text-[16px] font-bold text-text flex items-center gap-2">
+                            <Zap className="w-4 h-4 text-accent" />
                             <span>Practice & Assessment</span>
                           </h4>
-                          <div className="p-4 rounded-xl bg-surface-2 border border-border space-y-3 text-xs">
+                          <div className="p-4 sm:p-5 rounded-xl bg-surface-2 border border-border space-y-3 text-[14px]">
                             {/* Conceptual Questions */}
                             {conceptualQuestions.length > 0 && (
                               <div className="p-3.5 rounded-lg bg-surface-1 border border-border space-y-2">
-                                <span className="font-semibold text-text flex items-center gap-1.5">
-                                  <HelpCircle className="w-3.5 h-3.5 text-accent" />
+                                <span className="font-semibold text-text flex items-center gap-1.5 text-[14px]">
+                                  <HelpCircle className="w-4 h-4 text-accent" />
                                   Conceptual Questions:
                                 </span>
-                                <ul className="space-y-1.5 pl-5 text-text-muted list-disc">
+                                <ul className="space-y-1.5 pl-5 text-text-muted list-disc text-[14px]">
                                   {conceptualQuestions.map((q, qIdx) => (
                                     <li key={qIdx} className="leading-relaxed">
                                       {q}
@@ -596,8 +596,8 @@ export const FullPageDayView = ({
                             {/* Hands-on Practice */}
                             {handsOnDrills.length > 0 && (
                               <div className="space-y-1.5 pt-1">
-                                <span className="font-semibold text-text block">Hands-on Practice:</span>
-                                <ul className="space-y-1.5 text-text-muted pl-1">
+                                <span className="font-semibold text-text block text-[14px]">Hands-on Practice:</span>
+                                <ul className="space-y-1.5 text-text-muted pl-1 text-[14px]">
                                   {handsOnDrills.map((ex, exIdx) => (
                                     <li key={exIdx} className="flex items-start gap-2">
                                       <span className="text-accent font-bold">›</span>
@@ -614,12 +614,12 @@ export const FullPageDayView = ({
                       {/* 4. Key Takeaways */}
                       {takeaways.length > 0 && (
                         <div className="space-y-3">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-accent flex items-center gap-1.5">
-                            <Award className="w-4 h-4" />
+                          <h4 className="text-[15px] sm:text-[16px] font-bold text-text flex items-center gap-2">
+                            <Award className="w-4 h-4 text-accent" />
                             <span>Key Takeaways</span>
                           </h4>
-                          <div className="p-4 rounded-xl bg-done/5 border border-done/20 space-y-2">
-                            <ul className="space-y-2 text-xs text-text">
+                          <div className="p-4 sm:p-5 rounded-xl bg-done/5 border border-done/20 space-y-2">
+                            <ul className="space-y-2 text-[14px] sm:text-[15px] text-text">
                               {takeaways.map((takeaway, tkIdx) => (
                                 <li key={tkIdx} className="flex items-start gap-2.5">
                                   <Check className="w-4 h-4 text-done shrink-0 mt-0.5" />

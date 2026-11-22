@@ -44,7 +44,7 @@ export const SafeMarkdown = ({ content = '' }) => {
 
       if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
         return (
-          <strong key={key} className="font-semibold text-ink">
+          <strong key={key} className="font-bold text-text">
             {part.slice(2, -2)}
           </strong>
         );
@@ -52,7 +52,7 @@ export const SafeMarkdown = ({ content = '' }) => {
 
       if (part.startsWith('*') && part.endsWith('*') && part.length >= 2) {
         return (
-          <em key={key} className="italic text-ink">
+          <em key={key} className="italic text-text">
             {part.slice(1, -1)}
           </em>
         );
@@ -123,7 +123,7 @@ export const SafeMarkdown = ({ content = '' }) => {
     // Headings
     if (trimmed.startsWith('#### ')) {
       elements.push(
-        <h5 key={`h4-${i}`} className="text-sm font-semibold text-ink uppercase tracking-wide mt-3 mb-1">
+        <h5 key={`h4-${i}`} className="text-[15px] sm:text-[16px] font-semibold text-text mt-3.5 mb-1.5 tracking-normal">
           {renderInline(trimmed.replace(/^####\s+/, ''), `h4-in-${i}`)}
         </h5>
       );
@@ -131,7 +131,7 @@ export const SafeMarkdown = ({ content = '' }) => {
     }
     if (trimmed.startsWith('### ')) {
       elements.push(
-        <h4 key={`h3-${i}`} className="text-base font-semibold text-ink mt-4 mb-1.5">
+        <h4 key={`h3-${i}`} className="text-[16px] font-bold text-text mt-4 mb-2">
           {renderInline(trimmed.replace(/^###\s+/, ''), `h3-in-${i}`)}
         </h4>
       );
@@ -139,7 +139,7 @@ export const SafeMarkdown = ({ content = '' }) => {
     }
     if (trimmed.startsWith('## ')) {
       elements.push(
-        <h3 key={`h2-${i}`} className="text-lg font-semibold text-ink mt-5 mb-2 pb-1 border-b border-line">
+        <h3 key={`h2-${i}`} className="text-lg font-bold text-text mt-5 mb-2 pb-1 border-b border-border">
           {renderInline(trimmed.replace(/^##\s+/, ''), `h2-in-${i}`)}
         </h3>
       );
@@ -147,7 +147,7 @@ export const SafeMarkdown = ({ content = '' }) => {
     }
     if (trimmed.startsWith('# ')) {
       elements.push(
-        <h2 key={`h1-${i}`} className="text-xl font-bold text-ink mt-6 mb-2 pb-1 border-b border-line">
+        <h2 key={`h1-${i}`} className="text-xl font-bold text-text mt-6 mb-2 pb-1 border-b border-border">
           {renderInline(trimmed.replace(/^#\s+/, ''), `h1-in-${i}`)}
         </h2>
       );
@@ -159,7 +159,7 @@ export const SafeMarkdown = ({ content = '' }) => {
       elements.push(
         <blockquote
           key={`quote-${i}`}
-          className="pl-3.5 border-l-2 border-accent text-[13px] text-muted italic my-2 bg-page py-1.5 rounded-r"
+          className="pl-3.5 border-l-2 border-accent text-[14px] text-text-muted italic my-2 bg-surface-1 py-1.5 rounded-r"
         >
           {renderInline(trimmed.replace(/^>\s*/, ''), `quote-in-${i}`)}
         </blockquote>
@@ -167,12 +167,12 @@ export const SafeMarkdown = ({ content = '' }) => {
       continue;
     }
 
-    // Unordered lists
+    // Unordered lists (bullet point text: 14-15px, comfortable leading and spacing)
     if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
       elements.push(
-        <div key={`li-${i}`} className="flex items-start gap-2 text-[13px] text-ink ml-2 my-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0 mt-1.5" />
-          <span className="leading-relaxed">
+        <div key={`li-${i}`} className="flex items-start gap-2.5 text-[14px] sm:text-[15px] text-text ml-1 my-1.5 leading-relaxed">
+          <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0 mt-2" />
+          <span className="leading-relaxed flex-1">
             {renderInline(trimmed.replace(/^[-*]\s+/, ''), `li-in-${i}`)}
           </span>
         </div>
@@ -184,9 +184,9 @@ export const SafeMarkdown = ({ content = '' }) => {
     const olMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
     if (olMatch) {
       elements.push(
-        <div key={`oli-${i}`} className="flex items-start gap-2 text-[13px] text-ink ml-2 my-1">
-          <span className="font-semibold text-accent shrink-0">{olMatch[1]}.</span>
-          <span className="leading-relaxed">
+        <div key={`oli-${i}`} className="flex items-start gap-2.5 text-[14px] sm:text-[15px] text-text ml-1 my-1.5 leading-relaxed">
+          <span className="font-semibold text-accent shrink-0 mt-0.5">{olMatch[1]}.</span>
+          <span className="leading-relaxed flex-1">
             {renderInline(olMatch[2], `oli-in-${i}`)}
           </span>
         </div>
@@ -194,9 +194,9 @@ export const SafeMarkdown = ({ content = '' }) => {
       continue;
     }
 
-    // Standard paragraph
+    // Standard paragraph (14-15px, comfortable leading)
     elements.push(
-      <p key={`p-${i}`} className="text-[13px] text-ink leading-relaxed my-1.5">
+      <p key={`p-${i}`} className="text-[14px] sm:text-[15px] text-text leading-relaxed my-2">
         {renderInline(rawLine, `p-in-${i}`)}
       </p>
     );

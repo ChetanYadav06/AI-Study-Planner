@@ -265,22 +265,22 @@ public class TopicExpansionService {
                 Topic: %s
                 Roadmap Subject: %s (Day %d)
 
-                Structure your explanation point-wise using clear Markdown headings and bullet points. Avoid lengthy generic paragraphs.
+                Structure your explanation point-wise using clear Markdown headings and concise bullet points. Avoid lengthy generic paragraphs and repeated boilerplate.
+                Strict Rules:
+                - Do NOT use generic repetitive descriptions like "Definition and Purpose", "Working Model", or "Practical Implication".
+                - Keep each bullet point to approximately one sentence.
+                - Prefer 4 to 7 important, topic-specific bullet points overall.
+
                 Follow this exact structure:
 
                 ### Topic Introduction
-                - Provide a concise 2-3 sentence overview explaining what this topic is and why it is important.
+                - Maximum 2 short sentences explaining what this topic is and why it is important.
 
                 ### Core Concepts
                 - Divide into meaningful subheadings (#### Concept Name).
-                - Explain each concept using concise bullet points.
+                - Provide 3 to 5 concise bullet points per concept.
                 - Highlight important technical terms using **bold**.
-                - Include short concrete examples where they improve understanding.
-
-                ### Important Points & Mechanisms
-                - 1. **Working Principle**: Numbered step-by-step mechanism or execution lifecycle.
-                - 2. **Key Definitions**: Important definitions and constraints.
-                - 3. **Trade-offs & Differences**: Comparisons and performance or memory trade-offs.
+                - Keep descriptions direct, accurate, and beginner-friendly.
 
                 ### Practical Example
                 - If this is a programming or technical topic, provide a clean, runnable code snippet with a 1-sentence explanation of what it does.
@@ -291,7 +291,7 @@ public class TopicExpansionService {
                 - **Hands-on Practice**: 2 realistic exercises or scenario challenges.
 
                 ### Key Takeaways
-                - 3 to 5 concise bullet points summarizing the most important points, highlighting key terminology.
+                - 3 to 5 concise bullet points summarizing essential points with **bold** key terms.
                 """, topicTitle, roadmapTopic, dayNumber);
         } else {
             return String.format("""
@@ -299,23 +299,23 @@ public class TopicExpansionService {
                 Topic: %s
                 Roadmap Subject: %s (Day %d)
 
-                Structure your explanation point-wise using clear Markdown headings and bullet points. Avoid lengthy paragraphs.
+                Structure your explanation point-wise using clear Markdown headings and concise bullet points. Avoid lengthy paragraphs and repetitive boilerplate.
+                Strict Rules:
+                - Do NOT use generic labels like "Definition and Purpose", "Working Model", or "Practical Implication".
+                - Keep each bullet point to approximately one sentence.
+                - Prefer 4 to 7 important, advanced bullet points overall.
+
                 Follow this exact structure:
 
                 ### Topic Introduction
-                - Concise 2-3 sentence overview of advanced architectural role, scalability, and production impact.
+                - Maximum 2 short sentences on advanced architectural role, scalability, and production impact.
 
                 ### Core Concepts & Internal Mechanics
                 - Divide into meaningful subheadings (#### Mechanism Name).
                 - Explain internal state transitions, runtime behavior, and concurrency characteristics using concise bullet points with **bold** key terms.
 
-                ### Important Points & Mechanisms
-                - 1. **Performance & Scalability**: Latency, throughput, and memory optimization techniques.
-                - 2. **Failure Modes & Pitfalls**: Common edge cases, anti-patterns, and defensive coding strategies.
-                - 3. **Production Best Practices**: Architectural trade-offs and monitoring.
-
                 ### Practical Example
-                - If technical/code-based, provide a production-grade snippet demonstrating defensive programming or performance optimization.
+                - If technical/code-based, provide a production-grade snippet demonstrating defensive programming or performance optimization with a 1-sentence explanation.
                 - If theoretical, write "N/A".
 
                 ### Practice & Assessment
