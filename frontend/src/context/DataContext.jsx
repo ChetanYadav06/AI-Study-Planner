@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getGoals, getSavedRoadmaps, setTaskCompletion } from '../services/api';
 import { useAuth } from './AuthContext';
 
@@ -12,8 +12,14 @@ export const DataProvider = ({ children }) => {
   const [goals, setGoals] = useState([]);
   const [roadmaps, setRoadmaps] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [lastFetched, setLastFetched] = useState(null);
   const [error, setError] = useState(null);
+
+  // Mutable refs for stable caching, inflight request deduplication, and race-condition prevention
+  const lastFetchedRef = useRef(null);
+  const inFlightFetchRef = useRef(null);
+  const latestRequestIdRef = useRef(0);
+  const roadmapsRef = useRef(roadmaps);
+  roadmapsRef.current = roadmaps;
 
   // Single Source of Truth for Active Roadmap ID
   const [activeRoadmapId, setActiveRoadmapIdState] = useState(() => {
@@ -40,53 +46,81 @@ export const DataProvider = ({ children }) => {
     if (!isAuthenticated) {
       setGoals([]);
       setRoadmaps([]);
-      setLastFetched(null);
+      lastFetchedRef.current = null;
+      setLoading(false);
       return;
     }
 
     const now = Date.now();
-    if (!force && lastFetched && (now - lastFetched < CACHE_TTL_MS)) {
+    // Cache check: return immediately if data is still fresh within CACHE_TTL_MS and not forced
+    if (!force && lastFetchedRef.current && (now - lastFetchedRef.current < CACHE_TTL_MS)) {
       return;
     }
 
-    setLoading(true);
+    // Deduplication check: if a request is already in-flight, return the active promise
+    if (inFlightFetchRef.current) {
+      return inFlightFetchRef.current;
+    }
+
+    // Only set loading true during initial load (when roadmaps array is empty) to prevent UI flickering
+    if (roadmapsRef.current.length === 0) {
+      setLoading(true);
+    }
     setError(null);
-    try {
-      const [goalsRes, roadmapsRes] = await Promise.all([
-        getGoals().catch((err) => {
-          console.warn('Failed to fetch goals:', err);
-          return [];
-        }),
-        getSavedRoadmaps().catch((err) => {
-          console.warn('Failed to fetch roadmaps:', err);
-          return [];
-        })
-      ]);
 
-      const loadedGoals = Array.isArray(goalsRes) ? goalsRes : [];
-      const loadedRoadmaps = Array.isArray(roadmapsRes) ? roadmapsRes : [];
+    const requestId = ++latestRequestIdRef.current;
 
-      setGoals(loadedGoals);
-      setRoadmaps(loadedRoadmaps);
-      setLastFetched(Date.now());
+    const fetchPromise = (async () => {
+      try {
+        const [goalsRes, roadmapsRes] = await Promise.all([
+          getGoals().catch((err) => {
+            console.warn('Failed to fetch goals:', err);
+            return [];
+          }),
+          getSavedRoadmaps().catch((err) => {
+            console.warn('Failed to fetch roadmaps:', err);
+            return [];
+          })
+        ]);
 
-      // Validate or default activeRoadmapId
-      if (loadedRoadmaps.length > 0) {
-        const savedId = typeof window !== 'undefined' ? localStorage.getItem(ACTIVE_ROADMAP_STORAGE_KEY) : null;
-        const exists = loadedRoadmaps.some((r) => String(r.id) === String(savedId));
-        if (!exists) {
-          // Default to first active roadmap (< 100%) or first available
-          const defaultRoadmap = loadedRoadmaps.find((r) => (r.progressPercentage || 0) < 100) || loadedRoadmaps[0];
-          setActiveRoadmapId(defaultRoadmap.id);
+        // Race condition prevention: ignore response if a newer fetch request was dispatched
+        if (requestId !== latestRequestIdRef.current) {
+          return;
+        }
+
+        const loadedGoals = Array.isArray(goalsRes) ? goalsRes : [];
+        const loadedRoadmaps = Array.isArray(roadmapsRes) ? roadmapsRes : [];
+
+        setGoals(loadedGoals);
+        setRoadmaps(loadedRoadmaps);
+        lastFetchedRef.current = Date.now();
+
+        // Validate or default activeRoadmapId
+        if (loadedRoadmaps.length > 0) {
+          const savedId = typeof window !== 'undefined' ? localStorage.getItem(ACTIVE_ROADMAP_STORAGE_KEY) : null;
+          const exists = loadedRoadmaps.some((r) => String(r.id) === String(savedId));
+          if (!exists) {
+            // Default to first active roadmap (< 100%) or first available
+            const defaultRoadmap = loadedRoadmaps.find((r) => (r.progressPercentage || 0) < 100) || loadedRoadmaps[0];
+            setActiveRoadmapId(defaultRoadmap.id);
+          }
+        }
+      } catch (err) {
+        if (requestId === latestRequestIdRef.current) {
+          console.error('Failed to refresh data cache:', err);
+          setError('Failed to load study data.');
+        }
+      } finally {
+        if (requestId === latestRequestIdRef.current) {
+          setLoading(false);
+          inFlightFetchRef.current = null;
         }
       }
-    } catch (err) {
-      console.error('Failed to refresh data cache:', err);
-      setError('Failed to load study data.');
-    } finally {
-      setLoading(false);
-    }
-  }, [isAuthenticated, lastFetched, setActiveRoadmapId]);
+    })();
+
+    inFlightFetchRef.current = fetchPromise;
+    return fetchPromise;
+  }, [isAuthenticated, setActiveRoadmapId]);
 
   // Initial fetch when authenticated
   useEffect(() => {
@@ -95,7 +129,8 @@ export const DataProvider = ({ children }) => {
     } else {
       setGoals([]);
       setRoadmaps([]);
-      setLastFetched(null);
+      lastFetchedRef.current = null;
+      setLoading(false);
     }
   }, [isAuthenticated, refreshData]);
 
@@ -304,6 +339,7 @@ export const DataProvider = ({ children }) => {
   // Cache mutation helpers
   const removeRoadmap = useCallback((id) => {
     setRoadmaps((prev) => prev.filter((r) => r.id !== id));
+    lastFetchedRef.current = null;
   }, []);
 
   const addRoadmap = useCallback((newRoadmap) => {
@@ -312,27 +348,31 @@ export const DataProvider = ({ children }) => {
       setActiveRoadmapId(newRoadmap.id);
     }
     // Invalidate lastFetched timestamp so future refreshData() always fetches fresh records
-    setLastFetched(null);
+    lastFetchedRef.current = null;
   }, [setActiveRoadmapId]);
 
   const updateRoadmap = useCallback((updatedRoadmap) => {
     setRoadmaps((prev) =>
       prev.map((r) => (r.id === updatedRoadmap.id ? { ...r, ...updatedRoadmap } : r))
     );
+    lastFetchedRef.current = null;
   }, []);
 
   const removeGoal = useCallback((id) => {
     setGoals((prev) => prev.filter((g) => g.id !== id));
+    lastFetchedRef.current = null;
   }, []);
 
   const addGoal = useCallback((newGoal) => {
     setGoals((prev) => [newGoal, ...prev.filter((g) => g.id !== newGoal.id)]);
+    lastFetchedRef.current = null;
   }, []);
 
   const updateGoal = useCallback((updatedGoal) => {
     setGoals((prev) =>
       prev.map((g) => (g.id === updatedGoal.id ? { ...g, ...updatedGoal } : g))
     );
+    lastFetchedRef.current = null;
   }, []);
 
   const value = useMemo(() => ({
@@ -340,7 +380,6 @@ export const DataProvider = ({ children }) => {
     roadmaps,
     loading,
     error,
-    lastFetched,
     activeRoadmapId,
     activeRoadmap,
     activeRoadmapStats,
@@ -358,7 +397,6 @@ export const DataProvider = ({ children }) => {
     roadmaps,
     loading,
     error,
-    lastFetched,
     activeRoadmapId,
     activeRoadmap,
     activeRoadmapStats,

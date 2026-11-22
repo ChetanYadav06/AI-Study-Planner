@@ -46,9 +46,9 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
   const [generateError, setGenerateError] = useState(null);
   const pollIntervalRef = useRef(null);
 
-  // Always force-refresh saved roadmaps and goals on mount
+  // Fetch roadmaps on mount (uses cache if available; avoids repeated requests)
   useEffect(() => {
-    refreshData(true);
+    refreshData();
   }, [refreshData]);
 
   // Stop polling on unmount
@@ -60,19 +60,32 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
     };
   }, []);
 
+  // Deduplicate roadmaps by id to prevent duplicate card rendering
+  const uniqueRoadmaps = useMemo(() => {
+    const seen = new Set();
+    return savedRoadmaps.filter((r) => {
+      if (!r || !r.id || seen.has(r.id)) return false;
+      seen.add(r.id);
+      return true;
+    });
+  }, [savedRoadmaps]);
+
+  const hasExistingData = uniqueRoadmaps.length > 0;
+  const isInitialLoading = loadingRoadmaps && !hasExistingData;
+
   // Compute aggregate stats across saved roadmaps
   const roadmapStats = useMemo(() => {
-    const total = savedRoadmaps.length;
+    const total = uniqueRoadmaps.length;
     if (total === 0) return { total: 0, avgProgress: 0, completedCount: 0, inProgressCount: 0 };
-    const completedCount = savedRoadmaps.filter(r => (r.progressPercentage || 0) >= 100).length;
-    const sumPct = savedRoadmaps.reduce((acc, r) => acc + (r.progressPercentage || 0), 0);
+    const completedCount = uniqueRoadmaps.filter(r => (r.progressPercentage || 0) >= 100).length;
+    const sumPct = uniqueRoadmaps.reduce((acc, r) => acc + (r.progressPercentage || 0), 0);
     return {
       total,
       avgProgress: Math.round(sumPct / total),
       completedCount,
       inProgressCount: total - completedCount
     };
-  }, [savedRoadmaps]);
+  }, [uniqueRoadmaps]);
 
   const pollJobUntilComplete = (jobId) => {
     return new Promise((resolve, reject) => {
@@ -311,21 +324,34 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
             }
           />
 
-          {savedRoadmaps.length > 0 && (
+          {uniqueRoadmaps.length > 0 && (
             <p className="text-sm text-muted">
               {roadmapStats.inProgressCount} in progress, {roadmapStats.completedCount} completed
             </p>
           )}
 
-          {/* Roadmaps List */}
-          {loadingRoadmaps ? (
-            <div className="py-12 text-center text-sm text-muted">
-              Loading roadmaps...
+          {/* Roadmaps List: Stable skeleton only on initial empty load; keeps cards visible during background refresh */}
+          {isInitialLoading ? (
+            <div className="space-y-3" aria-label="Loading roadmaps">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="p-5 bg-surface-1 border border-border rounded-xl space-y-3 animate-pulse">
+                  <div className="flex items-center justify-between">
+                    <div className="h-5 bg-surface-2 rounded-md w-48" />
+                    <div className="h-4 bg-surface-2 rounded-full w-20" />
+                  </div>
+                  <div className="h-3.5 bg-surface-2 rounded-md w-64" />
+                  <div className="pt-2.5 border-t border-border flex items-center justify-between">
+                    <div className="h-3 bg-surface-2 rounded-md w-28" />
+                    <div className="h-3 bg-surface-2 rounded-md w-24" />
+                  </div>
+                </div>
+              ))}
             </div>
-          ) : savedRoadmaps.length > 0 ? (
+          ) : uniqueRoadmaps.length > 0 ? (
             <div className="space-y-3">
-              {savedRoadmaps.map((roadmap) => {
+              {uniqueRoadmaps.map((roadmap) => {
                 const isComplete = (roadmap.progressPercentage || 0) >= 100;
+                const isCurrentActive = String(roadmap.id) === String(activeRoadmapId || activeRoadmap?.id);
                 const linkedGoal = goals.find(g => g.id === roadmap.goalId);
                 const displayHours = linkedGoal?.hoursPerDay != null ? linkedGoal.hoursPerDay : roadmap.hoursPerDay;
                 const formattedHours = typeof displayHours === 'number' ? displayHours : Number(displayHours) || 2;
@@ -338,7 +364,7 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div className="space-y-1.5 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="text-sm sm:text-base font-semibold text-text truncate">
                             {roadmap.title}
                           </h3>
@@ -346,6 +372,12 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
                             <StatusText status="success">Completed</StatusText>
                           ) : (
                             <StatusText status="accent">In progress</StatusText>
+                          )}
+                          {isCurrentActive && (
+                            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-accent/15 text-accent border border-accent/30 flex items-center gap-1 shrink-0">
+                              <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                              Active
+                            </span>
                           )}
                         </div>
 
@@ -359,6 +391,19 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
+                        {!isCurrentActive && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveRoadmapId(roadmap.id);
+                            }}
+                            className="text-xs text-text-muted hover:text-accent font-medium px-2 py-1 rounded-md hover:bg-surface-2 transition cursor-pointer"
+                            title="Set as active roadmap"
+                          >
+                            Set active
+                          </button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
