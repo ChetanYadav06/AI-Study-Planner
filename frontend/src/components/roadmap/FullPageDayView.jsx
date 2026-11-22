@@ -26,6 +26,10 @@ import {
   saveCachedDayContent,
   buildDayLearningContent
 } from '../../services/dayContentService';
+import {
+  setTutorLearningContext,
+  buildQuizPrompt
+} from '../../services/aiTutorContextService';
 
 export const FullPageDayView = ({
   roadmap,
@@ -172,14 +176,85 @@ export const FullPageDayView = ({
     }
   };
 
-  const handleAskAiAboutTopic = (topicTitle) => {
-    const query = `I am studying Day ${dayNumber} (${currentTaskItem?.task?.title || ''}). Can you explain "${topicTitle}" with beginner-friendly concepts, key mechanisms, and practical examples?`;
-    navigate(`#/ai-assistant?topic=${encodeURIComponent(topicTitle)}&prompt=${encodeURIComponent(query)}`);
+  // Button 1: Ask AI Tutor about Day [N] - sets full day context
+  const handleAskAiAboutDay = () => {
+    const contextData = {
+      type: 'day',
+      roadmapId,
+      roadmapTitle: roadmap?.topic || roadmap?.title || 'Study Curriculum',
+      goal: roadmap?.goal || roadmap?.description || '',
+      phaseNumber: phaseIdx + 1,
+      phaseTitle,
+      dayNumber,
+      dayTitle: task.title,
+      dayDescription: task.description || '',
+      objectives: task.learningObjectives || [],
+      skillLevel: roadmap?.skillLevel || 'INTERMEDIATE',
+      completionStatus: `${completedCount} of ${totalTopicsCount} topics completed (${dayProgressPct}%)`,
+      topics: dayTopics.map((t) => ({
+        title: t.title,
+        explanation: t.explanation,
+        subtopics: t.subtopics,
+        codeExample: t.codeExample,
+        takeaways: t.takeaways
+      }))
+    };
+    setTutorLearningContext(contextData);
+    navigate('#/ai-assistant?mode=day-qa');
   };
 
-  const handleAskAiAboutDay = () => {
-    const query = `I am studying Day ${dayNumber}: ${currentTaskItem?.task?.title || ''}. Give me a structured study summary and test my understanding with 3 practice questions.`;
-    navigate(`#/ai-assistant?topic=${encodeURIComponent(currentTaskItem?.task?.title || `Day ${dayNumber}`)}&prompt=${encodeURIComponent(query)}`);
+  // Chat with AI Tutor about a specific topic (maintains topic context)
+  const handleAskAiAboutTopic = (topicItem) => {
+    const contextData = {
+      type: 'topic-qa',
+      roadmapId,
+      roadmapTitle: roadmap?.topic || roadmap?.title || 'Study Curriculum',
+      goal: roadmap?.goal || '',
+      phaseNumber: phaseIdx + 1,
+      phaseTitle,
+      dayNumber,
+      dayTitle: task.title,
+      skillLevel: roadmap?.skillLevel || 'INTERMEDIATE',
+      activeTopic: {
+        title: topicItem.title,
+        explanation: topicItem.explanation,
+        subtopics: topicItem.subtopics,
+        codeExample: topicItem.codeExample,
+        takeaways: topicItem.takeaways
+      }
+    };
+    setTutorLearningContext(contextData);
+    navigate('#/ai-assistant?mode=topic-qa');
+  };
+
+  // Button 2: Ask AI Tutor to Test Me on a specific topic - prepares editable quiz prompt
+  const handleAskAiToTestTopic = (topicItem) => {
+    const contextData = {
+      type: 'topic-quiz',
+      roadmapId,
+      roadmapTitle: roadmap?.topic || roadmap?.title || 'Study Curriculum',
+      goal: roadmap?.goal || '',
+      phaseNumber: phaseIdx + 1,
+      phaseTitle,
+      dayNumber,
+      dayTitle: task.title,
+      skillLevel: roadmap?.skillLevel || 'INTERMEDIATE',
+      activeTopic: {
+        title: topicItem.title,
+        explanation: topicItem.explanation,
+        subtopics: topicItem.subtopics,
+        codeExample: topicItem.codeExample,
+        takeaways: topicItem.takeaways
+      }
+    };
+    setTutorLearningContext(contextData);
+    const quizPrompt = buildQuizPrompt({
+      topicTitle: topicItem.title,
+      dayNumber,
+      roadmapTitle: roadmap?.topic || roadmap?.title || 'Study Curriculum',
+      skillLevel: roadmap?.skillLevel || 'INTERMEDIATE'
+    });
+    navigate(`#/ai-assistant?mode=quiz&prompt=${encodeURIComponent(quizPrompt)}`);
   };
 
   // Copy code snippet helper
@@ -489,7 +564,7 @@ export const FullPageDayView = ({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleAskAiAboutTopic(topicItem.title);
+                          handleAskAiAboutTopic(topicItem);
                         }}
                         className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-1 hover:bg-surface-2 border border-border text-xs font-semibold text-text hover:text-accent transition cursor-pointer"
                         title="Chat with AI Tutor about this topic"
@@ -637,7 +712,7 @@ export const FullPageDayView = ({
                       <div className="pt-2 flex items-center justify-between border-t border-border">
                         <button
                           type="button"
-                          onClick={() => handleAskAiAboutTopic(topicItem.title)}
+                          onClick={() => handleAskAiToTestTopic(topicItem)}
                           className="px-3 py-1.5 rounded-lg bg-surface-2 hover:bg-surface-1 border border-border text-xs text-text flex items-center gap-1.5 transition cursor-pointer"
                         >
                           <Sparkles className="w-3.5 h-3.5 text-accent" />

@@ -14,7 +14,8 @@ import {
   ArrowRight,
   Bot,
   User,
-  Loader2
+  Loader2,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from '../../context/RouterContext';
@@ -25,6 +26,12 @@ import { SafeMarkdown } from '../roadmap/SafeMarkdown';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
+import {
+  getTutorLearningContext,
+  clearTutorLearningContext,
+  buildQuizPrompt,
+  formatContextForAssistant
+} from '../../services/aiTutorContextService';
 
 export const AiAssistantView = () => {
   const { user } = useAuth();
@@ -73,11 +80,8 @@ export const AiAssistantView = () => {
   // Active topic filter/context
   const [selectedTopic, setSelectedTopic] = useState(defaultContext);
 
-  useEffect(() => {
-    if (!query.topic && (activeRoadmap?.topic || activeRoadmap?.title)) {
-      setSelectedTopic(activeRoadmap.topic || activeRoadmap.title);
-    }
-  }, [activeRoadmap, query.topic]);
+  // Active learning context passed from Day/Topic interactions
+  const [learningContext, setLearningContext] = useState(() => getTutorLearningContext());
 
   // Conversations history list
   const [conversations, setConversations] = useState(() => {
@@ -94,7 +98,7 @@ export const AiAssistantView = () => {
           {
             id: 'm1',
             role: 'assistant',
-            content: `Hello ${user?.name || 'there'}! I am your AI Study Tutor. Ask me any question, request concept explanations, take a rapid quiz, or click any prompt chip below to accelerate your learning.`,
+            content: `Hello ${user?.name || 'there'}! I am your AI Study Tutor. Ask me any question, request concept explanations, take an interactive quiz, or test your understanding to accelerate your learning.`,
             createdAt: new Date().toISOString()
           }
         ]
@@ -107,10 +111,133 @@ export const AiAssistantView = () => {
   const [loadingReply, setLoadingReply] = useState(false);
   const messagesEndRef = useRef(null);
 
+  // Handle incoming contextual navigation from Day / Topic view
+  useEffect(() => {
+    const ctx = getTutorLearningContext();
+    if (ctx) {
+      setLearningContext(ctx);
+      const targetTopic = ctx.activeTopic?.title || ctx.dayTitle || ctx.roadmapTitle;
+      if (targetTopic) {
+        setSelectedTopic(targetTopic);
+      }
+
+      // Generate a unique session ID for this specific day/topic
+      const convId = `conv-${ctx.type}-${ctx.roadmapId || 'rm'}-d${ctx.dayNumber || '0'}-${
+        ctx.activeTopic?.title ? ctx.activeTopic.title.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16) : 'day'
+      }`;
+
+      // Mode: Quiz (Button 2: Ask AI Tutor to Test Me)
+      if (query.mode === 'quiz') {
+        const quizPrompt = query.prompt
+          ? decodeURIComponent(query.prompt)
+          : buildQuizPrompt({
+              topicTitle: ctx.activeTopic?.title || ctx.dayTitle,
+              dayNumber: ctx.dayNumber,
+              roadmapTitle: ctx.roadmapTitle,
+              skillLevel: ctx.skillLevel
+            });
+
+        // Insert prompt directly into chat input for student to review or edit
+        setInputMessage(quizPrompt);
+
+        setConversations((prev) => {
+          const existing = prev.find((c) => c.id === convId);
+          if (existing) {
+            setActiveConvId(convId);
+            return prev;
+          }
+          const newConv = {
+            id: convId,
+            title: `Quiz: ${ctx.activeTopic?.title || 'Day ' + ctx.dayNumber}`,
+            learningContext: ctx,
+            createdAt: new Date().toISOString(),
+            messages: [
+              {
+                id: `m-init-${Date.now()}`,
+                role: 'assistant',
+                content: `Ready for your quiz on **${ctx.activeTopic?.title || ctx.dayTitle}**!\n\nI have loaded your learning material into context and prepared your quiz prompt below. You can review or edit it, then hit **Send** to start the interactive test.`,
+                createdAt: new Date().toISOString()
+              }
+            ]
+          };
+          setActiveConvId(convId);
+          return [newConv, ...prev];
+        });
+      }
+
+      // Mode: Day Q&A (Button 1: Ask AI Tutor about Day [N])
+      else if (query.mode === 'day-qa') {
+        setInputMessage('');
+        setConversations((prev) => {
+          const existing = prev.find((c) => c.id === convId);
+          if (existing) {
+            setActiveConvId(convId);
+            return prev;
+          }
+          const newConv = {
+            id: convId,
+            title: `Day ${ctx.dayNumber}: ${ctx.dayTitle}`,
+            learningContext: ctx,
+            createdAt: new Date().toISOString(),
+            messages: [
+              {
+                id: `m-init-${Date.now()}`,
+                role: 'assistant',
+                content: `You're currently studying Day ${ctx.dayNumber} of your ${ctx.roadmapTitle} learning roadmap. I have your day-wise learning material ready. What would you like to understand?`,
+                createdAt: new Date().toISOString()
+              }
+            ]
+          };
+          setActiveConvId(convId);
+          return [newConv, ...prev];
+        });
+      }
+
+      // Mode: Topic Q&A (Specific topic within day)
+      else if (query.mode === 'topic-qa') {
+        setInputMessage('');
+        setConversations((prev) => {
+          const existing = prev.find((c) => c.id === convId);
+          if (existing) {
+            setActiveConvId(convId);
+            return prev;
+          }
+          const newConv = {
+            id: convId,
+            title: `Study: ${ctx.activeTopic?.title || 'Topic'}`,
+            learningContext: ctx,
+            createdAt: new Date().toISOString(),
+            messages: [
+              {
+                id: `m-init-${Date.now()}`,
+                role: 'assistant',
+                content: `You're studying **${ctx.activeTopic?.title}** from Day ${ctx.dayNumber} of your ${ctx.roadmapTitle} roadmap. I have your topic learning material ready. What concept, code example, or problem would you like to explore?`,
+                createdAt: new Date().toISOString()
+              }
+            ]
+          };
+          setActiveConvId(convId);
+          return [newConv, ...prev];
+        });
+      }
+    }
+  }, [query.mode, query.prompt]);
+
   // Active conversation object
   const activeConversation = useMemo(() => {
     return conversations.find((c) => c.id === activeConvId) || conversations[0];
   }, [conversations, activeConvId]);
+
+  // Active effective learning context (from conversation or session)
+  const currentLearningContext = useMemo(() => {
+    return activeConversation?.learningContext || learningContext || null;
+  }, [activeConversation, learningContext]);
+
+  // Clear active context
+  const handleClearContext = () => {
+    clearTutorLearningContext();
+    setLearningContext(null);
+  };
 
   // Persist conversations
   useEffect(() => {
@@ -179,7 +306,7 @@ export const AiAssistantView = () => {
     }
   };
 
-  // Send message
+  // Send message with automatic learning context
   const handleSendMessage = async (customText = null, actionType = 'chat') => {
     const textToSend = (customText || inputMessage).trim();
     if (!textToSend || loadingReply) return;
@@ -192,14 +319,16 @@ export const AiAssistantView = () => {
       createdAt: new Date().toISOString()
     };
 
-    // Update state with user message
+    // Update state with visible user message
     setConversations((prev) =>
       prev.map((c) => {
         if (c.id === activeConvId) {
           const isFirstUserMsg = c.messages.filter((m) => m.role === 'user').length === 0;
           return {
             ...c,
-            title: isFirstUserMsg ? textToSend.slice(0, 36) : c.title,
+            title: isFirstUserMsg && !c.title.startsWith('Quiz:') && !c.title.startsWith('Day ')
+              ? textToSend.slice(0, 36)
+              : c.title,
             messages: [...c.messages, newUserMessage]
           };
         }
@@ -211,17 +340,20 @@ export const AiAssistantView = () => {
     setLoadingReply(true);
 
     try {
-      // Augment message with relevant uploaded study notes/documents context if available
+      // 1. Augment with active Day/Topic study context
+      let formattedPrompt = formatContextForAssistant(currentLearningContext, textToSend);
+
+      // 2. Augment with relevant uploaded student study notes if present
       const notesContext = getStudentNotesContext(`${selectedTopic} ${textToSend}`);
-      let queryMessage = textToSend;
       if (notesContext && notesContext.trim()) {
-        queryMessage = `[STUDENT'S UPLOADED STUDY MATERIALS / NOTES CONTEXT:\n${notesContext}\n]\n\nSTUDENT QUESTION / PROMPT:\n${textToSend}`;
+        formattedPrompt = `[STUDENT'S UPLOADED STUDY MATERIALS / NOTES CONTEXT:\n${notesContext}\n]\n\n${formattedPrompt}`;
       }
 
+      // 3. Send to existing Gemini assistant endpoint
       const response = await sendAssistantChatMessage({
-        message: queryMessage,
-        topic: selectedTopic,
-        action: actionType
+        message: formattedPrompt,
+        topic: currentLearningContext?.activeTopic?.title || currentLearningContext?.dayTitle || selectedTopic,
+        action: actionType || (query.mode === 'quiz' ? 'quiz' : 'chat')
       });
 
       const assistantMessage = {
@@ -258,12 +390,12 @@ export const AiAssistantView = () => {
     }
   };
 
-  // Quick Action Chips from Section 6
+  // Quick Action Chips
   const promptChips = [
-    { label: 'Quiz me', icon: HelpCircle, action: 'quiz', prompt: `Quiz me on ${selectedTopic}. Ask 3 challenging conceptual multiple-choice questions with answers revealed at the end.` },
-    { label: 'Explain a concept', icon: BookOpen, action: 'explain', prompt: `Explain the core conceptual foundation of ${selectedTopic} using simple analogies and clean code examples.` },
+    { label: 'Quiz me', icon: HelpCircle, action: 'quiz', prompt: `Quiz me on ${selectedTopic}. Ask 3 challenging conceptual multiple-choice questions one at a time, and wait for my answer.` },
+    { label: 'Explain with code', icon: Code, action: 'explain', prompt: `Explain the core conceptual foundation of ${selectedTopic} using simple analogies and clean code examples.` },
     { label: 'Summarize topic', icon: FileText, action: 'summary', prompt: `Provide a high-impact executive summary and key takeaways for ${selectedTopic}.` },
-    { label: 'Practice problems', icon: Code, action: 'practice', prompt: `Give me 2 practical coding and architectural problem drills on ${selectedTopic} to test my skills.` },
+    { label: 'Practice problems', icon: BookOpen, action: 'practice', prompt: `Give me 2 practical coding and architectural problem drills on ${selectedTopic} to test my skills.` },
     { label: 'Revision notes', icon: Layers, action: 'revision', prompt: `Generate concise revision cheat-sheet notes and common pitfall warnings for ${selectedTopic}.` },
     { label: 'What should I study next?', icon: Compass, action: 'next', prompt: `Based on studying ${selectedTopic}, what logical prerequisites or next topics should I master next?` },
   ];
@@ -271,14 +403,14 @@ export const AiAssistantView = () => {
   return (
     <div className="h-[calc(100vh-var(--header-h,3.5rem)-2rem)] max-w-7xl mx-auto flex gap-4 select-none">
       {/* ── LEFT: CONVERSATION SIDEBAR ── */}
-      <div className="w-64 sm:w-72 shrink-0 bg-surface border border-line rounded-xl flex flex-col justify-between overflow-hidden hidden md:flex">
+      <div className="w-64 sm:w-72 shrink-0 bg-surface-1 border border-border rounded-2xl flex flex-col justify-between overflow-hidden hidden md:flex shadow-xs">
         {/* New Chat Button Header */}
-        <div className="p-3.5 border-b border-line space-y-3">
+        <div className="p-3.5 border-b border-border bg-surface-2/60 space-y-3">
           <Button
             variant="primary"
             size="md"
             onClick={handleNewChat}
-            className="w-full gap-2"
+            className="w-full gap-2 font-semibold"
           >
             <Plus className="w-4 h-4" />
             <span>New Chat</span>
@@ -286,13 +418,13 @@ export const AiAssistantView = () => {
 
           {/* Topic Context Selector */}
           <div className="space-y-1">
-            <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">
+            <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider block">
               Active Study Context
             </label>
             <select
               value={selectedTopic}
               onChange={(e) => setSelectedTopic(e.target.value)}
-              className="w-full p-2 text-xs rounded-lg bg-surface-secondary border border-line text-ink focus:border-accent outline-none font-medium truncate cursor-pointer"
+              className="w-full p-2 text-xs rounded-xl bg-surface-1 border border-border text-text focus:border-accent outline-none font-medium truncate cursor-pointer"
             >
               {availableTopics.map((t) => (
                 <option key={t} value={t}>
@@ -305,8 +437,8 @@ export const AiAssistantView = () => {
         </div>
 
         {/* Conversations List */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-1 divide-y-0">
-          <span className="text-[10px] font-bold text-muted/70 px-2 py-1 uppercase tracking-wider block">
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          <span className="text-[10px] font-bold text-text-muted/70 px-2 py-1 uppercase tracking-wider block">
             Recent Conversations
           </span>
           {conversations.map((conv) => {
@@ -315,14 +447,14 @@ export const AiAssistantView = () => {
               <div
                 key={conv.id}
                 onClick={() => setActiveConvId(conv.id)}
-                className={`flex items-center justify-between p-2.5 rounded-lg text-xs font-medium transition cursor-pointer group ${
+                className={`flex items-center justify-between p-2.5 rounded-xl text-xs font-medium transition cursor-pointer group ${
                   isActive
-                    ? 'bg-accent/15 text-white border border-accent/40 font-semibold'
-                    : 'text-muted hover:text-ink hover:bg-surface-secondary border border-transparent'
+                    ? 'bg-accent/15 text-white border border-accent/40 font-semibold shadow-xs'
+                    : 'text-text-muted hover:text-text hover:bg-surface-2 border border-transparent'
                 }`}
               >
                 <div className="flex items-center gap-2 truncate flex-1 min-w-0">
-                  <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-accent' : 'text-muted'}`} />
+                  <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-accent' : 'text-text-muted'}`} />
                   <span className="truncate">{conv.title || 'Untitled Session'}</span>
                 </div>
 
@@ -341,40 +473,69 @@ export const AiAssistantView = () => {
       </div>
 
       {/* ── RIGHT: MAIN CHAT INTERFACE ── */}
-      <Card className="flex-1 flex flex-col justify-between overflow-hidden border border-border bg-surface-1">
+      <Card className="flex-1 flex flex-col justify-between overflow-hidden border border-border bg-surface-1 shadow-xs">
         {/* Chat Window Header */}
-        <div className="p-4 sm:p-5 border-b border-border bg-surface-2/60 flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-[10px] bg-accent-solid flex items-center justify-center text-white shrink-0">
-              <Bot className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm sm:text-base font-bold text-text truncate">
-                  AI Study Tutor
-                </h3>
-                <Badge variant="accent" size="xs">
-                  Gemini 3.5
-                </Badge>
+        <div className="p-4 sm:p-5 border-b border-border bg-surface-2/60 shrink-0 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-accent-solid flex items-center justify-center text-white shrink-0 shadow-xs">
+                <Bot className="w-5 h-5" />
               </div>
-              <p className="text-xs text-text-muted truncate flex items-center gap-2">
-                <span>Context: <span className="text-accent font-medium">{selectedTopic}</span></span>
-                {getStudentNotesContext() ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] text-accent font-medium bg-accent/15 px-2 py-0.5 rounded-full border border-accent/20">
-                    <FileText className="w-3 h-3" />
-                    <span>Using your notes</span>
-                  </span>
-                ) : null}
-              </p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-bold text-text truncate">
+                    AI Study Tutor
+                  </h3>
+                  <Badge variant="accent" size="xs">
+                    Gemini 3.5
+                  </Badge>
+                </div>
+                <p className="text-xs text-text-muted truncate flex items-center gap-2">
+                  <span>Subject: <span className="text-accent font-medium">{selectedTopic}</span></span>
+                  {getStudentNotesContext() ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-accent font-medium bg-accent/15 px-2 py-0.5 rounded-full border border-accent/20">
+                      <FileText className="w-3 h-3" />
+                      <span>Using your notes</span>
+                    </span>
+                  ) : null}
+                </p>
+              </div>
+            </div>
+
+            {/* Mobile New Chat trigger */}
+            <div className="md:hidden">
+              <Button variant="secondary" size="sm" onClick={handleNewChat}>
+                <Plus className="w-3.5 h-3.5" />
+              </Button>
             </div>
           </div>
 
-          {/* Mobile New Chat trigger */}
-          <div className="md:hidden">
-            <Button variant="secondary" size="sm" onClick={handleNewChat}>
-              <Plus className="w-3.5 h-3.5" />
-            </Button>
-          </div>
+          {/* Active Roadmap & Day Learning Context Banner */}
+          {currentLearningContext && (
+            <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2 truncate">
+                <span className="px-2 py-0.5 rounded-md font-mono font-bold text-[11px] bg-accent-solid text-white shrink-0">
+                  Day {currentLearningContext.dayNumber || 1}
+                </span>
+                <span className="text-text font-medium truncate">
+                  {currentLearningContext.activeTopic?.title || currentLearningContext.dayTitle}
+                  <span className="text-text-muted ml-1 text-[11px]">
+                    ({currentLearningContext.roadmapTitle})
+                  </span>
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleClearContext}
+                className="text-[11px] text-text-muted hover:text-danger flex items-center gap-1 transition cursor-pointer shrink-0"
+                title="Clear day-specific learning context"
+              >
+                <X className="w-3 h-3" />
+                <span>Clear Context</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Message Stream */}
@@ -390,7 +551,7 @@ export const AiAssistantView = () => {
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
                     isUser
-                      ? 'bg-accent-solid text-white'
+                      ? 'bg-accent-solid text-white shadow-xs'
                       : 'bg-surface-2 text-accent border border-border'
                   }`}
                 >
@@ -399,10 +560,10 @@ export const AiAssistantView = () => {
 
                 {/* Message Bubble */}
                 <div
-                  className={`p-4 rounded-[14px] text-sm leading-relaxed space-y-2 select-text ${
+                  className={`p-4 rounded-2xl text-[14px] leading-relaxed space-y-2 select-text ${
                     isUser
-                      ? 'bg-accent-solid text-white rounded-tr-xs max-w-lg'
-                      : 'bg-surface-secondary/80 border border-line text-ink rounded-tl-xs flex-1'
+                      ? 'bg-accent-solid text-white rounded-tr-xs max-w-xl shadow-xs'
+                      : 'bg-surface-2 border border-border text-text rounded-tl-xs flex-1'
                   }`}
                 >
                   {isUser ? (
@@ -418,12 +579,12 @@ export const AiAssistantView = () => {
           {/* Typing Loading Indicator */}
           {loadingReply && (
             <div className="flex gap-3 max-w-xl mr-auto animate-pulse">
-              <div className="w-8 h-8 rounded-full bg-surface-secondary border border-line flex items-center justify-center text-accent shrink-0">
+              <div className="w-8 h-8 rounded-full bg-surface-2 border border-border flex items-center justify-center text-accent shrink-0">
                 <Sparkles className="w-4 h-4 text-accent" />
               </div>
-              <div className="p-3.5 rounded-2xl rounded-tl-xs bg-surface-secondary/80 border border-line flex items-center gap-2 text-xs text-muted">
+              <div className="p-3.5 rounded-2xl rounded-tl-xs bg-surface-2 border border-border flex items-center gap-2 text-xs text-text-muted">
                 <Loader2 className="w-4 h-4 animate-spin text-accent" />
-                <span>Gemini is synthesizing explanation...</span>
+                <span>Gemini is synthesizing explanation using your roadmap context...</span>
               </div>
             </div>
           )}
@@ -432,7 +593,7 @@ export const AiAssistantView = () => {
         </div>
 
         {/* ── BOTTOM: QUICK CHIPS + MESSAGE INPUT ── */}
-        <div className="p-3 sm:p-4 border-t border-line bg-surface-secondary/60 space-y-3 shrink-0">
+        <div className="p-3 sm:p-4 border-t border-border bg-surface-2/60 space-y-3 shrink-0">
           {/* Quick Prompt Action Chips */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
             {promptChips.map((chip) => {
@@ -442,7 +603,7 @@ export const AiAssistantView = () => {
                   key={chip.label}
                   type="button"
                   onClick={() => handleSendMessage(chip.prompt, chip.action)}
-                  className="px-3 py-1 rounded-full bg-surface-2 border border-border hover:border-accent text-xs font-medium text-text-muted hover:text-text transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
+                  className="px-3 py-1 rounded-full bg-surface-1 border border-border hover:border-accent text-xs font-medium text-text-muted hover:text-text transition flex items-center gap-1.5 shrink-0 cursor-pointer"
                 >
                   <ChipIcon className="w-3 h-3 text-accent" />
                   <span>{chip.label}</span>
@@ -463,9 +624,13 @@ export const AiAssistantView = () => {
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              placeholder={`Ask anything about ${selectedTopic}... (Enter to send)`}
+              placeholder={
+                currentLearningContext
+                  ? `Ask anything about Day ${currentLearningContext.dayNumber} (${currentLearningContext.activeTopic?.title || currentLearningContext.dayTitle})...`
+                  : `Ask anything about ${selectedTopic}... (Enter to send)`
+              }
               disabled={loadingReply}
-              className="flex-1 p-3 text-sm rounded-[10px] bg-surface-2 border border-border text-text placeholder:text-text-muted/70 focus:border-accent outline-none font-medium transition-colors"
+              className="flex-1 p-3 text-sm rounded-xl bg-surface-1 border border-border text-text placeholder:text-text-muted/60 focus:border-accent focus:ring-1 focus:ring-accent outline-none font-medium transition"
             />
 
             <Button
@@ -473,7 +638,7 @@ export const AiAssistantView = () => {
               variant="primary"
               size="md"
               disabled={!inputMessage.trim() || loadingReply}
-              className="px-4"
+              className="px-4.5 font-semibold"
               aria-label="Send message"
             >
               <Send className="w-4 h-4" />
