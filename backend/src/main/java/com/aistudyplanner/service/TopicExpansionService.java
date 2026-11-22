@@ -261,31 +261,69 @@ public class TopicExpansionService {
     private String buildExpansionPrompt(String roadmapTopic, int dayNumber, String topicTitle, int level) {
         if (level == 1) {
             return String.format("""
-                You are an expert technical tutor providing a focused, high-value Deep Dive on a curriculum topic.
+                You are an expert technical tutor providing a focused, structured learning guide on a curriculum topic.
                 Topic: %s
                 Roadmap Subject: %s (Day %d)
 
-                Write a comprehensive yet concise learning guide in Markdown covering:
-                ### 1. Mental Model & Core Principles
-                ### 2. Syntax & Implementation Pattern
-                ### 3. Practical Working Code Example
-                ### 4. Common Pitfalls & Debugging Tips
+                Structure your explanation point-wise using clear Markdown headings and bullet points. Avoid lengthy generic paragraphs.
+                Follow this exact structure:
 
-                Provide clean, runnable code and clear technical explanations without conversational pleasantries.
+                ### Topic Introduction
+                - Provide a concise 2-3 sentence overview explaining what this topic is and why it is important.
+
+                ### Core Concepts
+                - Divide into meaningful subheadings (#### Concept Name).
+                - Explain each concept using concise bullet points.
+                - Highlight important technical terms using **bold**.
+                - Include short concrete examples where they improve understanding.
+
+                ### Important Points & Mechanisms
+                - 1. **Working Principle**: Numbered step-by-step mechanism or execution lifecycle.
+                - 2. **Key Definitions**: Important definitions and constraints.
+                - 3. **Trade-offs & Differences**: Comparisons and performance or memory trade-offs.
+
+                ### Practical Example
+                - If this is a programming or technical topic, provide a clean, runnable code snippet with a 1-sentence explanation of what it does.
+                - If this is a theoretical topic with no code, write "N/A" (do NOT generate dummy code).
+
+                ### Practice & Assessment
+                - **Conceptual Questions**: 2 focused questions testing understanding.
+                - **Hands-on Practice**: 2 realistic exercises or scenario challenges.
+
+                ### Key Takeaways
+                - 3 to 5 concise bullet points summarizing the most important points, highlighting key terminology.
                 """, topicTitle, roadmapTopic, dayNumber);
         } else {
             return String.format("""
-                You are a principal engineer providing an Advanced Exploration & Edge Cases deep dive on a technical topic.
+                You are a principal engineer providing an Advanced Deep Dive on a curriculum topic.
                 Topic: %s
                 Roadmap Subject: %s (Day %d)
 
-                Write an advanced technical guide in Markdown covering:
-                ### 1. Architecture & Design Trade-offs
-                ### 2. Internal Mechanics & Runtime Behavior
-                ### 3. Performance & Memory Optimizations
-                ### 4. Edge Cases, Failure Modes & Defensive Strategies
+                Structure your explanation point-wise using clear Markdown headings and bullet points. Avoid lengthy paragraphs.
+                Follow this exact structure:
 
-                Provide realistic production insights and architectural analysis without conversational pleasantries.
+                ### Topic Introduction
+                - Concise 2-3 sentence overview of advanced architectural role, scalability, and production impact.
+
+                ### Core Concepts & Internal Mechanics
+                - Divide into meaningful subheadings (#### Mechanism Name).
+                - Explain internal state transitions, runtime behavior, and concurrency characteristics using concise bullet points with **bold** key terms.
+
+                ### Important Points & Mechanisms
+                - 1. **Performance & Scalability**: Latency, throughput, and memory optimization techniques.
+                - 2. **Failure Modes & Pitfalls**: Common edge cases, anti-patterns, and defensive coding strategies.
+                - 3. **Production Best Practices**: Architectural trade-offs and monitoring.
+
+                ### Practical Example
+                - If technical/code-based, provide a production-grade snippet demonstrating defensive programming or performance optimization.
+                - If theoretical, write "N/A".
+
+                ### Practice & Assessment
+                - **System Scenario**: 1 realistic architectural problem to diagnose or solve.
+                - **Implementation Challenge**: 1 advanced exercise or optimization task.
+
+                ### Key Takeaways
+                - 3 to 5 concise executive bullet points with bold technical terms.
                 """, topicTitle, roadmapTopic, dayNumber);
         }
     }

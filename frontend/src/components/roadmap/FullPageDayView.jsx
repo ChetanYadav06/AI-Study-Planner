@@ -14,14 +14,11 @@ import {
   ChevronUp,
   MessageSquare,
   HelpCircle,
-  Layers,
   Award,
-  Zap,
-  RotateCcw
+  Zap
 } from 'lucide-react';
 import { useRouter } from '../../context/RouterContext';
 import { Button } from '../ui/Button';
-import { Badge } from '../ui/Badge';
 import { ProgressBar } from '../ui/ProgressBar';
 import { SafeMarkdown } from './SafeMarkdown';
 import {
@@ -74,7 +71,7 @@ export const FullPageDayView = ({
     }
   }, [completedSubtopics, subtopicStorageKey]);
 
-  // Load or generate structured 5-section day content using dayContentService
+  // Load or generate structured point-wise day content using dayContentService
   const [dayTopics, setDayTopics] = useState([]);
   const [loadingContent, setLoadingContent] = useState(true);
 
@@ -176,12 +173,12 @@ export const FullPageDayView = ({
   };
 
   const handleAskAiAboutTopic = (topicTitle) => {
-    const query = `I am studying Day ${dayNumber} (${currentTaskItem?.task?.title || ''}). Can you explain "${topicTitle}" with beginner-friendly concepts and a practical coding example?`;
+    const query = `I am studying Day ${dayNumber} (${currentTaskItem?.task?.title || ''}). Can you explain "${topicTitle}" with beginner-friendly concepts, key mechanisms, and practical examples?`;
     navigate(`#/ai-assistant?topic=${encodeURIComponent(topicTitle)}&prompt=${encodeURIComponent(query)}`);
   };
 
   const handleAskAiAboutDay = () => {
-    const query = `I am studying Day ${dayNumber}: ${currentTaskItem?.task?.title || ''}. Give me a high-yield study summary and test my understanding with 3 practice questions.`;
+    const query = `I am studying Day ${dayNumber}: ${currentTaskItem?.task?.title || ''}. Give me a structured study summary and test my understanding with 3 practice questions.`;
     navigate(`#/ai-assistant?topic=${encodeURIComponent(currentTaskItem?.task?.title || `Day ${dayNumber}`)}&prompt=${encodeURIComponent(query)}`);
   };
 
@@ -381,10 +378,10 @@ export const FullPageDayView = ({
           <div>
             <h2 className="text-lg font-bold text-text tracking-tight flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-accent" />
-              <span>Study Topics & Deep Dives ({dayTopics.length})</span>
+              <span>Study Topics ({dayTopics.length})</span>
             </h2>
             <p className="text-xs text-text-muted mt-0.5">
-              Work through each topic's core concepts, live code, practice problems, and key takeaways.
+              Work through each topic's point-wise core concepts, practical examples, and practice drills.
             </p>
           </div>
 
@@ -408,6 +405,30 @@ export const FullPageDayView = ({
             {dayTopics.map((topicItem, tIdx) => {
               const isTopicDone = isDayCompleted || Boolean(completedSubtopics[topicItem.id]);
               const isExpanded = Boolean(expandedTopics[tIdx]);
+
+              // Conditional code check: only show if valid non-empty code exists
+              const hasCode = Boolean(
+                topicItem.codeExample &&
+                topicItem.codeExample.code &&
+                typeof topicItem.codeExample.code === 'string' &&
+                topicItem.codeExample.code.trim().length > 0 &&
+                !/^(N\/A|none|no code available)$/i.test(topicItem.codeExample.code.trim())
+              );
+
+              // Practice questions & exercises (supports both new array format and legacy fallback)
+              const conceptualQuestions = Array.isArray(topicItem.practice?.conceptualQuestions)
+                ? topicItem.practice.conceptualQuestions
+                : topicItem.practice?.conceptualQuestion
+                ? [topicItem.practice.conceptualQuestion]
+                : [];
+
+              const handsOnDrills = Array.isArray(topicItem.practice?.handsOnExercises)
+                ? topicItem.practice.handsOnExercises
+                : Array.isArray(topicItem.practice?.exercises)
+                ? topicItem.practice.exercises
+                : [];
+
+              const takeaways = Array.isArray(topicItem.takeaways) ? topicItem.takeaways.slice(0, 5) : [];
 
               return (
                 <div
@@ -483,46 +504,27 @@ export const FullPageDayView = ({
                     </div>
                   </div>
 
-                  {/* Topic Expanded Content: 5 Structured Sections */}
+                  {/* Topic Expanded Content: 4 Refined Point-wise Sections */}
                   {isExpanded && (
                     <div className="p-6 space-y-6 border-t border-border">
-                      {/* 1. What You Need to Study */}
-                      <div className="space-y-3">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-accent flex items-center gap-1.5">
-                          <Layers className="w-4 h-4" />
-                          <span>1. What You Need to Study</span>
-                        </h4>
-                        <div className="p-4 rounded-xl bg-surface-2 border border-border space-y-2">
-                          <span className="text-xs font-semibold text-text block">Core Subtopics & Key Concepts:</span>
-                          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-text-muted">
-                            {(topicItem.subtopics || []).map((sub, sIdx) => (
-                              <li key={sIdx} className="flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
-                                <span>{sub}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-
-                      {/* 2. Detailed Explanation */}
+                      {/* 1. Concept Explanation (Intro, Core Concepts, Mechanisms) */}
                       <div className="space-y-3">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-accent flex items-center gap-1.5">
                           <BookOpen className="w-4 h-4" />
-                          <span>2. Detailed Explanation</span>
+                          <span>Concept Explanation</span>
                         </h4>
-                        <div className="p-5 rounded-xl bg-surface-2/60 border border-border text-sm leading-relaxed text-text space-y-3">
+                        <div className="p-5 rounded-xl bg-surface-2/60 border border-border text-sm leading-relaxed text-text space-y-4">
                           <SafeMarkdown content={topicItem.explanation} />
                         </div>
                       </div>
 
-                      {/* 3. Practical Code Examples */}
-                      {topicItem.codeExample && (
+                      {/* 2. Practical Example (Conditional: Completely hidden if no code) */}
+                      {hasCode && (
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
                             <h4 className="text-xs font-bold uppercase tracking-wider text-accent flex items-center gap-1.5">
                               <Code className="w-4 h-4" />
-                              <span>3. Practical Code Implementation</span>
+                              <span>Practical Example</span>
                             </h4>
                             <button
                               type="button"
@@ -532,7 +534,7 @@ export const FullPageDayView = ({
                               {copiedCodeId === topicItem.id ? (
                                 <>
                                   <Check className="w-3.5 h-3.5 text-done" />
-                                  <span className="text-done">Copied</span>
+                                  <span className="text-done font-medium">Copied</span>
                                 </>
                               ) : (
                                 <>
@@ -543,12 +545,21 @@ export const FullPageDayView = ({
                             </button>
                           </div>
 
+                          {/* Code Description */}
+                          {topicItem.codeExample.description && (
+                            <p className="text-xs text-text-muted leading-relaxed">
+                              {topicItem.codeExample.description}
+                            </p>
+                          )}
+
                           <div className="rounded-xl overflow-hidden border border-border bg-[#0B0B14] shadow-sm">
                             <div className="px-4 py-2 bg-[#12121C] border-b border-border flex items-center justify-between text-xs text-text-muted">
-                              <span className="font-mono text-accent font-semibold">
+                              <span className="font-mono text-accent font-semibold uppercase">
                                 {topicItem.codeExample.language || 'code'}
                               </span>
-                              <span className="text-[11px]">{topicItem.codeExample.title || 'Implementation'}</span>
+                              <span className="text-[11px] truncate max-w-sm">
+                                {topicItem.codeExample.title || 'Implementation'}
+                              </span>
                             </div>
                             <pre className="p-4 text-xs font-mono text-[#F1F1FA] overflow-x-auto leading-relaxed">
                               <code>{topicItem.codeExample.code}</code>
@@ -557,34 +568,40 @@ export const FullPageDayView = ({
                         </div>
                       )}
 
-                      {/* 4. Practice Tasks & Conceptual Questions */}
-                      {topicItem.practice && (
+                      {/* 3. Practice Tasks & Assessment */}
+                      {(conceptualQuestions.length > 0 || handsOnDrills.length > 0) && (
                         <div className="space-y-3">
                           <h4 className="text-xs font-bold uppercase tracking-wider text-accent flex items-center gap-1.5">
                             <Zap className="w-4 h-4" />
-                            <span>4. Practice Tasks & Assessment</span>
+                            <span>Practice & Assessment</span>
                           </h4>
                           <div className="p-4 rounded-xl bg-surface-2 border border-border space-y-3 text-xs">
-                            {topicItem.practice.conceptualQuestion && (
-                              <div className="p-3 rounded-lg bg-surface-1 border border-border space-y-1">
+                            {/* Conceptual Questions */}
+                            {conceptualQuestions.length > 0 && (
+                              <div className="p-3.5 rounded-lg bg-surface-1 border border-border space-y-2">
                                 <span className="font-semibold text-text flex items-center gap-1.5">
                                   <HelpCircle className="w-3.5 h-3.5 text-accent" />
-                                  Conceptual Checkpoint:
+                                  Conceptual Questions:
                                 </span>
-                                <p className="text-text-muted pl-5">
-                                  {topicItem.practice.conceptualQuestion}
-                                </p>
+                                <ul className="space-y-1.5 pl-5 text-text-muted list-disc">
+                                  {conceptualQuestions.map((q, qIdx) => (
+                                    <li key={qIdx} className="leading-relaxed">
+                                      {q}
+                                    </li>
+                                  ))}
+                                </ul>
                               </div>
                             )}
 
-                            {topicItem.practice.exercises && topicItem.practice.exercises.length > 0 && (
-                              <div className="space-y-1.5">
-                                <span className="font-semibold text-text block">Hands-on Drills:</span>
-                                <ul className="space-y-1 text-text-muted pl-1">
-                                  {topicItem.practice.exercises.map((ex, exIdx) => (
+                            {/* Hands-on Practice */}
+                            {handsOnDrills.length > 0 && (
+                              <div className="space-y-1.5 pt-1">
+                                <span className="font-semibold text-text block">Hands-on Practice:</span>
+                                <ul className="space-y-1.5 text-text-muted pl-1">
+                                  {handsOnDrills.map((ex, exIdx) => (
                                     <li key={exIdx} className="flex items-start gap-2">
                                       <span className="text-accent font-bold">›</span>
-                                      <span>{ex}</span>
+                                      <span className="leading-relaxed">{ex}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -594,19 +611,21 @@ export const FullPageDayView = ({
                         </div>
                       )}
 
-                      {/* 5. Key Takeaways */}
-                      {topicItem.takeaways && topicItem.takeaways.length > 0 && (
+                      {/* 4. Key Takeaways */}
+                      {takeaways.length > 0 && (
                         <div className="space-y-3">
                           <h4 className="text-xs font-bold uppercase tracking-wider text-accent flex items-center gap-1.5">
                             <Award className="w-4 h-4" />
-                            <span>5. Key Takeaways</span>
+                            <span>Key Takeaways</span>
                           </h4>
                           <div className="p-4 rounded-xl bg-done/5 border border-done/20 space-y-2">
-                            <ul className="space-y-1.5 text-xs text-text">
-                              {topicItem.takeaways.map((takeaway, tkIdx) => (
-                                <li key={tkIdx} className="flex items-start gap-2">
-                                  <Check className="w-3.5 h-3.5 text-done shrink-0 mt-0.5" />
-                                  <span>{takeaway}</span>
+                            <ul className="space-y-2 text-xs text-text">
+                              {takeaways.map((takeaway, tkIdx) => (
+                                <li key={tkIdx} className="flex items-start gap-2.5">
+                                  <Check className="w-4 h-4 text-done shrink-0 mt-0.5" />
+                                  <span className="leading-relaxed">
+                                    <SafeMarkdown content={takeaway} />
+                                  </span>
                                 </li>
                               ))}
                             </ul>
@@ -614,7 +633,7 @@ export const FullPageDayView = ({
                         </div>
                       )}
 
-                      {/* Complete topic action button */}
+                      {/* Footer Actions: Test Me & Toggle Topic */}
                       <div className="pt-2 flex items-center justify-between border-t border-border">
                         <button
                           type="button"
