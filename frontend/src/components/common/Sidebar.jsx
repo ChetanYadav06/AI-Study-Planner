@@ -166,7 +166,13 @@ export const Sidebar = ({
         <div className="px-1">
           <button
             type="button"
-            onClick={() => handleNavClick('#/roadmaps/new')}
+            onClick={() => {
+              if (onOpenCreateGoal) {
+                onOpenCreateGoal();
+              } else {
+                handleNavClick('#/roadmaps/new');
+              }
+            }}
             className={`w-full btn-primary-gradient rounded-[10px] min-h-[44px] flex items-center justify-center gap-2 font-medium text-sm transition-opacity hover:opacity-95 cursor-pointer shadow-xs ${
               isCollapsed ? 'px-0' : 'px-3.5'
             }`}

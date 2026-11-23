@@ -108,6 +108,12 @@ export const RoadmapWizard = ({
   const [newCustomTopic, setNewCustomTopic] = useState('');
   const [diagnosticNote, setDiagnosticNote] = useState(null);
 
+  // Step 3: Duration & Budget
+  const [targetDays, setTargetDays] = useState(initialGoal?.targetDays || 30);
+  const [hoursPerDay, setHoursPerDay] = useState(initialGoal?.hoursPerDay || 2.0);
+  const [specificTopics, setSpecificTopics] = useState(initialGoal?.specificTopics || '');
+  const [targetOutcomes, setTargetOutcomes] = useState(initialGoal?.targetOutcome || '');
+
   // Unambiguous target completion date format (e.g., "2 Jan 2027")
   const projectedCompletionDate = useMemo(() => {
     const d = new Date();
@@ -117,12 +123,6 @@ export const RoadmapWizard = ({
     const year = d.getFullYear();
     return `${day} ${month} ${year}`;
   }, [targetDays]);
-
-  // Step 3: Duration & Budget
-  const [targetDays, setTargetDays] = useState(initialGoal?.targetDays || 30);
-  const [hoursPerDay, setHoursPerDay] = useState(initialGoal?.hoursPerDay || 2.0);
-  const [specificTopics, setSpecificTopics] = useState(initialGoal?.specificTopics || '');
-  const [targetOutcomes, setTargetOutcomes] = useState(initialGoal?.targetOutcome || '');
 
   // Step 4: Roadmap Preferences
   const [explanationStyle, setExplanationStyle] = useState('STEP_BY_STEP');

@@ -23,7 +23,7 @@ import { ProgressBar } from '../ui/ProgressBar';
 import { StatusText } from '../ui/StatusText';
 import { EmptyState } from '../ui/EmptyState';
 
-export const MyRoadmapsView = ({ onNavigateTab }) => {
+export const MyRoadmapsView = ({ onNavigateTab, onOpenCreateGoal }) => {
   const { user } = useAuth();
   const { route, params, query, navigate } = useRouter();
   const {
@@ -291,7 +291,13 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
             <Button
               variant="primary"
               size="sm"
-              onClick={() => navigate('#/roadmaps/new')}
+              onClick={() => {
+                if (onOpenCreateGoal) {
+                  onOpenCreateGoal();
+                } else {
+                  navigate('#/roadmaps/new');
+                }
+              }}
             >
               Create New Roadmap
             </Button>
@@ -317,7 +323,13 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => navigate('#/roadmaps/new')}
+                onClick={() => {
+                  if (onOpenCreateGoal) {
+                    onOpenCreateGoal();
+                  } else {
+                    navigate('#/roadmaps/new');
+                  }
+                }}
               >
                 Create New Roadmap
               </Button>
@@ -445,7 +457,13 @@ export const MyRoadmapsView = ({ onNavigateTab }) => {
                 <Button
                   variant="primary"
                   size="sm"
-                  onClick={() => navigate('#/roadmaps/new')}
+                  onClick={() => {
+                    if (onOpenCreateGoal) {
+                      onOpenCreateGoal();
+                    } else {
+                      navigate('#/roadmaps/new');
+                    }
+                  }}
                 >
                   Create New Roadmap
                 </Button>

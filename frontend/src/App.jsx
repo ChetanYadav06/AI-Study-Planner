@@ -85,7 +85,7 @@ const AppContent = () => {
 
           {(route === 'roadmaps' || route === 'roadmaps-new' || route === 'roadmap-detail' || route === 'interactive-roadmap') && (
             isAuthenticated ? (
-              <MyRoadmapsView />
+              <MyRoadmapsView onOpenCreateGoal={handleOpenCreateGoal} />
             ) : (
               <StudentPortalLanding onOpenAuth={handleOpenAuth} />
             )
