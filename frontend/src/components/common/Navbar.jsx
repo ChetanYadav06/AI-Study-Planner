@@ -29,7 +29,9 @@ export const Navbar = ({ onOpenAuth, onNavigateProfile, onToggleMobileMenu }) =>
     'active-study': 'Active Study & Pomodoro',
     'progress': 'Progress Analytics',
     'resources': 'My Notes',
-    'profile': 'Settings & Profile'
+    'profile': 'Settings & Profile',
+    'login': 'Sign In',
+    'register': 'Create Account'
   };
 
   const currentTitle = routeTitles[route] || 'AI Study Planner';
@@ -37,30 +39,45 @@ export const Navbar = ({ onOpenAuth, onNavigateProfile, onToggleMobileMenu }) =>
   return (
     <header className="sticky top-0 z-30 bg-surface-1/90 backdrop-blur-md border-b border-border h-[var(--header-h,3.5rem)] select-none">
       <div className="w-full px-4 sm:px-6 h-full flex items-center justify-between gap-4">
-        {/* Left: Mobile Menu Trigger + Breadcrumb */}
-        <div className="flex items-center gap-3 min-w-0">
+        {/* Left: Mobile Menu Trigger + Breadcrumb (Authenticated) OR Public Logo (Unauthenticated) */}
+        {isAuthenticated ? (
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={onToggleMobileMenu}
+              className="md:hidden inline-flex items-center justify-center p-2 rounded-[10px] text-text-muted hover:text-text hover:bg-surface-2 border border-transparent hover:border-border transition-colors cursor-pointer min-h-[44px] min-w-[44px]"
+              title="Open navigation menu"
+              aria-label="Toggle navigation menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 min-w-0 text-sm">
+              <span className="text-text-muted hidden sm:inline">AI Study Planner</span>
+              <ChevronRight className="w-3.5 h-3.5 text-text-muted/60 hidden sm:inline" />
+              <span className="font-semibold text-text truncate">
+                {currentTitle}
+              </span>
+            </div>
+          </div>
+        ) : (
           <button
             type="button"
-            onClick={onToggleMobileMenu}
-            className="md:hidden inline-flex items-center justify-center p-2 rounded-[10px] text-text-muted hover:text-text hover:bg-surface-2 border border-transparent hover:border-border transition-colors cursor-pointer min-h-[44px] min-w-[44px]"
-            title="Open navigation menu"
-            aria-label="Toggle navigation menu"
+            onClick={() => navigate('#/dashboard')}
+            className="flex items-center gap-2.5 min-w-0 cursor-pointer group border-none bg-transparent text-left p-0"
           >
-            <Menu className="w-5 h-5" />
-          </button>
-
-          <div className="flex items-center gap-2 min-w-0 text-sm">
-            <span className="text-text-muted hidden sm:inline">AI Study Planner</span>
-            <ChevronRight className="w-3.5 h-3.5 text-text-muted/60 hidden sm:inline" />
-            <span className="font-semibold text-text truncate">
-              {currentTitle}
+            <div className="w-8 h-8 rounded-xl bg-accent-solid text-white flex items-center justify-center font-bold shadow-md shadow-accent/20 group-hover:scale-105 transition-transform">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <span className="font-bold text-base text-text tracking-tight group-hover:text-accent transition-colors">
+              AI Study Planner
             </span>
-          </div>
-        </div>
+          </button>
+        )}
 
-        {/* Right: Quick Actions, Theme Toggle, Profile */}
+        {/* Right: Quick Actions, Theme Toggle, Profile / Auth Actions */}
         <div className="flex items-center gap-2.5 sm:gap-3">
-          {/* Ask AI Quick Action Button */}
+          {/* Ask AI Quick Action Button (Authenticated Only) */}
           {isAuthenticated && (
             <button
               type="button"
@@ -104,24 +121,40 @@ export const Navbar = ({ onOpenAuth, onNavigateProfile, onToggleMobileMenu }) =>
             </button>
           ) : (
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onOpenAuth('login')}
-                className="gap-1.5"
-              >
-                <LogIn className="w-4 h-4" />
-                <span>Sign In</span>
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => onOpenAuth('register')}
-                className="gap-1.5"
-              >
-                <UserPlus className="w-4 h-4" />
-                <span>Get Started</span>
-              </Button>
+              {route === 'login' && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => navigate('#/register')}
+                  className="gap-1.5"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Create Account</span>
+                </Button>
+              )}
+
+              {route !== 'login' && route !== 'register' && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate('#/login')}
+                    className="gap-1.5"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span>Sign In</span>
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => navigate('#/register')}
+                    className="gap-1.5"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>Get Started</span>
+                  </Button>
+                </>
+              )}
             </div>
           )}
         </div>

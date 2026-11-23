@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   getGoals,
-  getTopicKnowledge,
+  getSkills,
   getProgressOverview,
   getWeeklyReview
 } from '../../services/api';
@@ -32,7 +32,7 @@ export const ProgressView = () => {
     try {
       const [goalsData, skillsData, overviewData, reviewData] = await Promise.all([
         getGoals().catch(() => []),
-        getTopicKnowledge().catch(() => []),
+        getSkills().catch(() => []),
         getProgressOverview(userTimezone).catch(() => null),
         getWeeklyReview(userTimezone).catch(() => null)
       ]);

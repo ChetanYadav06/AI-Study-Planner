@@ -73,8 +73,6 @@ export const getSkills = async (search = '') => {
   return response.data;
 };
 
-export const getTopicKnowledge = getSkills;
-
 export const upsertSkill = async (data) => {
   const response = await api.post('/skills', data);
   return response.data;
@@ -180,7 +178,6 @@ export const getGoals = async () => {
   const response = await api.get('/goals');
   return response.data;
 };
-export const getUserGoals = getGoals;
 
 export const createGoal = async (data) => {
   const response = await api.post('/goals', data);

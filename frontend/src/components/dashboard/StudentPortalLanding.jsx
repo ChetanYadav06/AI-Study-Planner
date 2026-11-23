@@ -1,7 +1,18 @@
 import React from 'react';
+import { useRouter } from '../../context/RouterContext';
 import { Button } from '../ui/Button';
 
 export const StudentPortalLanding = ({ onOpenAuth }) => {
+  const { navigate } = useRouter();
+
+  const handleRegister = () => {
+    navigate('#/register');
+  };
+
+  const handleLogin = () => {
+    navigate('#/login');
+  };
+
   return (
     <div className="w-full flex-1 flex flex-col items-center justify-center text-center">
       <div className="max-w-2xl mx-auto space-y-6">
@@ -18,7 +29,7 @@ export const StudentPortalLanding = ({ onOpenAuth }) => {
           <Button
             variant="primary"
             size="md"
-            onClick={() => onOpenAuth('register')}
+            onClick={handleRegister}
           >
             Create account
           </Button>
@@ -26,7 +37,7 @@ export const StudentPortalLanding = ({ onOpenAuth }) => {
           <Button
             variant="secondary"
             size="md"
-            onClick={() => onOpenAuth('login')}
+            onClick={handleLogin}
           >
             Sign in
           </Button>

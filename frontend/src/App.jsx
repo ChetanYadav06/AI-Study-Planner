@@ -9,6 +9,7 @@ import { StudentPortalLanding } from './components/dashboard/StudentPortalLandin
 import { StudentDashboard } from './components/dashboard/StudentDashboard';
 import { ProfileView } from './components/profile/ProfileView';
 import { AuthModal } from './components/auth/AuthModal';
+import { LoginPage } from './components/auth/LoginPage';
 import { CreateGoalModal } from './components/goals/CreateGoalModal';
 import { MyRoadmapsView } from './components/roadmap/MyRoadmapsView';
 import { StudyPlannerView } from './components/views/StudyPlannerView';
@@ -53,15 +54,17 @@ const AppContent = () => {
 
   return (
     <div className="h-screen bg-bg flex flex-col md:flex-row text-text overflow-hidden">
-      {/* Sidebar: Desktop Flush Left / Mobile Drawer */}
-      <Sidebar
-        onOpenAuth={handleOpenAuth}
-        onOpenCreateGoal={handleOpenCreateGoal}
-        isCollapsed={sidebarCollapsed}
-        setIsCollapsed={setSidebarCollapsed}
-        mobileOpen={mobileSidebarOpen}
-        setMobileOpen={setMobileSidebarOpen}
-      />
+      {/* Sidebar: Only rendered when user is authenticated */}
+      {isAuthenticated && (
+        <Sidebar
+          onOpenAuth={handleOpenAuth}
+          onOpenCreateGoal={handleOpenCreateGoal}
+          isCollapsed={sidebarCollapsed}
+          setIsCollapsed={setSidebarCollapsed}
+          mobileOpen={mobileSidebarOpen}
+          setMobileOpen={setMobileSidebarOpen}
+        />
+      )}
 
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Top Navbar */}
@@ -140,6 +143,10 @@ const AppContent = () => {
             ) : (
               <StudentPortalLanding onOpenAuth={handleOpenAuth} />
             )
+          )}
+
+          {(route === 'login' || route === 'register') && (
+            <LoginPage initialMode={route === 'register' ? 'register' : 'login'} />
           )}
 
           {route === 'not-found' && (

@@ -24,6 +24,12 @@ export const parseHash = (hashString = '') => {
   if (path === '/' || path === '/dashboard') {
     return { route: 'dashboard', params: {}, query, rawPath: path };
   }
+  if (path === '/login' || path === '/signin') {
+    return { route: 'login', params: {}, query, rawPath: path };
+  }
+  if (path === '/register' || path === '/signup') {
+    return { route: 'register', params: {}, query, rawPath: path };
+  }
   if (path === '/roadmaps') {
     return { route: 'roadmaps', params: {}, query, rawPath: path };
   }

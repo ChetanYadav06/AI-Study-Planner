@@ -5,7 +5,6 @@ import com.aistudyplanner.service.GeminiTestService;
 import com.aistudyplanner.util.TutorResponseSanitizer;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,15 +20,6 @@ public class GeminiTestController {
 
     public GeminiTestController(GeminiTestService geminiTestService) {
         this.geminiTestService = geminiTestService;
-    }
-
-    @GetMapping("/test")
-    public Map<String, String> testGemini() {
-        String answer = geminiTestService.askGemini(
-            "Explain what an array is in Java in 3 simple sentences."
-        );
-
-        return Map.of("answer", answer);
     }
 
     /**

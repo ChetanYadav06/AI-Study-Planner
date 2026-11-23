@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Check,
   LogOut,
+  LogIn,
   X,
   Plus
 } from 'lucide-react';
@@ -56,7 +57,8 @@ export const Sidebar = ({
 
   const handleNavClick = (targetRoute) => {
     if (!isAuthenticated && targetRoute !== '#/dashboard') {
-      if (onOpenAuth) onOpenAuth('login');
+      navigate(`#/login?redirect=${encodeURIComponent(targetRoute)}`);
+      if (setMobileOpen) setMobileOpen(false);
       return;
     }
     navigate(targetRoute);
