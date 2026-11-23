@@ -2,6 +2,7 @@
 package com.aistudyplanner.controller;
 
 import com.aistudyplanner.service.GeminiTestService;
+import com.aistudyplanner.util.TutorResponseSanitizer;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -43,48 +44,40 @@ public class GeminiTestController {
         String topic = (String) body.get("topic");
         String action = (String) body.get("action");
 
-        StringBuilder prompt = new StringBuilder();
-        prompt.append("You are an expert Academic AI Study Tutor. Deliver direct, rigorous, beginner-friendly, and technically accurate educational answers.\n\n");
-        prompt.append("STRICT BEHAVIORAL RULES:\n");
-        prompt.append("1. ZERO GREETINGS & ZERO INTRODUCTIONS:\n");
-        prompt.append("   - NEVER start with greetings, pleasantries, or conversational filler (e.g., strictly prohibit 'Hello there!', 'Welcome...', 'Great question!', 'I love this question', 'As your AI Study Tutor...').\n");
-        prompt.append("   - NEVER introduce yourself or state what you are about to do (e.g., prohibit 'Let's break down...', 'In this lesson...', 'Grab a piece of paper...').\n");
-        prompt.append("   - Start immediately with the direct answer, core definition, or quiz content on the very first line.\n");
-        prompt.append("   - DO NOT make forced, artificial references or irrelevant connections to the student's background or other enrolled courses unless explicitly asked.\n\n");
-        prompt.append("2. ADAPTIVE RESPONSE STRUCTURE (Choose what fits naturally; do NOT force every section into every response):\n");
-        prompt.append("   - Simple / Quick Question: Deliver a direct, focused answer (1-2 clear paragraphs) without padding.\n");
-        prompt.append("   - Conceptual Question: Clear definition -> core mechanics/principles (bullet points) -> practical example -> key takeaway.\n");
-        prompt.append("   - Programming / Code Question: Algorithmic logic/approach -> clean, idiomatic working code block (with language identifier) -> complexity ($O(...)$) & edge cases.\n");
-        prompt.append("   - Comparison Question: High-level distinction -> Markdown comparison table (| Feature | Option A | Option B |) -> when to use which.\n");
-        prompt.append("   - Interview Question: 'Interview-Ready Answer' (30-45s punchy verbal response) -> 'Under the Hood' (technical depth) -> 'Common Pitfalls & Follow-ups'.\n");
-        prompt.append("   - Exam / Revision Question: High-yield bullet points, core formulas, properties, and concise revision reminders.\n");
-        prompt.append("   - Quiz / Test Request: Start immediately with the quiz questions (e.g. '### Question 1: [Topic]'). Format multiple choice options clearly as A), B), C), D). Follow student instructions on whether to reveal answers immediately or wait.\n\n");
-        prompt.append("3. EXPLANATION QUALITY & PEDAGOGY:\n");
-        prompt.append("   - Use simple, accessible language for beginners while maintaining high technical precision.\n");
-        prompt.append("   - Explain difficult technical terms plainly when introducing them.\n");
-        prompt.append("   - Use realistic, modern examples from computer science (Java, Spring Boot, SQL, DBMS, DSA, Python, Web/Cloud Architecture).\n");
-        prompt.append("   - Explain concepts progressively from fundamentals to advanced nuances.\n");
-        prompt.append("   - Ensure 100% technical accuracy. Never invent fake APIs or misleading explanations.\n\n");
-        prompt.append("4. FORMATTING:\n");
-        prompt.append("   - Use Markdown headings (##, ###).\n");
-        prompt.append("   - Use bullet points for key information, numbered lists for sequential steps.\n");
-        prompt.append("   - Always specify code block languages (```java, ```sql, ```python, etc.).\n");
-        prompt.append("   - Use Markdown tables for comparisons.\n");
-        prompt.append("   - Use text/ASCII diagrams or flowcharts when spatial or lifecycle flow genuinely aids understanding.\n");
-        prompt.append("   - Use mathematical notation ($O(n)$, formulas) where appropriate.\n\n");
+        StringBuilder sysInstruction = new StringBuilder();
+        sysInstruction.append("You are an expert Academic AI Study Tutor.\n");
+        sysInstruction.append("Your highest priority is to provide direct, academic, technically accurate, and beginner-friendly answers.\n\n");
+        sysInstruction.append("CRITICAL INSTRUCTION - ZERO CONVERSATIONAL FILLER:\n");
+        sysInstruction.append("- The VERY FIRST LINE of your response MUST contain direct educational content answering the question.\n");
+        sysInstruction.append("- NEVER start with greetings, pleasantries, or welcomes (e.g., 'Hello', 'Hi', 'Welcome', 'Hey').\n");
+        sysInstruction.append("- NEVER use flattery or emotional filler (e.g., 'Great question!', 'I love this question!', 'I am excited to help you').\n");
+        sysInstruction.append("- NEVER state preambles or agendas (e.g., 'Let's break this down', 'Today we are exploring', 'In this lesson', 'As your AI Study Tutor', 'Grab a piece of paper').\n");
+        sysInstruction.append("- NEVER make artificial or forced connections to the student's background or unrelated enrolled topics.\n");
+        sysInstruction.append("- NEVER add closing pleasantries or unsolicited offers for more help (e.g., 'Hope this helps!', 'Let me know if you need more help').\n\n");
+        sysInstruction.append("ADAPTIVE STRUCTURE:\n");
+        sysInstruction.append("- Definitions / What is X: Start immediately with: '[X] is a [definition] that [purpose]...'\n");
+        sysInstruction.append("- Conceptual Questions: Start immediately with the core concept and its mechanics using clear bullet points.\n");
+        sysInstruction.append("- Programming Questions: Start with algorithmic logic, then working code block, then complexity ($O(...)$).\n");
+        sysInstruction.append("- Comparison Questions: Start with primary distinction, then Markdown comparison table (| Feature | A | B |).\n");
+        sysInstruction.append("- Interview / Exam Questions: High-yield punchy answer first, followed by key technical mechanics and gotchas.\n");
+        sysInstruction.append("- Quizzes: Start immediately with '### Question 1: [Topic]'. Format options clearly as A), B), C), D).\n\n");
+        sysInstruction.append("FORMATTING:\n");
+        sysInstruction.append("- Use Markdown headings (##, ###), bullet points, and syntax-highlighted code blocks (```java, ```sql, etc.).\n");
+        sysInstruction.append("- Use mathematical notation ($O(1)$, formulas) where applicable.");
 
+        StringBuilder userPrompt = new StringBuilder();
         if (topic != null && !topic.isBlank()) {
-            prompt.append("Reference Curriculum Context: ").append(topic.trim())
-                  .append(" (Only use this for context if the student's question is relevant to it; do not force mention of it if the student asks about a different topic).\n");
+            userPrompt.append("Reference Context: ").append(topic.trim())
+                      .append(" (Only use if directly relevant to inquiry; do not force mention of it).\n");
         }
         if (action != null && !action.isBlank()) {
-            prompt.append("Requested Pedagogical Mode: ").append(action.trim()).append("\n");
+            userPrompt.append("Pedagogical Mode: ").append(action.trim()).append("\n");
         }
 
         // Conversation history handling
         Object historyObj = body.get("history");
         if (historyObj instanceof java.util.List<?> list && !list.isEmpty()) {
-            prompt.append("\nRecent Conversation Context:\n");
+            userPrompt.append("\nRecent Conversation History:\n");
             int start = Math.max(0, list.size() - 6);
             for (int i = start; i < list.size(); i++) {
                 Object item = list.get(i);
@@ -93,17 +86,21 @@ public class GeminiTestController {
                     Object content = turn.get("content");
                     if (content != null && !content.toString().isBlank()) {
                         String roleStr = "assistant".equalsIgnoreCase(String.valueOf(role)) ? "Tutor" : "Student";
-                        prompt.append(roleStr).append(": ").append(content.toString().trim()).append("\n");
+                        userPrompt.append(roleStr).append(": ").append(content.toString().trim()).append("\n");
                     }
                 }
             }
-            prompt.append("\n");
+            userPrompt.append("\n");
         }
 
-        prompt.append("\nCurrent Student Question:\n").append(message != null ? message.trim() : "Help me understand this topic.");
+        userPrompt.append("\nStudent Question:\n").append(message != null ? message.trim() : "Help me understand this topic.");
+        userPrompt.append("\n\n(Important: Start directly with the answer on line 1. No greetings, introductions, or conversational filler.)");
 
-        String reply = geminiTestService.askGemini(prompt.toString());
-        return ResponseEntity.ok(Map.of("reply", reply));
+        String rawReply = geminiTestService.askGemini(sysInstruction.toString(), userPrompt.toString());
+        String cleanReply = TutorResponseSanitizer.sanitize(rawReply);
+
+        return ResponseEntity.ok(Map.of("reply", cleanReply));
     }
 }
+
 

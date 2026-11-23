@@ -65,31 +65,38 @@ public class GeminiTestService {
     }
 
     public String askGemini(String prompt) {
-        return executeGeminiCall(prompt, false);
+        return executeGeminiCall(null, prompt, false);
+    }
+
+    public String askGemini(String systemInstruction, String prompt) {
+        return executeGeminiCall(systemInstruction, prompt, false);
     }
 
     public String askGeminiJson(String prompt) {
-        return executeGeminiCall(prompt, true);
+        return executeGeminiCall(null, prompt, true);
     }
 
-    private String executeGeminiCall(String prompt, boolean jsonMode) {
-        Map<String, Object> requestBody;
+    public String askGeminiJson(String systemInstruction, String prompt) {
+        return executeGeminiCall(systemInstruction, prompt, true);
+    }
+
+    private String executeGeminiCall(String systemInstruction, String prompt, boolean jsonMode) {
+        Map<String, Object> requestBody = new java.util.HashMap<>();
+        requestBody.put("contents", List.of(
+            Map.of("parts", List.of(Map.of("text", prompt)))
+        ));
+
+        if (systemInstruction != null && !systemInstruction.isBlank()) {
+            requestBody.put("system_instruction", Map.of(
+                "parts", List.of(Map.of("text", systemInstruction.trim()))
+            ));
+        }
+
         if (jsonMode) {
-            requestBody = Map.of(
-                "contents", List.of(
-                    Map.of("parts", List.of(Map.of("text", prompt)))
-                ),
-                "generationConfig", Map.of(
-                    "responseMimeType", "application/json",
-                    "temperature", 0.3
-                )
-            );
-        } else {
-            requestBody = Map.of(
-                "contents", List.of(
-                    Map.of("parts", List.of(Map.of("text", prompt)))
-                )
-            );
+            requestBody.put("generationConfig", Map.of(
+                "responseMimeType", "application/json",
+                "temperature", 0.3
+            ));
         }
 
         // Build model queue: at most 3 models from configured models list
