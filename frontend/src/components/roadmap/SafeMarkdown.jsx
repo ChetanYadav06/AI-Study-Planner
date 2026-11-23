@@ -23,8 +23,8 @@ export const SafeMarkdown = ({ content = '' }) => {
 
   const renderInline = (text, keyPrefix) => {
     // Escape or sanitize text by tokenizing:
-    // Tokens: `code`, **bold**, *italic*, [text](url)
-    const tokenRegex = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g;
+    // Tokens: `code`, $math$, **bold**, *italic*, [text](url)
+    const tokenRegex = /(`[^`]+`|\$[^\$]+\$|\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g;
     const parts = text.split(tokenRegex);
 
     return parts.map((part, pIdx) => {
@@ -39,6 +39,17 @@ export const SafeMarkdown = ({ content = '' }) => {
           >
             {part.slice(1, -1)}
           </code>
+        );
+      }
+
+      if (part.startsWith('$') && part.endsWith('$') && part.length >= 2) {
+        return (
+          <span
+            key={key}
+            className="px-1.5 py-0.5 rounded bg-surface-2 font-mono text-[13px] text-accent font-medium inline-block"
+          >
+            {part.slice(1, -1)}
+          </span>
         );
       }
 
@@ -118,6 +129,60 @@ export const SafeMarkdown = ({ content = '' }) => {
     if (!trimmed) {
       elements.push(<div key={`spacer-${i}`} className="h-2" />);
       continue;
+    }
+
+    // Horizontal Rule
+    if (trimmed === '---' || trimmed === '***' || trimmed === '___') {
+      elements.push(<hr key={`hr-${i}`} className="border-border my-4" />);
+      continue;
+    }
+
+    // Markdown Table
+    if (trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.length >= 3) {
+      if (i + 1 < lines.length) {
+        const nextTrimmed = lines[i + 1].trim();
+        const isDelimiter = /^\|(\s*:?-+:?\s*\|)+$/.test(nextTrimmed);
+        if (isDelimiter) {
+          const headerCells = trimmed.slice(1, -1).split('|').map(c => c.trim());
+          const rows = [];
+          let k = i + 2;
+          while (k < lines.length && lines[k].trim().startsWith('|') && lines[k].trim().endsWith('|')) {
+            const rowCells = lines[k].trim().slice(1, -1).split('|').map(c => c.trim());
+            rows.push(rowCells);
+            k++;
+          }
+
+          elements.push(
+            <div key={`table-${i}`} className="overflow-x-auto my-3.5 rounded-lg border border-border">
+              <table className="w-full text-left text-xs sm:text-sm border-collapse">
+                <thead className="bg-surface-2 border-b border-border">
+                  <tr>
+                    {headerCells.map((h, hIdx) => (
+                      <th key={hIdx} className="px-3.5 py-2.5 font-semibold text-text">
+                        {renderInline(h, `th-${i}-${hIdx}`)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border bg-surface-1">
+                  {rows.map((row, rIdx) => (
+                    <tr key={rIdx} className="hover:bg-surface-2/40 transition-colors">
+                      {row.map((cell, cIdx) => (
+                        <td key={cIdx} className="px-3.5 py-2.5 text-text align-top">
+                          {renderInline(cell, `td-${i}-${rIdx}-${cIdx}`)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+
+          i = k - 1; // Advance past table
+          continue;
+        }
+      }
     }
 
     // Headings

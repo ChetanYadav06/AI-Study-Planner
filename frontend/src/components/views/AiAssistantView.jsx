@@ -98,7 +98,7 @@ export const AiAssistantView = () => {
           {
             id: 'm1',
             role: 'assistant',
-            content: `Hello ${user?.name || 'there'}! I am your AI Study Tutor. Ask me any question, request concept explanations, take an interactive quiz, or test your understanding to accelerate your learning.`,
+            content: `Welcome${user?.name ? ', ' + user.name : ''}. Ask any computer science or curriculum question, request deep-dive explanations with code, or take an adaptive quiz to test your mastery.`,
             createdAt: new Date().toISOString()
           }
         ]
@@ -155,7 +155,7 @@ export const AiAssistantView = () => {
               {
                 id: `m-init-${Date.now()}`,
                 role: 'assistant',
-                content: `Ready for your quiz on **${ctx.activeTopic?.title || ctx.dayTitle}**!\n\nI have loaded your learning material into context and prepared your quiz prompt below. You can review or edit it, then hit **Send** to start the interactive test.`,
+                content: `Ready for your quiz on **${ctx.activeTopic?.title || ctx.dayTitle}**.\n\nYour quiz prompt has been prepared below. Review or adjust it, then click **Send** to begin.`,
                 createdAt: new Date().toISOString()
               }
             ]
@@ -183,7 +183,7 @@ export const AiAssistantView = () => {
               {
                 id: `m-init-${Date.now()}`,
                 role: 'assistant',
-                content: `You're currently studying Day ${ctx.dayNumber} of your ${ctx.roadmapTitle} learning roadmap. I have your day-wise learning material ready. What would you like to understand?`,
+                content: `Studying Day ${ctx.dayNumber}: **${ctx.dayTitle}** (${ctx.roadmapTitle}). What concept, code logic, or problem would you like to explore?`,
                 createdAt: new Date().toISOString()
               }
             ]
@@ -211,7 +211,7 @@ export const AiAssistantView = () => {
               {
                 id: `m-init-${Date.now()}`,
                 role: 'assistant',
-                content: `You're studying **${ctx.activeTopic?.title}** from Day ${ctx.dayNumber} of your ${ctx.roadmapTitle} roadmap. I have your topic learning material ready. What concept, code example, or problem would you like to explore?`,
+                content: `Studying **${ctx.activeTopic?.title}** (Day ${ctx.dayNumber} · ${ctx.roadmapTitle}). Ask any question or request code explanations, edge cases, and architectural breakdowns.`,
                 createdAt: new Date().toISOString()
               }
             ]
@@ -268,7 +268,7 @@ export const AiAssistantView = () => {
         {
           id: `m-${Date.now()}`,
           role: 'assistant',
-          content: `Ready for a new session on **${selectedTopic || 'your learning goals'}**! What concept or problem shall we tackle?`,
+          content: `New study session on **${selectedTopic || 'computer science'}**. Ask any question to begin.`,
           createdAt: new Date().toISOString()
         }
       ]
@@ -349,11 +349,20 @@ export const AiAssistantView = () => {
         formattedPrompt = `[STUDENT'S UPLOADED STUDY MATERIALS / NOTES CONTEXT:\n${notesContext}\n]\n\n${formattedPrompt}`;
       }
 
-      // 3. Send to existing Gemini assistant endpoint
+      // 3. Extract recent conversation turns for multi-turn context
+      const recentHistory = (activeConversation?.messages || [])
+        .slice(-6)
+        .map((m) => ({
+          role: m.role,
+          content: m.content
+        }));
+
+      // 4. Send to existing Gemini assistant endpoint
       const response = await sendAssistantChatMessage({
         message: formattedPrompt,
         topic: currentLearningContext?.activeTopic?.title || currentLearningContext?.dayTitle || selectedTopic,
-        action: actionType || (query.mode === 'quiz' ? 'quiz' : 'chat')
+        action: actionType || (query.mode === 'quiz' ? 'quiz' : 'chat'),
+        history: recentHistory
       });
 
       const assistantMessage = {
